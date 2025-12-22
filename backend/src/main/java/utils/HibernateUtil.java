@@ -9,11 +9,13 @@ public class HibernateUtil {
 
 	private static final SessionFactory factory = createSessionFactory();
 
-//	private static SessionFactory createSessionFactory() {
-//		StandardServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder().configure().build();
-//		SessionFactory sessionFactory = new MetadataSources(serviceRegistry).buildMetadata().buildSessionFactory();
-//		return sessionFactory;
-//	}
+	// private static SessionFactory createSessionFactory() {
+	// StandardServiceRegistry serviceRegistry = new
+	// StandardServiceRegistryBuilder().configure().build();
+	// SessionFactory sessionFactory = new
+	// MetadataSources(serviceRegistry).buildMetadata().buildSessionFactory();
+	// return sessionFactory;
+	// }
 
 	private static SessionFactory createSessionFactory() {
 
