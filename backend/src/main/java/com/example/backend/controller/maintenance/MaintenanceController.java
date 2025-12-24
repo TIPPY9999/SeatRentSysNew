@@ -31,6 +31,11 @@ public class MaintenanceController {
     public String test() {
         return "Backend is working!";
     }
+
+    // 網址: http://localhost:8080/api/maintenance/tickets
+    
+
+
 @Autowired
 private MaintenanceInformationRepository infoRepo;
     @GetMapping("/tickets")
