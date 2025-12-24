@@ -1,37 +1,49 @@
-package com.example.backend.model.spot;
+package com.example.backend.model;
 
 import java.sql.Timestamp;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table; 
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "seats")
-public class SeatBean {
+public class Seat {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer seatsId;        
-    private String seatsName;     
-    private String seatsType;       
-    private String seatsStatus;     
-    private Integer spotId;         
-    private Timestamp updatedAt;    
-    private String serialNumber;    
-    private Timestamp createdAt;    
+    @Column(name = "seatsId")
+    private Integer seatsId;
 
+    @Column(name = "seatsName")
+    private String seatsName;
 
+    @Column(name = "seatsType")
+    private String seatsType;
 
+    @Column(name = "seatsStatus")
+    private String seatsStatus;
 
-    public SeatBean() {
+    @Column(name = "spotId")
+    private Integer spotId;
+
+    @Column(name = "updatedAt")
+    private Timestamp updatedAt;
+
+    @Column(name = "serialNumber")
+    private String serialNumber;
+
+    @Column(name = "createdAt")
+    private Timestamp createdAt;
+
+    public Seat() {
     }
 
-
-    public SeatBean(Integer seatsId, String seatsName, String seatsType, String seatsStatus,
-                Integer spotId, Timestamp updatedAt, String serialNumber, Timestamp createdAt) {
+    public Seat(Integer seatsId, String seatsName, String seatsType, String seatsStatus,
+            Integer spotId, Timestamp updatedAt, String serialNumber, Timestamp createdAt) {
         this.seatsId = seatsId;
         this.seatsName = seatsName;
         this.seatsType = seatsType;
@@ -80,7 +92,6 @@ public class SeatBean {
         return spotId;
     }
 
-
     public void setSpotId(Integer spotId) {
         this.spotId = spotId;
     }
@@ -97,7 +108,6 @@ public class SeatBean {
         return serialNumber;
     }
 
-
     public void setSerialNumber(String serialNumber) {
         this.serialNumber = serialNumber;
     }
@@ -110,18 +120,4 @@ public class SeatBean {
         this.createdAt = createdAt;
     }
 
-
-    @Override
-    public String toString() {
-        return "Seats{" +
-                "seatsId=" + seatsId +
-                ", seatsName='" + seatsName + '\'' +
-                ", seatsType='" + seatsType + '\'' +
-                ", seatsStatus='" + seatsStatus + '\'' +
-                ", spotId=" + spotId +
-                ", updatedAt=" + updatedAt +
-                ", serialNumber='" + serialNumber + '\'' +
-                ", createdAt=" + createdAt +
-                '}';
-    }
 }

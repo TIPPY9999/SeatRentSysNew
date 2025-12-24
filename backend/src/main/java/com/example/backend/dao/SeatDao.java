@@ -1,16 +1,16 @@
-package com.example.backend.dao.spot;
+package com.example.backend.dao;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.example.backend.model.spot.SeatBean;
+import com.example.backend.model.Seat;
 import com.example.backend.utils.GetConn;
 
 public class SeatDao {
 
-	private SeatBean mapBean(ResultSet rs) throws SQLException {
-		SeatBean bean = new SeatBean();
+	private Seat mapBean(ResultSet rs) throws SQLException {
+		Seat bean = new Seat();
 
 		bean.setSeatsId(rs.getInt("seatsId"));
 		bean.setSeatsName(rs.getString("seatsName"));
@@ -27,8 +27,8 @@ public class SeatDao {
 		return bean;
 	}
 
-	public List<SeatBean> findAll() {
-		List<SeatBean> list = new ArrayList<>();
+	public List<Seat> findAll() {
+		List<Seat> list = new ArrayList<>();
 		String sql = "SELECT seatsId, seatsName, seatsType, seatsStatus, spotId, updatedAt, serialNumber, createdAt "
 				+ "FROM seats";
 
@@ -45,8 +45,8 @@ public class SeatDao {
 		return list;
 	}
 
-	public SeatBean findById(Integer seatsId) {
-		SeatBean bean = null;
+	public Seat findById(Integer seatsId) {
+		Seat bean = null;
 		String sql = "SELECT seatsId, seatsName, seatsType, seatsStatus, spotId, updatedAt, serialNumber, createdAt "
 				+ "FROM seats WHERE seatsId = ?";
 
@@ -65,9 +65,9 @@ public class SeatDao {
 		return bean;
 	}
 
-	public List<SeatBean> findByCondition(String seatsName, String seatsType, String seatsStatus, Integer spotId,
+	public List<Seat> findByCondition(String seatsName, String seatsType, String seatsStatus, Integer spotId,
 			String serialNumber) {
-		List<SeatBean> list = new ArrayList<>();
+		List<Seat> list = new ArrayList<>();
 		List<Object> params = new ArrayList<>();
 
 		StringBuilder sql = new StringBuilder(
@@ -112,7 +112,7 @@ public class SeatDao {
 	}
 
 	// 新增：時間交給 DB
-	public int insert(SeatBean bean) {
+	public int insert(Seat bean) {
 		String sql = "INSERT INTO seats "
 				+ "(seatsName, seatsType, seatsStatus, spotId, serialNumber, createdAt, updatedAt) "
 				+ "VALUES (?, ?, ?, ?, ?, GETDATE(), GETDATE())";
@@ -144,7 +144,7 @@ public class SeatDao {
 	}
 
 	// 更新：updatedAt 交給 DB
-	public int update(SeatBean bean) {
+	public int update(Seat bean) {
 		String sql = "UPDATE seats SET " + "seatsName = ?, seatsType = ?, seatsStatus = ?, spotId = ?, "
 				+ "serialNumber = ?, updatedAt = GETDATE() " + "WHERE seatsId = ?";
 

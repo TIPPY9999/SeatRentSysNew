@@ -3,7 +3,7 @@ package com.example.backend.controller.spot;
 import java.io.IOException;
 import java.util.List;
 
-import com.example.backend.dao.spot.SeatDao;
+import com.example.backend.dao.SeatDao;
 import com.example.backend.model.spot.SeatBean;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;

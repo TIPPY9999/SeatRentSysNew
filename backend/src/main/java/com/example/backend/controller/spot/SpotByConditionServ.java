@@ -28,7 +28,7 @@ public class SpotByConditionServ extends HttpServlet {
         Integer merchantId = parseInteger(request.getParameter("merchantId"));
 
         RentalSpotDao dao = new RentalSpotDao();
-        List<RentalSpotBean> list = dao.findByCondition(spotCode, spotName, spotStatus, merchantId);
+        List<RentalSpot> list = dao.findByCondition(spotCode, spotName, spotStatus, merchantId);
 
         request.setAttribute("spotList", list);
         request.getRequestDispatcher("/WEB-INF/view/spot/spotResult.jsp")

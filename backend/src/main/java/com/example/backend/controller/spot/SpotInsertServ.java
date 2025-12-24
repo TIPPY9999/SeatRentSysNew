@@ -37,7 +37,7 @@ public class SpotInsertServ extends HttpServlet {
         Double latitude = parseDouble(request.getParameter("latitude"));
         Double longitude = parseDouble(request.getParameter("longitude"));
 
-        RentalSpotBean spot = new RentalSpotBean();
+        RentalSpot spot = new RentalSpot();
         spot.setSpotCode(spotCode);
         spot.setSpotName(spotName);
         spot.setSpotAddress(spotAddress);
