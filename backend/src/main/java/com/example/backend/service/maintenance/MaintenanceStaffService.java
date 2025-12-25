@@ -1,6 +1,5 @@
 package com.example.backend.service.maintenance;
 
-import com.example.backend.model.maintenance.MaintenanceInformation;
 import com.example.backend.model.maintenance.MaintenanceStaff;
 import com.example.backend.repository.maintenance.MaintenanceStaffRepository;
 import org.springframework.stereotype.Service;
@@ -25,13 +24,13 @@ public class MaintenanceStaffService {
     public MaintenanceStaff createStaff(MaintenanceStaff staff) {
         validateForCreate(staff);
 
-        // 若你要強一點：統一 trim
         staff.setStaffName(staff.getStaffName().trim());
         if (!isBlank(staff.getStaffEmail())) {
             staff.setStaffEmail(staff.getStaffEmail().trim());
+        } else {
+            staff.setStaffEmail(null); // 避免存空白字串
         }
 
-        // DB 預設 isActive = 1，但 entity nullable=false；保險起見：
         if (staff.getIsActive() == null) {
             staff.setIsActive(true);
         }
@@ -44,26 +43,48 @@ public class MaintenanceStaffService {
 
         MaintenanceStaff existing = getRequiredStaff(staff.getStaffId());
 
-        existing.setStaffName(staff.getStaffName());
-        existing.setStaffCompany(staff.getStaffCompany());
-        existing.setStaffPhone(staff.getStaffPhone());
-        existing.setStaffEmail(staff.getStaffEmail());
-        existing.setStaffNote(staff.getStaffNote());
-        // 不動 createdAt
-        // 不一定要動 isActive（看你 UI 是否允許）
+        // 1. Name 必填，直接 trim
+        existing.setStaffName(staff.getStaffName().trim());
+        
+        // 2. 其他選填欄位：如果前端傳空字串，代表要「清空」，所以要 set(null)
+        if (!isBlank(staff.getStaffCompany())) {
+            existing.setStaffCompany(staff.getStaffCompany().trim());
+        } else {
+            existing.setStaffCompany(null);
+        }
+
+        if (!isBlank(staff.getStaffPhone())) {
+            existing.setStaffPhone(staff.getStaffPhone().trim());
+        } else {
+            existing.setStaffPhone(null);
+        }
+
+        if (!isBlank(staff.getStaffNote())) {
+            existing.setStaffNote(staff.getStaffNote().trim());
+        } else {
+            existing.setStaffNote(null);
+        }
+
+        // 3. Email 特殊處理 (Trim + 空字串轉 null + 唯一性在 validate 已檢查)
+        if (!isBlank(staff.getStaffEmail())) {
+            existing.setStaffEmail(staff.getStaffEmail().trim());
+        } else {
+            existing.setStaffEmail(null);
+        }
+        
+        // UI 有開放改 isActive 可以在這裡 set
+        if (staff.getIsActive() != null) {
+            existing.setIsActive(staff.getIsActive());
+        }
 
         return staffRepo.save(existing);
     }
 
-    /** 軟刪除：isActive = false */
     public void deleteStaff(int staffId) {
         MaintenanceStaff existing = getRequiredStaff(staffId);
-
         if (Boolean.FALSE.equals(existing.getIsActive())) {
-            // 已停用就當成功，或你要丟例外都可以
             return;
         }
-
         existing.setIsActive(false);
         staffRepo.save(existing);
     }
@@ -91,35 +112,35 @@ public class MaintenanceStaffService {
 
     @Transactional(readOnly = true)
     public List<MaintenanceStaff> getStaffByCompany(String staffCompany) {
-        if (isBlank(staffCompany)) {
-            throw new IllegalArgumentException("查詢維護人員時，廠商名稱不能為空白");
-        }
+        if (isBlank(staffCompany)) throw new IllegalArgumentException("廠商名稱不能為空白");
         return staffRepo.findByStaffCompany(staffCompany.trim());
     }
 
     private void validateForCreate(MaintenanceStaff staff) {
         if (staff == null) throw new IllegalArgumentException("維護人員資料不能為 null");
-        if (isBlank(staff.getStaffName())) throw new IllegalArgumentException("維護人員姓名 (staffName) 為必填欄位");
+        if (isBlank(staff.getStaffName())) throw new IllegalArgumentException("維護人員姓名必填");
 
         if (!isBlank(staff.getStaffEmail())) {
             String email = staff.getStaffEmail().trim();
-            // 你原本是 findByEmail，這裡用 exists 更快
             if (staffRepo.existsByStaffEmailIgnoreCase(email)) {
-                throw new IllegalArgumentException("此 Email 已被其他維護人員使用，請改用不同信箱");
+                throw new IllegalArgumentException("此 Email 已被使用");
             }
         }
     }
 
     private void validateForUpdate(MaintenanceStaff staff) {
-        if (staff == null) throw new IllegalArgumentException("維護人員資料不能為 null");
-        if (staff.getStaffId() == null) throw new IllegalArgumentException("更新維護人員時 staffId 不能為 null");
-        if (isBlank(staff.getStaffName())) throw new IllegalArgumentException("維護人員姓名 (staffName) 為必填欄位");
+        if (staff == null) throw new IllegalArgumentException("資料不能為 null");
+        if (staff.getStaffId() == null) throw new IllegalArgumentException("ID 不能為 null");
+        if (isBlank(staff.getStaffName())) throw new IllegalArgumentException("姓名必填");
 
         if (!isBlank(staff.getStaffEmail())) {
             String email = staff.getStaffEmail().trim();
-            MaintenanceStaff existing = staffRepo.findByStaffEmail(email);
+            // 使用 IgnoreCase 確保大小寫視為相同
+            MaintenanceStaff existing = staffRepo.findByStaffEmailIgnoreCase(email);
+            
+            // 如果找得到人，且那個人的 ID 不是我現在要修改的這個人 -> 代表跟別人重複了
             if (existing != null && !existing.getStaffId().equals(staff.getStaffId())) {
-                throw new IllegalArgumentException("此 Email 已被其他維護人員使用，請改用不同信箱");
+                throw new IllegalArgumentException("此 Email 已被其他維護人員使用");
             }
         }
     }
