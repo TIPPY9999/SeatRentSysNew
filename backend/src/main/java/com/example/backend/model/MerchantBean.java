@@ -1,16 +1,19 @@
 package com.example.backend.model;
 import jakarta.persistence.*;
+import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "merchant") // 對應資料庫中的 merchant 表
+@Data
 public class MerchantBean implements java.io.Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "merchantId")
-	private int merchantId;
+	private Integer merchantId;
 
 	@Column(name = "merchantName")
 	private String merchantName;

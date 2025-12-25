@@ -5,7 +5,7 @@
 <hibernate-configuration>
     <session-factory>
         <property name="connection.driver_class">com.microsoft.sqlserver.jdbc.SQLServerDriver</property>
-        <property name="connection.url">jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false</property>
+        <property name="connection.url">jdbc:sqlserver://localhost:1433;databaseName=SeatRentSysNew;encrypt=false</property>
         <property name="connection.username">kang</property>
         <property name="connection.password">1234</property>
 
@@ -15,7 +15,7 @@
         <property name="current_session_context_class">thread</property>
 
         <mapping class="com.example.backend.model.MerchantBean"/>
-        <mapping class="com.seatrentsys.model.merchantandcoupon.discountBean" />
-        <mapping class="com.seatrentsys.model.merchantandcoupon.merchantBean" />
+        <mapping class="com.example.backend.model.DiscountBean" />
+
     </session-factory>
 </hibernate-configuration>

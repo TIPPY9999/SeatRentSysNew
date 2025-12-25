@@ -36,3 +36,4 @@ public class GetAllMerchant extends HttpServlet {
                .forward(request, response);
     }
 }
+ 

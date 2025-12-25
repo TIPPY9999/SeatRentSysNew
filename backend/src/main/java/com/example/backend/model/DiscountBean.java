@@ -11,15 +11,17 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import lombok.Data;
 @Entity
 @Table(name = "discount") // 對應資料庫的資料表名稱
+@Data
 public class DiscountBean implements Serializable{
     private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // 自動遞增
     @Column(name = "couponId")
-    private int couponId;
+    private Integer couponId;
 
     @Column(name = "couponName")
     private String couponName;
