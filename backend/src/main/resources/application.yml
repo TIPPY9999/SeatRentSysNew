@@ -17,7 +17,7 @@ spring:
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: update # 這行很重要！它會自動幫你在資料庫建 Table
+       ddl-auto: update # 這行很重要！它會自動幫你在資料庫建 Table
     properties:
       "[hibernate.format_sql]": true
       "[hibernate.dialect]": org.hibernate.dialect.SQLServerDialect
