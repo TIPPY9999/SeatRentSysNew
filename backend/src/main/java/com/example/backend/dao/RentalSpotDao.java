@@ -1,10 +1,10 @@
 package com.example.backend.dao;
 
 import org.hibernate.query.Query;
+import org.hibernate.Session;
 
 import com.example.backend.model.RentalSpot;
 
-import org.hibernate.Session;
 import java.util.List;
 
 public class RentalSpotDao implements IRentSpotDao {
@@ -27,17 +27,18 @@ public class RentalSpotDao implements IRentSpotDao {
 		return resultBean;
 	}
 
+	@Override
 	public List<RentalSpot> selectAll() {
-		Query<RentalSpot> query = session.createQuery("from RentalSpotBean", RentalSpot.class);
+		Query<RentalSpot> query = session.createQuery("from RentalSpot", RentalSpot.class);
 		return query.list();
 	}
 
 	@Override
 	public RentalSpot update(RentalSpot updateBean) {
-		RentalSpot resultBean = session.find(RentalSpot.class, updateBean.getSpotId());
+		RentalSpot resultBean = session.find(RentalSpot.class,
+				updateBean.getSpotId());
 
 		if (resultBean != null) {
-			// resultBean.setHousename("Wonderful House");
 			session.merge(updateBean);
 		}
 

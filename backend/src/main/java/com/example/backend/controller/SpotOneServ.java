@@ -3,6 +3,8 @@ package com.example.backend.controller.spot;
 import java.io.IOException;
 
 import com.example.backend.dao.spot.RentalSpotDao;
+import org.hibernate.Session;
+import com.example.backend.util.HibernateUtil;
 import com.example.backend.model.spot.RentalSpotBean;
 
 import jakarta.servlet.ServletException;
@@ -36,6 +38,10 @@ public class SpotOneServ extends HttpServlet {
         }
 
         RentalSpotDao dao = new RentalSpotDao();
+        RentalSpotBean spot = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            spot = session.get(RentalSpotBean.class, spotId);
+        }
 
         System.out.print("dao.findById(spotId)");// DEBUG
         RentalSpotBean spot = dao.findById(spotId);

@@ -2,8 +2,9 @@ package com.example.backend.controller.spot;
 
 import java.io.IOException;
 
-import com.example.backend.dao.SeatDao;
-import com.example.backend.model.spot.SeatBean;
+import org.hibernate.Session;
+import com.example.backend.model.Seat;
+import com.example.backend.utils.HibernateUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -25,10 +26,10 @@ public class SeatInsertServ extends HttpServlet {
 
         request.setCharacterEncoding("UTF-8");
 
-        SeatBean bean = new SeatBean();
-        bean.setSeatsName(request.getParameter("seatsName"));
-        bean.setSeatsType(request.getParameter("seatsType"));
-        bean.setSeatsStatus(request.getParameter("seatsStatus"));
+        Seat sBean = new Seat();
+        sBean.setSeatsName(request.getParameter("seatsName"));
+        sBean.setSeatsType(request.getParameter("seatsType"));
+        sBean.setSeatsStatus(request.getParameter("seatsStatus"));
 
         // spotId 防呆
         String spotIdStr = request.getParameter("spotId");
@@ -39,13 +40,22 @@ public class SeatInsertServ extends HttpServlet {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "spotId 格式錯誤");
             return;
         }
-        bean.setSpotId(spotId);
+        sBean.setSpotId(spotId);
 
         String serialNumber = request.getParameter("serialNumber");
-        bean.setSerialNumber((serialNumber == null || serialNumber.isBlank()) ? null : serialNumber.trim());
+        sBean.setSerialNumber((serialNumber == null || serialNumber.isBlank()) ? null : serialNumber.trim());
 
-        // ✅ createdAt / updatedAt 交給 DAO 的 GETDATE()，Servlet 不用塞
-        new SeatDao().insert(bean);
+        Session session = HibernateUtil.getSessionFactory().openSession();
+        try {
+            session.beginTransaction();
+            session.persist(sBean);
+            session.getTransaction().commit();
+        } catch (Exception e) {
+            session.getTransaction().rollback();
+            e.printStackTrace();
+        } finally {
+            session.close();
+        }
 
         response.sendRedirect(request.getContextPath() + "/seat/list");
     }

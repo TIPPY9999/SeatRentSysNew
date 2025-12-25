@@ -1,6 +1,9 @@
 package com.example.backend.model;
 
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,7 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "seats")
+@Table(name = "seats", schema = "dbo")
 public class Seat {
 
     @Id
@@ -30,20 +33,22 @@ public class Seat {
     @Column(name = "spotId")
     private Integer spotId;
 
-    @Column(name = "updatedAt")
-    private Timestamp updatedAt;
-
     @Column(name = "serialNumber")
     private String serialNumber;
 
-    @Column(name = "createdAt")
-    private Timestamp createdAt;
+    @CreationTimestamp
+    @Column(name = "createdAt", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updatedAt")
+    private LocalDateTime updatedAt;
 
     public Seat() {
     }
 
     public Seat(Integer seatsId, String seatsName, String seatsType, String seatsStatus,
-            Integer spotId, Timestamp updatedAt, String serialNumber, Timestamp createdAt) {
+            Integer spotId, LocalDateTime updatedAt, String serialNumber, LocalDateTime createdAt) {
         this.seatsId = seatsId;
         this.seatsName = seatsName;
         this.seatsType = seatsType;
@@ -96,11 +101,11 @@ public class Seat {
         this.spotId = spotId;
     }
 
-    public Timestamp getUpdatedAt() {
+    public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(Timestamp updatedAt) {
+    public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
 
@@ -112,11 +117,11 @@ public class Seat {
         this.serialNumber = serialNumber;
     }
 
-    public Timestamp getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Timestamp createdAt) {
+    public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 

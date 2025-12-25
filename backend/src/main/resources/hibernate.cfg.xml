@@ -16,11 +16,9 @@
 		
 		<property name = "hibernate.current_session_context_class">thread</property>
 		
-		<mapping resource="tw/leon/model/HouseBean.hbm.xml"/>
-		
-		<mapping class="tw.leon.model.Department"/>
-		
-		<mapping class="tw.leon.model.House"/>
+		<!-- 註冊您的 Entity 類別 -->
+		<mapping class="com.example.backend.model.RentalSpot"/>
+		<mapping class="com.example.backend.model.Seat"/>
 
 	</session-factory>
 </hibernate-configuration> 

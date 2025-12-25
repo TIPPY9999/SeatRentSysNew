@@ -1,0 +1,18 @@
+package com.example.backend.service;
+
+import java.util.List;
+
+import com.example.backend.model.Seat;
+
+public interface ISeatService {
+
+    public Seat insert(Seat insertBean);
+
+    public Seat update(Seat updateBean);
+
+    public Seat selectById(Integer seatId);
+
+    public boolean deleteById(Integer seatId);
+
+    public List<Seat> selectAll();
+}

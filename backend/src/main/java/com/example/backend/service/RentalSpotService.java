@@ -5,11 +5,11 @@ import org.hibernate.Session;
 import com.example.backend.dao.RentalSpotDao;
 import com.example.backend.model.RentalSpot;
 
-public class RentSpotService implements IRentalSpotService {
+public class RentalSpotService implements IRentalSpotService {
 
     private RentalSpotDao rDao;
 
-    public RentSpotService(Session session) {
+    public RentalSpotService(Session session) {
         rDao = new RentalSpotDao(session);
     }
 

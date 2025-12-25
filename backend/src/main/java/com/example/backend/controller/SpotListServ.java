@@ -3,8 +3,8 @@ package com.example.backend.controller.spot;
 import java.io.IOException;
 import java.util.List;
 
-import com.example.backend.dao.spot.RentalSpotDao;
-import com.example.backend.model.spot.RentalSpotBean;
+import com.example.backend.dao.RentalSpotDao;
+import com.example.backend.model.RentalSpot;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -21,7 +21,7 @@ public class SpotListServ extends HttpServlet {
             throws ServletException, IOException {
 
         RentalSpotDao dao = new RentalSpotDao();
-        List<RentalSpotBean> list = dao.findAll();
+        List<RentalSpot> list = dao.findAll();
 
         request.setAttribute("spotList", list);
         request.getRequestDispatcher("/WEB-INF/view/spot/spotList.jsp")
