@@ -15,43 +15,43 @@ axios.defaults.timeout = 10000
 
 // 3. 請求攔截器 (Request Interceptor)
 axios.interceptors.request.use(
-  config => {
+  (config) => {
     // 這裡可以統一加入 Token，例如：
     // config.headers['Authorization'] = 'Bearer ' + localStorage.getItem('token')
     console.log('發送請求:', config.url)
     return config
   },
-  error => {
+  (error) => {
     return Promise.reject(error)
-  }
+  },
 )
 
 // 4. 回應攔截器 (Response Interceptor)
 // 這裡可以統一處理後端 Result<T> 的錯誤訊息
 axios.interceptors.response.use(
-  response => {
+  (response) => {
     const res = response.data
-    
+
     // 如果後端回傳的 code 不是 200，直接在這裡噴出 SweetAlert 提示
     if (res.code && res.code !== 200) {
       Swal.fire({
         icon: 'error',
         title: '操作失敗',
-        text: res.message || '系統發生錯誤'
+        text: res.message || '系統發生錯誤',
       })
       return Promise.reject(new Error(res.message || 'Error'))
     }
     return response
   },
-  error => {
+  (error) => {
     // 處理 HTTP 狀態碼錯誤 (如 404, 500)
     Swal.fire({
       icon: 'error',
       title: '網路錯誤',
-      text: '無法連線至伺服器，請檢查後端是否啟動'
+      text: '無法連線至伺服器，請檢查後端是否啟動',
     })
     return Promise.reject(error)
-  }
+  },
 )
 
 // 5. 將 axios 掛載到全域變數 (選用，Vue 3 建議直接 import)

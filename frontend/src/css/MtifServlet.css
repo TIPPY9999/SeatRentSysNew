@@ -1,258 +1,59 @@
-@charset "UTF-8";
+/* 讓外層佔滿內容區 */
+.wrapper { width: 100%; padding: 0; box-sizing: border-box; }
 
-/* ====== 全域 ====== */
-
-:root {
-    --sr-font-main: 'Noto Sans TC', 'Microsoft JhengHei', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --sr-font-title: 'Noto Sans TC', 'Microsoft JhengHei', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+.table-wrapper { 
+  background-color: #fdf5e6; border: 1px solid #c8b79b; 
+  padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
 }
-
-body {
-    margin: 0;
-    font-family: var(--sr-font-main);  /* 用你上面 :root 的變數 */
-    font-size: 15px;
-    background-color: #f0f2f5; /* 淡灰底 */
-    color: #333;
-}
-
-/* 外框容器：置中＋固定寬度 */
-
-.wrapper {
-  max-width: 1200px;
-  margin: 20px auto;
-  padding: 0 8px;
-}
-
-/* 表格外層：像截圖那樣有一個米色底＋陰影 */
-
-.table-wrapper {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 10px;
-  background-color: #fdf5e6;       /* 米色底 */
-  border: 1px solid #c8b79b;       /* 咖啡色邊框 */
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-/* 標題（可用 <div class="table-title">維修工單列表</div>） */
 
 .table-title {
-  font-size: 22px;
-  font-weight: bold;
-  text-align: center;
-  padding: 6px 0;
-  margin-bottom: 6px;
-  background: #d2b48c;   /* 茶色 */
-  color: #2b2114;
+  font-size: 24px; font-weight: bold; text-align: center; padding: 12px 0; 
+  margin: 0 0 20px 0; background: #d2b48c; color: #2b2114; 
+  border: 1px solid #8b7355; letter-spacing: 0.1em;
 }
 
-/* ====== 表格本體（只綁 .jy-table，避免影響其它 table） ====== */
+/* 工具列隨寬度縮放 */
+.toolbar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
 
-.jy-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: #fffdf5;
+.input-field-retro { 
+  padding: 8px 12px; border: 1px solid #c8b79b; background: #fffdf5; 
+  border-radius: 4px; width: 220px; transition: border 0.3s;
 }
 
-/* 標題列 */
-
-.jy-table th {
-  background-color: #f4e3c1;
-  font-weight: bold;
-  text-align: center;
-  padding: 6px 8px;
-  border: 1px solid #555;
-  white-space: nowrap;
+/* --- 表格核心：防止跑版 --- */
+.jy-table { 
+  width: 100%; border-collapse: collapse; background-color: #fffdf5; 
+  table-layout: fixed; /* 關鍵：強制分配欄寬 */
 }
 
-/* 一般儲存格 */
-
-.jy-table td {
-  border: 1px solid #999;
-  padding: 4px 8px;
-  font-size: 14px;
+.jy-table th { background-color: #f4e3c1; color: #5d4037; padding: 12px 8px; border: 1px solid #555; }
+.jy-table td { 
+  border: 1px solid #999; padding: 10px 8px; font-size: 14px; 
+  color: #333; vertical-align: middle; 
+  word-break: break-all; /* 防止電子信箱撐開表格 */
 }
 
-/* 斑馬紋，閱讀比較舒服 */
+.jy-table tbody tr:nth-child(even) { background-color: #fff9f0; }
+.jy-table tbody tr:hover { background-color: #fff1d0; }
 
-.jy-table tbody tr:nth-child(even) {
-  background-color: #fff9f0;
-}
+/* 狀態行效果 */
+.row-disabled { background-color: #e9e9e9 !important; color: #999 !important; }
+.row-ended { background-color: #fff0f0 !important; }
 
-/* 滑過的時候高亮一點 */
+/* 元件樣式 */
+.badge-retro { padding: 4px 8px; border-radius: 4px; font-size: 11px; color: white; white-space: nowrap; }
+.bg-green { background-color: #28a745; }
+.bg-red { background-color: #dc3545; }
+.bg-gray { background-color: #6c757d; }
 
-.jy-table tbody tr:hover {
-  background-color: #fff1d0;
-}
+.btn-retro, .btn-retro-add { background: #8b7355; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; white-space: nowrap; }
+.btn-retro-outline { background: transparent; color: #8b7355; border: 1px solid #8b7355; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
 
-/* 主分類欄位（像你截圖左邊「刀法」那格，如果之後要用） */
+.btn-action { padding: 4px 8px; margin: 2px; border-radius: 4px; border: 1px solid #999; cursor: pointer; font-size: 12px; white-space: nowrap; }
+.edit { background: white; color: #333; }
+.status { background: #d2b48c; color: #2b2114; }
+.delete { background: #dc3545; color: white; border: none; }
 
-.main-category {
-  font-weight: bold;
-  font-style: italic;
-  background-color: #ffe8c2;
-  border-left: 2px solid #555;
-  border-right: 2px solid #555;
-  text-align: center;
-}
-
-/* 長文字欄位（例如「問題描述」、「備註」） */
-
-.jy-table td.text-wrap {
-  white-space: normal;
-  word-break: break-all;
-  overflow-wrap: anywhere;
-}
-
-/* 操作欄（放按鈕用） */
-
-.jy-table td.actions {
-  white-space: nowrap;
-}
-
-/* ====== 簡單的搜尋欄樣式（如果有） ====== */
-
-.search-bar {
-  margin-bottom: 8px;
-  text-align: right;
-}
-
-.search-bar input[type="text"] {
-  padding: 4px 8px;
-  font-size: 13px;
-  border-radius: 4px;
-  border: 1px solid #cbd5e1;
-}
-
-/* ====== RWD：小螢幕略縮間距 ====== */
-
-@media (max-width: 768px) {
-  .wrapper,
-  .table-wrapper {
-    margin: 12px auto;
-  }
-
-  .jy-table td,
-  .jy-table th {
-    padding: 4px 6px;
-    font-size: 12px;
-  }
-
-  .table-title {
-    font-size: 18px;
-  }
-}
-
-/* 問題描述欄位：限制高度 + 捲軸，避免整列被撐太高 */
-.issue-desc {
-  max-width: 260px;       /* 看版面可以調整 */
-  max-height: 80px;       /* 超過就出現捲軸 */
-  overflow-y: auto;
-  white-space: pre-wrap;  /* 保留換行又可以自動換行 */
-  word-break: break-word; /* 長英數字也能斷行 */
-}
-
-/* 讓多行文字不要擠在中間，對齊上方比較好看 */
-.ticket-table td {
-  vertical-align: top;
-}
-
-/* 禁用樣式的按鈕（實際上還是可以點，只是顯示比較淡） */
-.btn.btn-disabled {
-  opacity: 0.5;
-}
-
-.content-header h1,
-.table-title {
-    font-family: var(--sr-font-title);
-    font-weight: 600;
-    font-size: 24px;
-    letter-spacing: 0.08em;
-    color: #333;
-}
-
-/* 小標題 card-title（例如「維護人員列表」卡片標題） */
-.card-title {
-    font-family: var(--sr-font-title);
-    font-weight: 600;
-    letter-spacing: 0.06em;
-}
-
-/* 表格表頭 */
-.jy-table thead th,
-.table thead th {
-    font-family: var(--sr-font-title);
-    font-weight: 600;
-    font-size: 14px;
-    letter-spacing: 0.05em;
-    color: #555;
-    background-color: #f7f7f7;
-    border-bottom: 2px solid #e0e0e0;
-}
-
-/* 表格內容 */
-.jy-table tbody td,
-.table tbody td {
-    font-size: 14px;
-    color: #444;
-    vertical-align: middle;
-}
-
-
-.small-box .inner h3 {
-    font-family: var(--sr-font-title);
-    font-weight: 700;
-    font-size: 30px;
-}
-
-.small-box .inner p {
-    font-size: 14px;
-    letter-spacing: 0.05em;
-}
-
-
-.btn {
-    font-family: var(--sr-font-main);
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-}
-
-/* ====== 優先級顏色（搭配 .badge） ====== */
-.badge.priority-low {
-  background-color: #6c757d;
-}
-
-.badge.priority-medium {
-  background-color: #17a2b8;
-}
-
-.badge.priority-high {
-  background-color: #ffc107;
-  color: #212529;
-}
-
-.badge.priority-urgent {
-  background-color: #dc3545;
-}
-
-/* ====== 狀態顏色 ====== */
-.badge.status-reported {
-  background-color: #6c757d;
-}
-
-.badge.status-assigned {
-  background-color: #007bff;
-}
-
-.badge.status-under {
-  background-color: #17a2b8;
-}
-
-.badge.status-resolved {
-  background-color: #28a745;
-}
-
-.badge.status-cancelled {
-  background-color: #6c757d;
-}
+.text-center { text-align: center; }
+.bold-text { font-weight: 600; color: #2b2114; }
+.empty-state { text-align: center; padding: 30px; color: #8b7355; font-style: italic; }

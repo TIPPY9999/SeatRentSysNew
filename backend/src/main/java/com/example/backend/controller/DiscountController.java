@@ -1,4 +1,5 @@
 package com.example.backend.controller;
+
 import com.example.backend.model.DiscountBean;
 import com.example.backend.model.Result;
 import com.example.backend.service.DiscountService;
@@ -14,7 +15,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/discounts")
-@CrossOrigin
+@CrossOrigin(origins = "http://localhost:5173")
 public class DiscountController {
 
     @Autowired
@@ -36,20 +37,21 @@ public class DiscountController {
     public Result<String> save(
             @RequestPart("discount") DiscountBean discount,
             @RequestPart(value = "image", required = false) MultipartFile file) {
-        
+
         try {
             if (file != null && !file.isEmpty()) {
                 // 生成唯一檔名防止重複
                 String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
                 File dest = new File(uploadPath + fileName);
-                
+
                 // 確保目錄存在
-                if (!dest.getParentFile().exists()) dest.getParentFile().mkdirs();
-                
+                if (!dest.getParentFile().exists())
+                    dest.getParentFile().mkdirs();
+
                 file.transferTo(dest);
                 discount.setCouponImg(fileName); // 存入資料庫的是檔名
             }
-            
+
             discountService.save(discount);
             return Result.success(null, "儲存成功");
         } catch (IOException e) {

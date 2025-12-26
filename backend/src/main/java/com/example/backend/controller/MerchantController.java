@@ -19,7 +19,7 @@ import com.example.backend.service.MerchantService;
 
 @RestController
 @RequestMapping("/api/merchants")
-@CrossOrigin // 允許來自 Vue (如 http://localhost:5173) 的跨域請求
+@CrossOrigin(origins = "http://localhost:5173") // 允許來自 Vue (如 http://localhost:5173) 的跨域請求
 public class MerchantController {
 
     @Autowired

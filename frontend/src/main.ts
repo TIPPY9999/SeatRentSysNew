@@ -1,4 +1,4 @@
-import './assets/main.css'
+import "./assets/AdminLTE-4.0.0-rc4/dist/css/adminlte.min.css";
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
