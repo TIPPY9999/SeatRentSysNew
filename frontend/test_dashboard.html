@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>座位租借系統 - API 測試儀表板</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- 引入 Bootstrap 5 (為了好看一點) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div id="app" class="container py-5">
+    <h1 class="mb-4 text-center">後端 API 整合測試</h1>
+
+    <!-- 切換分頁 -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link" :class="{ active: currentTab === 'seat' }" href="#" @click.prevent="currentTab = 'seat'">座位管理 (Seat)</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" :class="{ active: currentTab === 'spot' }" href="#" @click.prevent="currentTab = 'spot'">據點管理 (Spot)</a>
+        </li>
+    </ul>
+
+    <!-- 座位管理區塊 -->
+    <div v-if="currentTab === 'seat'">
+        <div class="card mb-4">
+            <div class="card-header">新增座位</div>
+            <div class="card-body">
+                <form @submit.prevent="addSeat" class="row g-3">
+                    <div class="col-md-3"><input v-model="seatForm.seatsName" class="form-control" placeholder="座位名稱"></div>
+                    <div class="col-md-3"><input v-model="seatForm.seatsType" class="form-control" placeholder="類型"></div>
+                    <div class="col-md-3"><input v-model="seatForm.seatsStatus" class="form-control" placeholder="狀態 (1:啟用)"></div>
+                    <div class="col-md-3"><button type="submit" class="btn btn-primary w-100">新增</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>座位列表</span>
+                <button @click="loadSeats" class="btn btn-sm btn-secondary">重新整理</button>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>名稱</th>
+                            <th>類型</th>
+                            <th>狀態</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="seat in seats" :key="seat.seatsId">
+                            <td>{{ seat.seatsId }}</td>
+                            <td>{{ seat.seatsName }}</td>
+                            <td>{{ seat.seatsType }}</td>
+                            <td>{{ seat.seatsStatus }}</td>
+                            <td>
+                                <button @click="deleteSeat(seat.seatsId)" class="btn btn-danger btn-sm">刪除</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 據點管理區塊 -->
+    <div v-if="currentTab === 'spot'">
+        <div class="card mb-4">
+            <div class="card-header">新增據點</div>
+            <div class="card-body">
+                <form @submit.prevent="addSpot" class="row g-3">
+                    <div class="col-md-3"><input v-model="spotForm.spotCode" class="form-control" placeholder="據點代碼"></div>
+                    <div class="col-md-3"><input v-model="spotForm.spotName" class="form-control" placeholder="據點名稱"></div>
+                    <div class="col-md-3"><input v-model="spotForm.spotStatus" class="form-control" placeholder="狀態 (1:營業中)"></div>
+                    <div class="col-md-3"><button type="submit" class="btn btn-success w-100">新增</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>據點列表</span>
+                <button @click="loadSpots" class="btn btn-sm btn-secondary">重新整理</button>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>代碼</th>
+                            <th>名稱</th>
+                            <th>狀態</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="spot in spots" :key="spot.spotId">
+                            <td>{{ spot.spotId }}</td>
+                            <td>{{ spot.spotCode }}</td>
+                            <td>{{ spot.spotName }}</td>
+                            <td>{{ spot.spotStatus }}</td>
+                            <td>
+                                <button @click="deleteSpot(spot.spotId)" class="btn btn-danger btn-sm">刪除</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, onMounted } = Vue;
+
+    // 設定後端 API 基礎路徑 (請依實際狀況調整 Port)
+    const API_BASE_URL = 'http://localhost:8081'; 
+
+    createApp({
+        setup() {
+            const currentTab = ref('seat');
+            const seats = ref([]);
+            const spots = ref([]);
+
+            // 表單資料
+            const seatForm = ref({ seatsName: '', seatsType: '', seatsStatus: '1' });
+            const spotForm = ref({ spotCode: '', spotName: '', spotStatus: '1' });
+
+            // 載入座位列表
+            const loadSeats = async () => {
+                try {
+                    const res = await axios.get(`${API_BASE_URL}/seat/list`);
+                    seats.value = res.data;
+                } catch (err) {
+                    // [修正] 顯示後端回傳的詳細錯誤內容，方便除錯
+                    alert(`讀取座位失敗: ${err.response ? JSON.stringify(err.response.data) : err.message}`);
+                    console.error(err);
+                }
+            };
+
+            // 新增座位
+            const addSeat = async () => {
+                try {
+                    const params = new URLSearchParams();
+                    params.append('seatsName', seatForm.value.seatsName);
+                    params.append('seatsType', seatForm.value.seatsType);
+                    params.append('seatsStatus', seatForm.value.seatsStatus);
+                    
+                    await axios.post(`${API_BASE_URL}/seat/insert`, params);
+                    alert('新增成功');
+                    loadSeats(); // 重新整理
+                    seatForm.value = { seatsName: '', seatsType: '', seatsStatus: '1' }; // 清空表單
+                } catch (err) {
+                    alert('新增失敗');
+                    console.error(err);
+                }
+            };
+
+            // 刪除座位
+            const deleteSeat = async (id) => {
+                if(!confirm('確定刪除?')) return;
+                try {
+                    const params = new URLSearchParams();
+                    params.append('seatsId', id);
+                    await axios.post(`${API_BASE_URL}/seat/delete`, params);
+                    loadSeats();
+                } catch (err) {
+                    alert('刪除失敗');
+                }
+            };
+
+            // 載入據點列表
+            const loadSpots = async () => {
+                try {
+                    const res = await axios.get(`${API_BASE_URL}/spot/list`);
+                    spots.value = res.data;
+                } catch (err) {
+                    // [修正] 顯示後端回傳的詳細錯誤內容
+                    alert(`讀取據點失敗: ${err.response ? JSON.stringify(err.response.data) : err.message}`);
+                    console.error(err);
+                }
+            };
+
+            // 新增據點
+            const addSpot = async () => {
+                try {
+                    const params = new URLSearchParams();
+                    params.append('spotCode', spotForm.value.spotCode);
+                    params.append('spotName', spotForm.value.spotName);
+                    params.append('spotStatus', spotForm.value.spotStatus);
+                    
+                    await axios.post(`${API_BASE_URL}/spot/insert`, params);
+                    alert('新增成功');
+                    loadSpots();
+                    spotForm.value = { spotCode: '', spotName: '', spotStatus: '1' };
+                } catch (err) {
+                    alert('新增失敗');
+                    console.error(err);
+                }
+            };
+
+            // 刪除據點
+            const deleteSpot = async (id) => {
+                if(!confirm('確定刪除?')) return;
+                try {
+                    const params = new URLSearchParams();
+                    params.append('spotId', id);
+                    await axios.post(`${API_BASE_URL}/spot/delete`, params);
+                    loadSpots();
+                } catch (err) {
+                    alert('刪除失敗');
+                }
+            };
+
+            // 頁面載入時執行
+            onMounted(() => {
+                loadSeats();
+                loadSpots();
+            });
+
+            return {
+                currentTab,
+                seats,
+                spots,
+                seatForm,
+                spotForm,
+                loadSeats,
+                addSeat,
+                deleteSeat,
+                loadSpots,
+                addSpot,
+                deleteSpot
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

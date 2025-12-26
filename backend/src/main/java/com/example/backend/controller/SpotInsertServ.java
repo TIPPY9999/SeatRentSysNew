@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import com.example.backend.service.RentalSpotService;
 import com.example.backend.model.RentalSpot;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,8 +14,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class SpotInsertServ {
 
-    @Autowired
-    private RentalSpotService rentalSpotService;
+    // [修正：改用建構子注入]
+    // 透過建構子傳入依賴，而不是讓 Spring 在事後才注入，
+    // 這種方式更符合物件導向的「不變性」原則。
+    private final RentalSpotService rentalSpotService;
+
+    public SpotInsertServ(RentalSpotService rentalSpotService) {
+        this.rentalSpotService = rentalSpotService;
+    }
 
     // [AXIOS POST 流程說明]
     // 1. 接收：前端 Vue 透過 axios.post('/spot/insert', params) 發送請求。

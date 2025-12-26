@@ -2,15 +2,19 @@ package com.example.backend.controller;
 
 import com.example.backend.service.RentalSpotService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class SpotDeleteServ {
 
-    @Autowired
-    private RentalSpotService rentalSpotService;
+    // [修正：改用建構子注入]
+    // 確保 Controller 依賴的 Service 在建立時就已備妥。
+    private final RentalSpotService rentalSpotService;
+
+    public SpotDeleteServ(RentalSpotService rentalSpotService) {
+        this.rentalSpotService = rentalSpotService;
+    }
 
     // [AXIOS POST 流程]
     // 前端發送刪除請求 -> 這裡接收 ID -> 呼叫 Service 刪除 -> 回傳簡單字串

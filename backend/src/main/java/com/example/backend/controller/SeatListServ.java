@@ -4,9 +4,9 @@ import java.util.List;
 
 import com.example.backend.model.Seat;
 import com.example.backend.service.SeatService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+// import org.springframework.beans.factory.annotation.Autowired;
 
 // 改用 @RestController：
 // 這就像是給這個類別掛上「Web 櫃台」的招牌。
@@ -20,8 +20,20 @@ public class SeatListServ {
     // 以前我們要自己 new SeatService()，還要管 Session。
     // 現在 Spring 容器這個大管家已經幫我們準備好 SeatService 了，
     // 只要喊一聲，它就會自動把做好的實例送進來，我們直接用就好。
-    @Autowired
-    private SeatService seatService;
+    // [註解掉的原因]：改用建構子注入，這是 Spring 官方更推薦的最佳實踐，
+    // 可以提升程式碼的穩定性與可測試性。
+    // @Autowired
+    // private final SeatService seatService;
+
+    // [修正：改用建構子注入]
+    // 1. 移除 @Autowired，將變數設為 final，確保它在物件建立後不會被更改。
+    private final SeatService seatService;
+
+    // 2. 建立建構子，讓 Spring 在建立這個 Controller 時，必須提供一個 SeatService。
+    // [優點]：依賴關係在物件建立時就已固定，無法在執行期間被意外修改，讓程式更可靠。
+    public SeatListServ(SeatService seatService) {
+        this.seatService = seatService;
+    }
 
     // 使用 @GetMapping：
     // 這就是路標，告訴系統：「只要有人用 GET 方法敲 /seat/list 這個門，就找我處理」。

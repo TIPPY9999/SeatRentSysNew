@@ -3,7 +3,6 @@ package com.example.backend.controller;
 import com.example.backend.model.Seat;
 import com.example.backend.service.SeatService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,8 +10,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class SeatUpdateServ {
 
-	@Autowired
-	private SeatService seatService;
+	// [修正：改用建構子注入]
+	private final SeatService seatService;
+
+	public SeatUpdateServ(SeatService seatService) {
+		this.seatService = seatService;
+	}
 
 	// [處理進入編輯頁時的資料讀取]
 	// 對應前端 axios.get('/seat/update', { params: { seatsId: ... } })

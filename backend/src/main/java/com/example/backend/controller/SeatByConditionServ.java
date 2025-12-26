@@ -5,9 +5,9 @@ import java.util.List;
 import com.example.backend.model.Seat;
 import com.example.backend.service.SeatService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+// import org.springframework.beans.factory.annotation.Autowired;
 
 // 改用 @RestController 註解：
 // 1. 告訴 Spring 這是一個控制器組件。
@@ -18,8 +18,21 @@ public class SeatByConditionServ {
     // 使用 @Autowired 進行依賴注入 (DI)：
     // Spring 容器會自動將已管理的 SeatService 實例注入進來，
     // 取代了傳統手動 new SeatService(session) 的方式，實現解耦與資源管理。
-    @Autowired
-    private SeatService seatService;
+    // [註解掉的原因]：改用建構子注入。雖然 @Autowired 欄位注入很方便，但它會讓單元測試變得困難，
+    // 且有隱藏依賴關係的風險。
+    // @Autowired
+    // private final SeatService seatService;
+
+    // [修正：改用建構子注入]
+    // 1. 移除 @Autowired，將變數設為 final，確保它在物件建立後不會被更改。
+    private final SeatService seatService;
+
+    // [修正]：補上建構子 (Constructor)
+    // 2. 建立建構子，讓 Spring 在建立這個 Controller 時，必須提供一個 SeatService 實例。
+    // [優點]：這種方式確保了依賴關係在物件建立時就已確定，且無法被更改，是更穩健的寫法。
+    public SeatByConditionServ(SeatService seatService) {
+        this.seatService = seatService;
+    }
 
     // 使用 @GetMapping 對應 HTTP GET 請求：
     // 取代了傳統 Servlet 的 doGet 方法判斷。

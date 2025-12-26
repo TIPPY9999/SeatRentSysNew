@@ -2,7 +2,6 @@ package com.example.backend.service;
 
 import com.example.backend.model.RentalSpot;
 import com.example.backend.repository.RentalSpotRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.criteria.Predicate;
@@ -14,12 +13,18 @@ import java.util.List;
 @Transactional
 public class RentalSpotService implements IRentalSpotService {
 
-    // @Autowired: 這是 Spring 的「自動裝配」。
-    // 我們不需要自己寫 RentalSpotRepository 的實作類別 (DAO)，
-    // Spring Data JPA 會在啟動時自動幫我們產生一個代理物件，裡面已經寫好了所有 CRUD 的 SQL 邏輯。
-    // 這樣我們就不用再寫 EntityManager 的 persist, merge, remove 等底層程式碼了。
-    @Autowired
-    private RentalSpotRepository rentalSpotRepository;
+    // [修正：改用建構子注入]
+    // 1. 加上 final：確保這個變數一旦被賦值後就不會被修改，增加系統穩定性。
+    // 2. 移除 @Autowired：不再直接對欄位進行注入，避免測試困難。
+    private final RentalSpotRepository rentalSpotRepository;
+
+    // [建構子注入原理]
+    // 當 Spring 建立 RentalSpotService 的時候，看到這個建構子，就會自動去尋找 RentalSpotRepository
+    // 的實例並傳進來。
+    // 這確保了 Service 建立完成時，Repository 一定已經準備好，不會有 NullPointerException 的風險。
+    public RentalSpotService(RentalSpotRepository rentalSpotRepository) {
+        this.rentalSpotRepository = rentalSpotRepository;
+    }
 
     @Override
     public List<RentalSpot> selectAll() {

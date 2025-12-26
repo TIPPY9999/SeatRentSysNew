@@ -2,7 +2,6 @@ package com.example.backend.service;
 
 import com.example.backend.model.Seat;
 import com.example.backend.repository.SeatRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.criteria.Predicate;
@@ -14,10 +13,14 @@ import java.util.List;
 @Transactional
 public class SeatService implements ISeatService {
 
-    // @Autowired: 自動注入 SeatRepository。
-    // 這是 Spring Data JPA 的核心，它讓我們不用寫 DAO 實作類別就能操作資料庫。
-    @Autowired
-    private SeatRepository seatRepository;
+    // [修正：改用建構子注入]
+    // 將依賴設為 final，確保不可變性 (Immutability)。
+    private final SeatRepository seatRepository;
+
+    // Spring 4.3+ 之後，如果類別只有一個建構子，可以省略 @Autowired 註解，Spring 會自動使用它來注入依賴。
+    public SeatService(SeatRepository seatRepository) {
+        this.seatRepository = seatRepository;
+    }
 
     @Override
     public Seat insert(Seat seat) {

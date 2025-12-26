@@ -6,15 +6,25 @@ import com.example.backend.service.RentalSpotService;
 import com.example.backend.model.RentalSpot;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class SpotByConditionServ {
 
-    @Autowired
-    private RentalSpotService rentalSpotService;
+    // [註解掉的原因]：改用建構子注入。
+    // @Autowired
+    // private final RentalSpotService rentalSpotService;
+
+    // [修正：改用建構子注入]
+    // 1. 將變數設為 final，確保它在物件建立後不會被更改。
+    private final RentalSpotService rentalSpotService;
+
+    // 2. 建立建構子，讓 Spring 在建立這個 Controller 時，必須提供一個 RentalSpotService。
+    // [優點]：這種方式強制依賴在物件建立時就必須存在，避免了執行期間才發現 NullPointerException 的問題。
+    public SpotByConditionServ(RentalSpotService rentalSpotService) {
+        this.rentalSpotService = rentalSpotService;
+    }
 
     // [處理前端的查詢請求]
     // 對應前端 axios.get('/spot/condition', { params: { spotName: '...', ... } })

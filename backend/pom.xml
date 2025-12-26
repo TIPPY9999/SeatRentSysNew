@@ -70,6 +70,24 @@
       <optional>true</optional>
     </dependency>
 
+    <!-- [註解原因]：專案已完全改為前後端分離架構，後端不再需要處理 JSP。 -->
+    <!-- 因此，與 JSP 相關的依賴 (jasper, jstl) 已無作用，可以註解掉以保持專案純淨。 -->
+    <!-- 支援 JSP 解析 -->
+    <!--
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-jasper</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    -->
+    <!-- 支援 JSTL 標籤庫 (如 c:forEach) -->
+    <!--
+    <dependency>
+      <groupId>org.glassfish.web</groupId>
+      <artifactId>jakarta.servlet.jsp.jstl</artifactId>
+    </dependency>
+    -->
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>

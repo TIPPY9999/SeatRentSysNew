@@ -102,7 +102,7 @@ const saveSpot = async () => {
       await axios.post('/spot/insert', params);
     }
     // 3. 後續：如果沒有報錯 (catch)，代表後端處理成功 (HTTP 200)，我們就跳轉回列表頁。
-    router.push('/spot/result');
+    router.push('/spot/list');
   } catch (error) {
     console.error('Save failed:', error);
   }

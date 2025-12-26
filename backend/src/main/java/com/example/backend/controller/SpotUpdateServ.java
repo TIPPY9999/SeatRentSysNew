@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import com.example.backend.model.RentalSpot;
 import com.example.backend.service.RentalSpotService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,8 +12,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class SpotUpdateServ {
 
-    @Autowired
-    private RentalSpotService rentalSpotService;
+    // [修正：改用建構子注入]
+    // 讓 Controller 的依賴關係在建立物件時就一目了然。
+    private final RentalSpotService rentalSpotService;
+
+    public SpotUpdateServ(RentalSpotService rentalSpotService) {
+        this.rentalSpotService = rentalSpotService;
+    }
 
     // [處理前端的 GET 請求]
     // 對應前端 axios.get('/spot/update', { params: { spotId: ... } })
