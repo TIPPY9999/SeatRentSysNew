@@ -1,40 +1,27 @@
 package com.example.backend.controller;
 
-import java.io.IOException;
 import com.example.backend.service.RentalSpotService;
 import com.example.backend.model.RentalSpot;
-import com.example.backend.utils.HibernateUtil;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@WebServlet("/spot/one")
-public class SpotOneServ extends HttpServlet {
+@RestController
+public class SpotOneServ {
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+    @Autowired
+    private RentalSpotService rentalSpotService;
+
+    // [處理單筆查詢]
+    // 對應前端 axios.get('/spot/one', { params: { spotId: ... } })
+    @GetMapping("/spot/one")
+    public RentalSpot getOne(HttpServletRequest req) {
         String spotIdStr = req.getParameter("spotId");
-        SessionFactory factory = HibernateUtil.getSessionFactory();
-        Session session = factory.getCurrentSession();
-        Transaction tx = null;
-        try {
-            tx = session.beginTransaction();
-            if (spotIdStr != null && !spotIdStr.isBlank()) {
-                RentalSpotService rentalSpotService = new RentalSpotService(session);
-                RentalSpot spot = rentalSpotService.selectById(Integer.valueOf(spotIdStr));
-                req.setAttribute("spot", spot);
-            }
-            tx.commit();
-            req.getRequestDispatcher("/WEB-INF/view/spotOne.jsp").forward(req, res);
-        } catch (Exception e) {
-            if (tx != null)
-                tx.rollback();
-            throw new ServletException(e);
+        if (spotIdStr != null && !spotIdStr.isBlank()) {
+            // 回傳單一物件，自動轉 JSON
+            return rentalSpotService.selectById(Integer.valueOf(spotIdStr));
         }
+        return null;
     }
 }

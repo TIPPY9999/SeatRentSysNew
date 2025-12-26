@@ -1,26 +1,26 @@
 package com.example.backend.controller;
 
-import java.io.IOException;
 import java.util.List;
 
 import com.example.backend.service.RentalSpotService;
 import com.example.backend.model.RentalSpot;
 
-import com.example.backend.utils.HibernateUtil;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@WebServlet("/spot/condition")
-public class SpotByConditionServ extends HttpServlet {
+@RestController
+public class SpotByConditionServ {
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+    @Autowired
+    private RentalSpotService rentalSpotService;
+
+    // [處理前端的查詢請求]
+    // 對應前端 axios.get('/spot/condition', { params: { spotName: '...', ... } })
+    @GetMapping("/spot/condition")
+    public List<RentalSpot> getByCondition(HttpServletRequest req) {
+        // 1. 接收：從 URL 參數中取出查詢條件
         String spotCode = req.getParameter("spotCode");
         String spotName = req.getParameter("spotName");
         String spotStatus = req.getParameter("spotStatus");
@@ -28,20 +28,10 @@ public class SpotByConditionServ extends HttpServlet {
         String merchantIdStr = req.getParameter("merchantId");
         Integer merchantId = (merchantIdStr == null || merchantIdStr.isBlank()) ? null : Integer.valueOf(merchantIdStr);
 
-        SessionFactory factory = HibernateUtil.getSessionFactory();
-        Session session = factory.getCurrentSession();
-        Transaction tx = null;
-        try {
-            tx = session.beginTransaction();
-            RentalSpotService rentalSpotService = new RentalSpotService(session);
-            List<RentalSpot> list = rentalSpotService.findByCondition(spotCode, spotName, spotStatus, merchantId);
-            req.setAttribute("spotList", list);
-            tx.commit();
-            req.getRequestDispatcher("/WEB-INF/view/spotResult.jsp").forward(req, res);
-        } catch (Exception e) {
-            if (tx != null)
-                tx.rollback();
-            throw new ServletException(e);
-        }
+        // 2. 處理：呼叫 Service 進行資料庫模糊查詢
+        // 3. 回傳：回傳 List<RentalSpot> (租借據點列表)，Spring Boot 會自動轉成 JSON 陣列 (例如
+        // [{"spotId":1...},
+        // {"spotId":2...}])
+        return rentalSpotService.findByCondition(spotCode, spotName, spotStatus, merchantId);
     }
 }

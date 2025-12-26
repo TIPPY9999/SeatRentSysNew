@@ -1,56 +1,46 @@
 package com.example.backend.controller;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 
 import com.example.backend.model.RentalSpot;
 import com.example.backend.service.RentalSpotService;
-import com.example.backend.utils.HibernateUtil;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@WebServlet("/spot/update")
-public class SpotUpdateServ extends HttpServlet {
+@RestController
+public class SpotUpdateServ {
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+    @Autowired
+    private RentalSpotService rentalSpotService;
+
+    // [處理前端的 GET 請求]
+    // 對應前端 axios.get('/spot/update', { params: { spotId: ... } })
+    @GetMapping("/spot/update")
+    public RentalSpot getOne(HttpServletRequest req) {
+        // 1. 接收：從 URL 參數中取出 spotId (例如 ?spotId=123)
         String spotIdStr = req.getParameter("spotId");
         Integer spotId = null;
-        try {
-            // 修改說明：將資料解析移至交易前，若格式錯誤直接拋出例外，避免開啟無謂的資料庫交易浪費資源
-            spotId = (spotIdStr == null || spotIdStr.isBlank()) ? null : Integer.valueOf(spotIdStr);
-        } catch (NumberFormatException e) {
-            throw new ServletException("spotId 格式錯誤", e);
+        if (spotIdStr != null && !spotIdStr.isBlank()) {
+            spotId = Integer.valueOf(spotIdStr);
         }
 
-        SessionFactory factory = HibernateUtil.getSessionFactory();
-        Session session = factory.getCurrentSession();
-        Transaction tx = null;
-        try {
-            tx = session.beginTransaction();
-            if (spotId != null) {
-                RentalSpotService rentalSpotService = new RentalSpotService(session);
-                RentalSpot spot = rentalSpotService.selectById(spotId);
-                req.setAttribute("spot", spot);
-            }
-            tx.commit();
-            req.getRequestDispatcher("/WEB-INF/view/spotUpdate.jsp").forward(req, res);
-        } catch (Exception e) {
-            if (tx != null)
-                tx.rollback();
-            throw new ServletException(e);
+        // 2. 處理：呼叫 Service 去資料庫找資料
+        if (spotId != null) {
+            // 3. 回傳：直接回傳 RentalSpot (租借據點) 物件。
+            // Spring Boot 會自動把它轉換成 JSON 格式 (例如 {"spotId":123, "spotName":"..."}) 傳回給前端。
+            return rentalSpotService.selectById(spotId);
         }
+        return null;
     }
 
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        req.setCharacterEncoding("UTF-8");
+    // [處理前端的 POST 請求]
+    // 對應前端 axios.post('/spot/update', params)
+    @PostMapping("/spot/update")
+    public RentalSpot update(HttpServletRequest req) {
+        // 1. 接收：因為前端是用 URLSearchParams 打包的，所以這裡可以用 req.getParameter() 接收每一個欄位。
         String spotIdStr = req.getParameter("spotId");
         String spotCode = req.getParameter("spotCode");
         String spotName = req.getParameter("spotName");
@@ -66,50 +56,32 @@ public class SpotUpdateServ extends HttpServlet {
         BigDecimal latitude = null;
         BigDecimal longitude = null;
 
-        try {
-            // 修改說明：統一在交易前處理資料轉型，確保進入交易時資料已準備就緒，減少交易內的運算成本
-            spotId = (spotIdStr == null || spotIdStr.isBlank()) ? null : Integer.valueOf(spotIdStr);
-            merchantId = (merchantIdStr == null || merchantIdStr.isBlank()) ? null : Integer.valueOf(merchantIdStr);
-            latitude = (latStr == null || latStr.isBlank()) ? null : new BigDecimal(latStr);
-            longitude = (lonStr == null || lonStr.isBlank()) ? null : new BigDecimal(lonStr);
-        } catch (Exception e) {
-            throw new ServletException("輸入資料格式錯誤", e);
-        }
+        // 資料轉型邏輯...
+        spotId = (spotIdStr == null || spotIdStr.isBlank()) ? null : Integer.valueOf(spotIdStr);
+        merchantId = (merchantIdStr == null || merchantIdStr.isBlank()) ? null : Integer.valueOf(merchantIdStr);
+        latitude = (latStr == null || latStr.isBlank()) ? null : new BigDecimal(latStr);
+        longitude = (lonStr == null || lonStr.isBlank()) ? null : new BigDecimal(lonStr);
 
-        SessionFactory factory = HibernateUtil.getSessionFactory();
-        Session session = factory.getCurrentSession();
-        Transaction tx = null;
-        try {
-            tx = session.beginTransaction();
-            RentalSpotService rentalSpotService = new RentalSpotService(session);
+        RentalSpot spot = null;
+        if (spotId != null) {
+            // 2. 處理：先查出舊資料，再更新欄位，最後存回資料庫
+            spot = rentalSpotService.selectById(spotId);
 
-            if (spotId != null) {
-                // 修改說明：採用「先查詢，後更新」模式，確保只更新表單提供的欄位，避免遺失原資料庫中未修改的欄位資料(如建立時間等)
-                // 1. 先從資料庫取出舊資料
-                RentalSpot spot = rentalSpotService.selectById(spotId);
+            if (spot != null) {
+                spot.setSpotCode(spotCode);
+                spot.setSpotName(spotName);
+                spot.setSpotAddress(spotAddress);
+                spot.setSpotStatus(spotStatus);
 
-                if (spot != null) {
-                    // 2. 更新欄位
-                    spot.setSpotCode(spotCode);
-                    spot.setSpotName(spotName);
-                    spot.setSpotAddress(spotAddress);
-                    spot.setSpotStatus(spotStatus);
+                spot.setMerchantId(merchantId);
+                spot.setLatitude(latitude);
+                spot.setLongitude(longitude);
 
-                    // 處理數值型別
-                    spot.setMerchantId(merchantId);
-                    spot.setLatitude(latitude);
-                    spot.setLongitude(longitude);
-
-                    // 3. 執行更新 (Hibernate 會自動偵測變更，明確呼叫 update 也可以)
-                    rentalSpotService.update(spot);
-                }
+                // 3. 回傳：更新成功後，回傳更新後的物件 (JSON)。
+                // 前端收到這個回應，就知道「更新成功」了。
+                return rentalSpotService.update(spot);
             }
-            tx.commit();
-            res.sendRedirect(req.getContextPath() + "/spot/list");
-        } catch (Exception e) {
-            if (tx != null)
-                tx.rollback();
-            throw new ServletException(e);
         }
+        return null;
     }
 }

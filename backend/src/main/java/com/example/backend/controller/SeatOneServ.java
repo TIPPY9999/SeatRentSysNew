@@ -1,40 +1,27 @@
 package com.example.backend.controller;
 
-import java.io.IOException;
 import com.example.backend.model.Seat;
 import com.example.backend.service.SeatService;
-import com.example.backend.utils.HibernateUtil;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@WebServlet("/seat/one")
-public class SeatOneServ extends HttpServlet {
+@RestController
+public class SeatOneServ {
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+    @Autowired
+    private SeatService seatService;
+
+    // [處理單筆座位查詢]
+    // 對應前端 axios.get('/seat/one', { params: { seatsId: ... } })
+    @GetMapping("/seat/one")
+    public Seat getOne(HttpServletRequest req) {
         String seatsIdStr = req.getParameter("seatsId");
-        SessionFactory factory = HibernateUtil.getSessionFactory();
-        Session session = factory.getCurrentSession();
-        Transaction tx = null;
-        try {
-            tx = session.beginTransaction();
-            if (seatsIdStr != null && !seatsIdStr.isBlank()) {
-                SeatService seatService = new SeatService(session);
-                Seat seat = seatService.selectById(Integer.valueOf(seatsIdStr));
-                req.setAttribute("seat", seat);
-            }
-            tx.commit();
-            req.getRequestDispatcher("/WEB-INF/view/seatOne.jsp").forward(req, res);
-        } catch (Exception e) {
-            if (tx != null)
-                tx.rollback();
-            throw new ServletException(e);
+        if (seatsIdStr != null && !seatsIdStr.isBlank()) {
+            // 回傳單一物件，自動轉 JSON
+            return seatService.selectById(Integer.valueOf(seatsIdStr));
         }
+        return null;
     }
 }

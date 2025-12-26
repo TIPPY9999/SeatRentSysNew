@@ -1,31 +1,28 @@
 package com.example.backend.controller;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 
 import com.example.backend.service.RentalSpotService;
-import com.example.backend.utils.HibernateUtil;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
 import com.example.backend.model.RentalSpot;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@WebServlet("/spot/insert")
-public class SpotInsertServ extends HttpServlet {
+// [改寫說明]
+// 1. @RestController: 宣告這是 Spring Boot 的控制器，回傳資料會自動轉 JSON。
+// 2. 移除 HttpServlet: 不再需要繼承傳統 Servlet，解耦 Web 容器依賴。
+@RestController
+public class SpotInsertServ {
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        req.getRequestDispatcher("/WEB-INF/view/spotInsert.jsp").forward(req, res);
-    }
+    @Autowired
+    private RentalSpotService rentalSpotService;
 
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        req.setCharacterEncoding("UTF-8");
+    // [AXIOS POST 流程說明]
+    // 1. 接收：前端 Vue 透過 axios.post('/spot/insert', params) 發送請求。
+    // 2. 處理：@PostMapping 攔截請求，並透過 req.getParameter 取得資料。
+    @PostMapping("/spot/insert")
+    public RentalSpot insert(HttpServletRequest req) {
         String spotCode = req.getParameter("spotCode");
         String spotName = req.getParameter("spotName");
         String spotAddress = req.getParameter("spotAddress");
@@ -49,19 +46,9 @@ public class SpotInsertServ extends HttpServlet {
         spot.setLatitude(latitude);
         spot.setLongitude(longitude);
 
-        SessionFactory factory = HibernateUtil.getSessionFactory();
-        Session session = factory.getCurrentSession();
-        Transaction tx = null;
-        try {
-            tx = session.beginTransaction();
-            RentalSpotService rentalSpotService = new RentalSpotService(session);
-            rentalSpotService.insert(spot);
-            tx.commit();
-            res.sendRedirect(req.getContextPath() + "/spot/list");
-        } catch (Exception e) {
-            if (tx != null)
-                tx.rollback();
-            throw new ServletException(e);
-        }
+        // 3. 業務邏輯：呼叫 Service (已由 Spring 管理交易) 進行新增。
+        // 4. 回傳：直接回傳新增後的物件，Spring Boot 自動轉為 JSON 給前端。
+        // 5. 前端：Vue 收到 JSON 後，執行 router.push 跳轉頁面。
+        return rentalSpotService.insert(spot);
     }
 }

@@ -1,39 +1,37 @@
 package com.example.backend.controller;
 
-import java.io.IOException;
 import java.util.List;
 
 import com.example.backend.model.Seat;
 import com.example.backend.service.SeatService;
-import com.example.backend.utils.HibernateUtil;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@WebServlet("/seat/list")
-public class SeatListServ extends HttpServlet {
+// 改用 @RestController：
+// 這就像是給這個類別掛上「Web 櫃台」的招牌。
+// 以前我們得自己把資料轉成 JSON 字串 (用 ObjectMapper)，很麻煩。
+// 現在有了這個，Spring Boot 就知道我們要回傳資料，會自動幫我們把 List<Seat> (設備(出租的椅子)列表) 轉成 JSON 格式丟給前端。
+@RestController
+public class SeatListServ {
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        SessionFactory factory = HibernateUtil.getSessionFactory();
-        Session session = factory.getCurrentSession();
-        Transaction tx = null;
-        try {
-            tx = session.beginTransaction();
-            SeatService seatService = new SeatService(session);
-            List<Seat> seatList = seatService.selectAll();
-            req.setAttribute("seatList", seatList);
-            tx.commit();
-            req.getRequestDispatcher("/WEB-INF/view/seatList.jsp").forward(req, res);
-        } catch (Exception e) {
-            if (tx != null)
-                tx.rollback();
-            throw new ServletException(e);
-        }
+    // 使用 @Autowired：
+    // 這叫「依賴注入」，白話說就是「自動配給」。
+    // 以前我們要自己 new SeatService()，還要管 Session。
+    // 現在 Spring 容器這個大管家已經幫我們準備好 SeatService 了，
+    // 只要喊一聲，它就會自動把做好的實例送進來，我們直接用就好。
+    @Autowired
+    private SeatService seatService;
+
+    // 使用 @GetMapping：
+    // 這就是路標，告訴系統：「只要有人用 GET 方法敲 /seat/list 這個門，就找我處理」。
+    // 取代了以前 Servlet 裡面的 doGet 方法，寫法更直覺。
+    @GetMapping("/seat/list")
+    public List<Seat> getList() {
+        // 直接呼叫 Service 拿資料：
+        // 以前這裡要寫一堆 try-catch、開關 Transaction (交易)。
+        // 現在那些複雜的資料庫管理工作，都交給 Service 層的 @Transactional 處理了。
+        // 我們只要輕鬆地把拿到的座位列表回傳回去，任務就完成了。
+        return seatService.selectAll();
     }
 }

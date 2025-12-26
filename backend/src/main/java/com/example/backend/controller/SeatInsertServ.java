@@ -1,29 +1,26 @@
 package com.example.backend.controller;
 
-import java.io.IOException;
 import com.example.backend.model.Seat;
 import com.example.backend.service.SeatService;
-import com.example.backend.utils.HibernateUtil;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@WebServlet("/seat/insert")
-public class SeatInsertServ extends HttpServlet {
+// [改寫說明]
+// 統一使用 @RestController，讓後端架構一致，方便維護。
+@RestController
+public class SeatInsertServ {
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        req.getRequestDispatcher("/WEB-INF/view/seatInsert.jsp").forward(req, res);
-    }
+    @Autowired
+    private SeatService seatService;
 
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        req.setCharacterEncoding("UTF-8");
+    // [資料去向說明]
+    // 前端 (Params) -> Controller (req.getParameter) -> Service (insert) -> DB
+    // DB -> Service (return Seat) -> Controller (return Seat (設備(出租的椅子))) -> 前端
+    // (response.data)
+    @PostMapping("/seat/insert")
+    public Seat insert(HttpServletRequest req) {
         String seatsName = req.getParameter("seatsName");
         String seatsType = req.getParameter("seatsType");
         String seatsStatus = req.getParameter("seatsStatus");
@@ -35,29 +32,14 @@ public class SeatInsertServ extends HttpServlet {
         sBean.setSeatsType(seatsType);
         sBean.setSeatsStatus(seatsStatus);
 
-        Integer spotId = null;
-        try {
-            spotId = (spotIdStr == null || spotIdStr.isBlank()) ? null : Integer.valueOf(spotIdStr.trim());
-        } catch (Exception e) {
-            throw new ServletException("spotId 格式錯誤", e);
+        if (spotIdStr != null && !spotIdStr.isBlank()) {
+            // 這裡保留基本的防呆，若轉型失敗會拋出例外，Spring Boot 會回傳 500 錯誤給前端
+            sBean.setSpotId(Integer.valueOf(spotIdStr.trim()));
         }
-        sBean.setSpotId(spotId);
 
         sBean.setSerialNumber((serialNumber == null || serialNumber.isBlank()) ? null : serialNumber.trim());
 
-        SessionFactory factory = HibernateUtil.getSessionFactory();
-        Session session = factory.getCurrentSession();
-        Transaction tx = null;
-        try {
-            tx = session.beginTransaction();
-            SeatService seatService = new SeatService(session);
-            seatService.insert(sBean);
-            tx.commit();
-            res.sendRedirect(req.getContextPath() + "/seat/list");
-        } catch (Exception e) {
-            if (tx != null)
-                tx.rollback();
-            throw new ServletException(e);
-        }
+        // 透過 Spring 管理的 Service 進行交易與資料庫操作
+        return seatService.insert(sBean);
     }
 }
