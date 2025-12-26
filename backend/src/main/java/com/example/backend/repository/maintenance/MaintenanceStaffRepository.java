@@ -8,7 +8,11 @@ import com.example.backend.model.maintenance.MaintenanceStaff;
 
 public interface MaintenanceStaffRepository extends JpaRepository<MaintenanceStaff, Integer> {
 
+    // 檢查 email 是否存在 (忽略大小寫) - 用於 create
     boolean existsByStaffEmailIgnoreCase(String staffEmail);
+
+    // ★ 新增：查詢 email (忽略大小寫) - 用於 update 檢查
+    MaintenanceStaff findByStaffEmailIgnoreCase(String staffEmail);
 
     MaintenanceStaff findByStaffEmail(String staffEmail);
 

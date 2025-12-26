@@ -1,23 +1,21 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    { path: '/', redirect: '/staff' },
+    // 維護人員相關
+    { path: '/staff', component: () => import('../views/maintenance/StaffList.vue') },
+    { path: '/staff/form/:id?', component: () => import('../views/maintenance/StaffForm.vue') },
+    { path: '/staff/history', component: () => import('../views/maintenance/StaffHistory.vue') },
+    // 維修工單相關
+    { path: '/tickets', component: () => import('../views/maintenance/TicketList.vue') },
     {
-      path: '/',
-      name: 'home',
-      component: HomeView,
+      path: '/tickets/history',
+      component: () => import('../views/maintenance/TicketList.vue'),
+      props: { historyMode: true },
     },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
-    },
+    { path: '/tickets/form/:id?', component: () => import('../views/maintenance/TicketForm.vue') },
   ],
 })
-
 export default router
