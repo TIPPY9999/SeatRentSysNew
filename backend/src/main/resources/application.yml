@@ -15,11 +15,10 @@ spring:
   jpa:
     show-sql: true
     hibernate:
-      # 保留你的設定：手動建表，不讓程式亂動資料庫結構
       ddl-auto: none
-    # 吸收組員新增的命名策略，確保資料表欄位對應正確
-    naming:
-      physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      # ✅ 修正：naming 必須縮排在 hibernate 之下，設定才會生效
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
       hibernate:
         "[format_sql]": true

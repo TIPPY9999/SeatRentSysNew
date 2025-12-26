@@ -4,23 +4,22 @@ import axios from 'axios'
 
 // --- 1. 狀態定義 (完全對應組員的變數) ---
 const rentList = ref<any[]>([])
-const activeView = ref('list') // 控制 view-add 與 view-list 的切換
-const API_URL = 'http://localhost:8080/api/rec-rents'
+const activeView = ref('list')
+const API_URL = 'http://localhost:8080/api/rec-rents' // ✅ 配合後端 8080
 
-// 表單標題與資料物件 (對應 getElementById 與 rentData)
 const formTitle = ref('新增訂單')
 const form = reactive({
-  recSeqId: null, // 隱藏的 ID (對應 hidden input)
-  memId: '', // 會員 ID
-  seatsId: '', // 座位編號
-  spotIdRent: '', // 租借站點 ID
-  recRentDT2: '', // 租借時間
-  recViolatInt: 0, // 違規記點
+  recSeqId: null,
+  memId: '',
+  seatsId: '',
+  spotIdRent: '',
+  recRentDT2: '',
+  recViolatInt: 0,
 })
 
 // --- 2. 核心邏輯 (完整移植組員的 Function) ---
 
-// 查詢 (Read) - 對應 loadRents
+// 查詢 (Read)
 const loadRents = async () => {
   try {
     const res = await axios.get(API_URL)
@@ -31,20 +30,18 @@ const loadRents = async () => {
   }
 }
 
-// 新增或更新 (Create / Update) - 對應 saveRent
+// 新增或更新 (Create / Update)
 const saveRent = async () => {
   try {
     const id = form.recSeqId
     const method = id ? 'put' : 'post'
     const url = id ? `${API_URL}/${id}` : API_URL
-
-    // Vue 自動將 reactive 物件轉為 JSON 傳送
     const res = await axios[method](url, form)
     if (res.status === 200 || res.status === 201) {
       alert(id ? '更新成功！' : '新增成功！')
       resetForm()
       await loadRents()
-      activeView.value = 'list' // 儲存成功後跳轉回列表 (對應 switchView('list'))
+      activeView.value = 'list'
     } else {
       alert('儲存失敗，請檢查輸入資料。')
     }
@@ -53,7 +50,7 @@ const saveRent = async () => {
   }
 }
 
-// 刪除 (Delete) - 對應 deleteRent
+// 刪除 (Delete)
 const deleteRent = async (id: number) => {
   if (!confirm('確定要刪除這筆訂單嗎？(ID: ' + id + ')')) return
   try {
@@ -68,9 +65,8 @@ const deleteRent = async (id: number) => {
   }
 }
 
-// 準備編輯資料 - 對應 editRent(index)
+// 準備編輯資料
 const editRent = (rent: any) => {
-  // 設定標題與填入資料
   formTitle.value = '編輯訂單 (ID: ' + rent.recSeqId + ')'
   form.recSeqId = rent.recSeqId
   form.memId = rent.memId
@@ -78,7 +74,6 @@ const editRent = (rent: any) => {
   form.spotIdRent = rent.spotIdRent
   form.recViolatInt = rent.recViolatInt
 
-  // 完美移植組員處理 datetime-local 的邏輯 (裁切毫秒)
   if (rent.recRentDT2) {
     let formattedDate = rent.recRentDT2
     if (formattedDate.length > 19) {
@@ -86,11 +81,8 @@ const editRent = (rent: any) => {
     }
     form.recRentDT2 = formattedDate
   }
-
-  // 切換視圖
   activeView.value = 'add'
 
-  // 完美移植組員的體驗設計：捲動到內容上方
   setTimeout(() => {
     const mainContent = document.querySelector('.main-content')
     if (mainContent) {
@@ -99,7 +91,7 @@ const editRent = (rent: any) => {
   }, 50)
 }
 
-// 重置表單 - 對應 resetForm()
+// 重置表單
 const resetForm = () => {
   formTitle.value = '新增訂單'
   form.recSeqId = null
@@ -110,7 +102,18 @@ const resetForm = () => {
   form.recViolatInt = 0
 }
 
-// 頁面載入執行 - 對應 DOMContentLoaded
+// ✅ 新增：封裝「切換到新增畫面」的動作，避免 HTML 報錯
+const goToAddView = () => {
+  resetForm()
+  activeView.value = 'add'
+}
+
+// ✅ 新增：封裝「取消返回列表」的動作
+const backToList = () => {
+  resetForm()
+  activeView.value = 'list'
+}
+
 onMounted(() => {
   loadRents()
 })
@@ -121,14 +124,7 @@ onMounted(() => {
     <div class="sidebar">
       <h2>後台管理系統</h2>
       <a @click="activeView = 'list'" :class="{ active: activeView === 'list' }">訂單查詢</a>
-      <a
-        @click="
-          resetForm()
-          activeView = 'add'
-        "
-        :class="{ active: activeView === 'add' }"
-        >新增訂單</a
-      >
+      <a @click="goToAddView" :class="{ active: activeView === 'add' }">新增訂單</a>
     </div>
 
     <div class="main-content">
@@ -158,15 +154,7 @@ onMounted(() => {
         </div>
 
         <div style="text-align: right">
-          <button
-            class="btn-secondary"
-            @click="
-              resetForm()
-              activeView = 'list'
-            "
-          >
-            重置 / 取消
-          </button>
+          <button class="btn-secondary" @click="backToList">重置 / 取消</button>
           <button class="btn-primary" @click="saveRent">儲存訂單</button>
         </div>
       </div>
@@ -217,7 +205,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* --- 100% 移植組員樣式，僅微調以適配 Vue 容器 --- */
+/* 樣式部分完全保留組員原始代碼 */
 .rec-rent-container {
   display: flex;
   height: 100%;
@@ -225,7 +213,6 @@ onMounted(() => {
   font-family: 'Microsoft JhengHei', Arial, sans-serif;
   background-color: #f9f9f9;
 }
-
 .sidebar {
   width: 250px;
   background-color: #343a40;
@@ -235,14 +222,12 @@ onMounted(() => {
   padding-top: 20px;
   flex-shrink: 0;
 }
-
 .sidebar h2 {
   color: white;
   text-align: center;
   font-size: 1.2em;
   margin-bottom: 30px;
 }
-
 .sidebar a {
   padding: 15px 20px;
   text-decoration: none;
@@ -251,49 +236,41 @@ onMounted(() => {
   transition: 0.3s;
   cursor: pointer;
 }
-
 .sidebar a:hover,
 .sidebar a.active {
   background-color: #495057;
   color: white;
 }
-
 .main-content {
   flex: 1;
   padding: 30px;
   overflow-y: auto;
 }
-
 h1,
 h2 {
   color: #333;
 }
-
 .form-section {
   background-color: #eef;
   padding: 15px;
   border-radius: 5px;
   margin-bottom: 20px;
 }
-
 .form-group {
   margin-bottom: 10px;
   display: flex;
   align-items: center;
 }
-
 .form-group label {
   width: 180px;
   font-weight: bold;
 }
-
 .form-group input {
   padding: 5px;
   flex: 1;
   border: 1px solid #ccc;
   border-radius: 3px;
 }
-
 button {
   padding: 8px 15px;
   cursor: pointer;
@@ -301,7 +278,6 @@ button {
   border-radius: 3px;
   font-weight: bold;
 }
-
 .btn-primary {
   background-color: #007bff;
   color: white;
@@ -321,40 +297,33 @@ button {
 .ml-1 {
   margin-left: 5px;
 }
-
 button:hover {
   opacity: 0.9;
 }
-
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
 }
-
 th,
 td {
   border: 1px solid #ddd;
   padding: 10px;
   text-align: left;
 }
-
 th {
   background-color: #343a40;
   color: white;
 }
-
 tr:nth-child(even) {
   background-color: #f2f2f2;
 }
-
 .view-section {
   display: none;
 }
 .view-section.active {
   display: block;
 }
-
 .badge-info {
   background-color: #17a2b8;
   color: white;
