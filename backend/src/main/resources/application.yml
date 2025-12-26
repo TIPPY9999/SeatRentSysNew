@@ -6,23 +6,22 @@ spring:
     name: seat-rent-backend
 
   datasource:
-    # 👇 連線字串
+    # 使用你的連線字串與帳號 tippy
     url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
-    # 👇 你的帳號 (保留 tippy 讓你連線)
     username: tippy
-    # 👇 你的密碼
     password: 1234
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
 
   jpa:
     show-sql: true
     hibernate:
-      # 👇 照你要求的：手動建表，不讓程式亂動資料庫
+      # 保留你的設定：手動建表，不讓程式亂動資料庫結構
       ddl-auto: none
-
+    # 吸收組員新增的命名策略，確保資料表欄位對應正確
+    naming:
+      physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
       hibernate:
         "[format_sql]": true
         dialect: org.hibernate.dialect.SQLServerDialect
         "[default_schema]": dbo
-        "[physical_naming_strategy]": org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl

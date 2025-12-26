@@ -13,14 +13,17 @@
           <li @click="go('/admin')" :class="{ active: isRoute('/admin') }">
             <i class="fas fa-home"></i> 後台首頁
           </li>
-          <li @click="go('/admin/members')" :class="{ active: isRoute('/admin/members') }">
+
+          <li @click="go('/admin/members')" :class="{ active: isActiveGroup('/admin/members') }">
             <i class="fas fa-users"></i> 會員列表
           </li>
-          <li @click="go('/admin/admins')" :class="{ active: isRoute('/admin/admins') }">
+
+          <li @click="go('/admin/admins')" :class="{ active: isActiveGroup('/admin/admins') }">
             <i class="fas fa-user-shield"></i> 管理員管理
           </li>
-          <li @click="go('/admin/orders')" :class="{ active: isRoute('/admin/orders') }">
-            <i class="fas fa-clipboard-list"></i> 租借紀錄
+
+          <li @click="go('/admin/rec-rent')" :class="{ active: isActiveGroup('/admin/rec-rent') }">
+            <i class="fas fa-clipboard-list"></i> 租借訂單管理
           </li>
 
           <div class="menu-divider">維修管理</div>
@@ -28,6 +31,7 @@
           <li @click="go('/admin/staff-list')" :class="{ active: isActiveGroup('/admin/staff') }">
             <i class="fas fa-user-cog"></i> 維護人員管理
           </li>
+
           <li @click="go('/admin/mtif-list')" :class="{ active: isActiveGroup('/admin/mtif') }">
             <i class="fas fa-wrench"></i> 維修工單管理
           </li>
@@ -45,7 +49,6 @@
 
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
-import { computed } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -59,16 +62,22 @@ function isRoute(path) {
 
 /**
  * 判斷目前路由是否屬於某個功能組 (模糊匹配)
- * 例如：在 /admin/staff-list 或 /admin/staff-form 時，維護人員選單都會亮起
+ * 解決：在子頁面（例如 /members/edit）時，側邊欄對應的主選單也能維持高亮
  */
 function isActiveGroup(prefix) {
   return route.path.startsWith(prefix)
 }
 
+/**
+ * 執行頁面跳轉
+ */
 function go(path) {
   router.push(path)
 }
 
+/**
+ * 登出功能
+ */
 function logout() {
   if (confirm('確定要登出嗎？')) {
     router.push('/login')
@@ -131,6 +140,7 @@ function logout() {
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .sidebar-title {
