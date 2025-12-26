@@ -1,4 +1,4 @@
-package com.example.backend.controller;
+package com.example.backend.controller.member;
 
 import java.util.List;
 
@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.backend.model.Member;
-import com.example.backend.service.MemberService;
+import com.example.backend.model.member.Member;
+import com.example.backend.service.member.MemberService;
 
 @CrossOrigin(origins = "http://localhost:5173")
 @RestController

@@ -106,20 +106,34 @@ onMounted(() => fetchTickets())
   <div>
     <section class="content-header">
       <div class="container-fluid">
-        <div class="row">
+        <div class="row mb-2">
           <div class="col-sm-6">
             <h1>{{ historyMode ? '維修工單歷史紀錄' : '維修工單列表' }}</h1>
           </div>
           <div class="col-sm-6 text-right">
-            <router-link v-if="!historyMode" to="/mtif-history" class="btn btn-outline-info btn-sm"
-              >查看歷史</router-link
+            <router-link
+              v-if="!historyMode"
+              to="/admin/mtif-history"
+              class="btn btn-outline-info btn-sm"
             >
-            <router-link v-if="historyMode" to="/mtif-list" class="btn btn-outline-info btn-sm"
-              >返回列表</router-link
+              <i class="fas fa-history mr-1"></i> 查看歷史
+            </router-link>
+
+            <router-link
+              v-if="historyMode"
+              to="/admin/mtif-list"
+              class="btn btn-outline-secondary btn-sm"
             >
-            <router-link v-if="!historyMode" to="/mtif-form" class="btn btn-success btn-sm ml-2"
-              >新增工單</router-link
+              <i class="fas fa-arrow-left mr-1"></i> 返回列表
+            </router-link>
+
+            <router-link
+              v-if="!historyMode"
+              to="/admin/mtif-form"
+              class="btn btn-success btn-sm ml-2"
             >
+              <i class="fas fa-plus mr-1"></i> 新增工單
+            </router-link>
           </div>
         </div>
       </div>
@@ -129,7 +143,7 @@ onMounted(() => fetchTickets())
       <div class="container-fluid">
         <div class="row mb-3">
           <div class="col-md-4">
-            <div class="small-box bg-info">
+            <div class="small-box bg-info shadow-sm">
               <div class="inner">
                 <h3>{{ stats.total }}</h3>
                 <p>工單總數</p>
@@ -138,7 +152,7 @@ onMounted(() => fetchTickets())
             </div>
           </div>
           <div class="col-md-4">
-            <div class="small-box bg-warning">
+            <div class="small-box bg-warning shadow-sm">
               <div class="inner">
                 <h3>{{ stats.under }}</h3>
                 <p>維修中</p>
@@ -147,7 +161,7 @@ onMounted(() => fetchTickets())
             </div>
           </div>
           <div class="col-md-4">
-            <div class="small-box bg-success">
+            <div class="small-box bg-success shadow-sm">
               <div class="inner">
                 <h3>{{ stats.done }}</h3>
                 <p>已完成</p>
@@ -157,7 +171,7 @@ onMounted(() => fetchTickets())
           </div>
         </div>
 
-        <div class="card">
+        <div class="card shadow-sm">
           <div class="card-header bg-light d-flex align-items-center">
             <input
               v-model="filters.keyword"
@@ -178,117 +192,188 @@ onMounted(() => fetchTickets())
                 <option value="ASSIGNED">已指派</option>
                 <option value="UNDER_MAINTENANCE">維修中</option>
               </template>
-              <template v-else
-                ><option value="RESOLVED">已完成</option>
-                <option value="CANCELLED">已取消</option></template
-              >
+              <template v-else>
+                <option value="RESOLVED">已完成</option>
+                <option value="CANCELLED">已取消</option>
+              </template>
             </select>
           </div>
+
           <div class="card-body p-0">
-            <table class="table table-sm jy-table table-hover mb-0">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>場地</th>
-                  <th>類型</th>
-                  <th>描述</th>
-                  <th>優先級</th>
-                  <th>狀態</th>
-                  <th>指派ID</th>
-                  <th v-if="!historyMode">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="t in filteredTickets" :key="t.ticketId">
-                  <td>{{ t.ticketId }}</td>
-                  <td>{{ t.spotId }}</td>
-                  <td>{{ t.issueType }}</td>
-                  <td>
-                    <div class="issue-desc">{{ t.issueDesc }}</div>
-                  </td>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0">
+                <thead class="thead-light text-nowrap">
+                  <tr>
+                    <th style="width: 60px">ID</th>
+                    <th>場地</th>
+                    <th>類型</th>
+                    <th>描述</th>
+                    <th>優先級</th>
+                    <th>狀態</th>
+                    <th>指派ID</th>
+                    <th v-if="!historyMode" style="width: 200px">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="t in filteredTickets" :key="t.ticketId">
+                    <td class="text-center font-weight-bold">{{ t.ticketId }}</td>
+                    <td>{{ t.spotId }}</td>
+                    <td>
+                      <span class="badge badge-light border">{{ t.issueType }}</span>
+                    </td>
+                    <td>
+                      <div class="text-truncate" style="max-width: 200px" :title="t.issueDesc">
+                        {{ t.issueDesc }}
+                      </div>
+                    </td>
 
-                  <td>
-                    <span :class="['badge', `priority-${t.issuePriority.toLowerCase()}`]">
-                      {{ priorityMap[t.issuePriority] || t.issuePriority }}
-                    </span>
-                  </td>
+                    <td>
+                      <span :class="['badge', `priority-${t.issuePriority.toLowerCase()}`]">
+                        {{ priorityMap[t.issuePriority] || t.issuePriority }}
+                      </span>
+                    </td>
 
-                  <td>
-                    <span :class="['badge', `status-${t.issueStatus.toLowerCase()}`]">
-                      {{ statusMap[t.issueStatus] || t.issueStatus }}
-                    </span>
-                  </td>
+                    <td>
+                      <span :class="['badge', `status-${t.issueStatus.toLowerCase()}`]">
+                        {{ statusMap[t.issueStatus] || t.issueStatus }}
+                      </span>
+                    </td>
 
-                  <td>{{ t.assignedStaffId || '-' }}</td>
+                    <td class="text-center">{{ t.assignedStaffId || '-' }}</td>
 
-                  <td v-if="!historyMode">
-                    <router-link
-                      :to="`/mtif-form/${t.ticketId}`"
-                      class="btn btn-outline-primary btn-sm mr-1"
-                      >編輯</router-link
-                    >
+                    <td v-if="!historyMode" class="text-nowrap">
+                      <router-link
+                        :to="`/admin/mtif-form/${t.ticketId}`"
+                        class="btn btn-outline-primary btn-xs mr-1"
+                      >
+                        <i class="fas fa-edit"></i> 編輯
+                      </router-link>
 
-                    <button
-                      v-if="
-                        (t.issueStatus === 'REPORTED' || t.issueStatus === 'ASSIGNED') &&
-                        t.assignedStaffId
-                      "
-                      @click="startTicket(t.ticketId)"
-                      class="btn btn-outline-secondary btn-sm mr-1"
-                    >
-                      開始
-                    </button>
+                      <button
+                        v-if="
+                          (t.issueStatus === 'REPORTED' || t.issueStatus === 'ASSIGNED') &&
+                          t.assignedStaffId
+                        "
+                        @click="startTicket(t.ticketId)"
+                        class="btn btn-outline-secondary btn-xs mr-1"
+                      >
+                        <i class="fas fa-play"></i> 開始
+                      </button>
 
-                    <button
-                      v-if="t.issueStatus === 'UNDER_MAINTENANCE'"
-                      @click="openResolveModal(t.ticketId)"
-                      class="btn btn-outline-success btn-sm mr-1"
-                    >
-                      結案
-                    </button>
+                      <button
+                        v-if="t.issueStatus === 'UNDER_MAINTENANCE'"
+                        @click="openResolveModal(t.ticketId)"
+                        class="btn btn-outline-success btn-xs mr-1"
+                      >
+                        <i class="fas fa-check-circle"></i> 結案
+                      </button>
 
-                    <button
-                      v-if="t.issueStatus !== 'RESOLVED' && t.issueStatus !== 'CANCELLED'"
-                      @click="cancelTicket(t.ticketId)"
-                      class="btn btn-outline-danger btn-sm"
-                    >
-                      取消
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                      <button
+                        v-if="t.issueStatus !== 'RESOLVED' && t.issueStatus !== 'CANCELLED'"
+                        @click="cancelTicket(t.ticketId)"
+                        class="btn btn-outline-danger btn-xs"
+                      >
+                        <i class="fas fa-times"></i> 取消
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="filteredTickets.length === 0">
+                    <td :colspan="historyMode ? 7 : 8" class="text-center py-4 text-muted">
+                      {{ loading ? '資料讀取中...' : '目前沒有符合條件的工單' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <div v-if="showResolveModal" class="modal d-block" style="background: rgba(0, 0, 0, 0.5)">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5>工單結案</h5>
-            <button @click="showResolveModal = false" class="close">&times;</button>
+    <div
+      v-if="showResolveModal"
+      class="modal d-block"
+      style="background: rgba(0, 0, 0, 0.5); z-index: 1050"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow">
+          <div class="modal-header bg-success text-white">
+            <h5 class="modal-title">工單結案確認</h5>
+            <button @click="showResolveModal = false" class="close text-white">&times;</button>
           </div>
           <div class="modal-body">
             <div class="form-group">
-              <label>結果</label>
+              <label>維修結果</label>
               <select v-model="resolveForm.resultType" class="form-control">
-                <option value="FIXED">維修成功</option>
-                <option value="NOT_FIXABLE">無法修復</option>
+                <option value="FIXED">維修成功 (Fixed)</option>
+                <option value="NOT_FIXABLE">無法修復 (Not Fixable)</option>
               </select>
             </div>
             <div class="form-group">
-              <label>備註</label
-              ><textarea v-model="resolveForm.resolveNote" class="form-control" rows="3"></textarea>
+              <label>維修備註</label>
+              <textarea
+                v-model="resolveForm.resolveNote"
+                class="form-control"
+                rows="3"
+                placeholder="請輸入維修心得或更換零件說明..."
+              ></textarea>
             </div>
           </div>
           <div class="modal-footer">
-            <button @click="submitResolve" class="btn btn-primary">確定</button
-            ><button @click="showResolveModal = false" class="btn btn-secondary">取消</button>
+            <button @click="submitResolve" class="btn btn-success">確定結案</button>
+            <button @click="showResolveModal = false" class="btn btn-secondary">取消</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.content-header {
+  padding: 15px 0.5rem;
+}
+.priority-low {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+.priority-normal {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+.priority-high {
+  background-color: #fff3cd;
+  color: #856404;
+}
+.priority-urgent {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-reported {
+  border: 1px solid #6c757d;
+  color: #6c757d;
+}
+.status-assigned {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+.status-under_maintenance {
+  background-color: #fff3cd;
+  color: #856404;
+}
+.status-resolved {
+  background-color: #d4edda;
+  color: #155724;
+}
+.status-cancelled {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.btn-xs {
+  padding: 1px 5px;
+  font-size: 12px;
+}
+</style>

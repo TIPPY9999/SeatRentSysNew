@@ -1,4 +1,4 @@
-package com.example.backend.service;
+package com.example.backend.service.member;
 
 import java.util.List;
 
@@ -6,8 +6,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.backend.model.Member;
-import com.example.backend.repository.MemberRepository;
+import com.example.backend.model.member.Member;
+import com.example.backend.repository.member.MemberRepository;
 
 @Service
 @Transactional

@@ -1,4 +1,4 @@
-package com.example.backend.controller;
+package com.example.backend.controller.member;
 
 import java.util.Map;
 
@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.backend.model.Member;
-import com.example.backend.repository.MemberRepository;
+import com.example.backend.model.member.Member;
+import com.example.backend.repository.member.MemberRepository;
 
 import jakarta.servlet.http.HttpSession;
 
