@@ -3,19 +3,40 @@ import { createRouter, createWebHistory } from 'vue-router'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/staff' },
-    // 維護人員相關
-    { path: '/staff', component: () => import('../views/maintenance/StaffList.vue') },
-    { path: '/staff/form/:id?', component: () => import('../views/maintenance/StaffForm.vue') },
-    { path: '/staff/history', component: () => import('../views/maintenance/StaffHistory.vue') },
-    // 維修工單相關
-    { path: '/tickets', component: () => import('../views/maintenance/TicketList.vue') },
+    { path: '/', redirect: '/staff-list' },
     {
-      path: '/tickets/history',
-      component: () => import('../views/maintenance/TicketList.vue'),
+      path: '/staff-list',
+      name: 'staff-list',
+      component: () => import('../views/maintenance/MaintenanceStaffList.vue'),
+    },
+    {
+      path: '/staff-form/:id?',
+      name: 'staff-form',
+      component: () => import('../views/maintenance/MaintenanceStaffForm.vue'),
+    },
+    {
+      path: '/staff-history',
+      name: 'staff-history',
+      component: () => import('../views/maintenance/MaintenanceStaffHistory.vue'),
+    },
+    {
+      path: '/mtif-list',
+      name: 'mtif-list',
+      component: () => import('../views/maintenance/MtifList.vue'),
+      props: { historyMode: false }, // 這裡要設定預設值為 false
+    },
+    {
+      path: '/mtif-history',
+      name: 'mtif-history',
+      component: () => import('../views/maintenance/MtifList.vue'),
       props: { historyMode: true },
     },
-    { path: '/tickets/form/:id?', component: () => import('../views/maintenance/TicketForm.vue') },
+    {
+      path: '/mtif-form/:id?',
+      name: 'mtif-form',
+      component: () => import('../views/maintenance/MtifForm.vue'),
+    },
   ],
 })
+
 export default router
