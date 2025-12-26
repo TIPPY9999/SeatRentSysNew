@@ -1,57 +1,59 @@
 package com.example.backend.service;
 
 import com.example.backend.model.RentalSpot;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.hibernate.Session;
+import org.hibernate.query.Query;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Service
-public class RentalSpotService {
+public class RentalSpotService implements IRentalSpotService {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private Session session;
 
-    @Transactional(readOnly = true)
+    public RentalSpotService(Session session) {
+        this.session = session;
+    }
+
+    @Override
     public List<RentalSpot> selectAll() {
-        return entityManager.createQuery("from RentalSpot", RentalSpot.class).getResultList();
+        Query<RentalSpot> query = session.createQuery("from RentalSpot", RentalSpot.class);
+        return query.list();
     }
 
-    @Transactional(readOnly = true)
+    @Override
     public RentalSpot selectById(Integer spotId) {
-        return entityManager.find(RentalSpot.class, spotId);
+        return session.get(RentalSpot.class, spotId);
     }
 
-    @Transactional
+    @Override
     public RentalSpot insert(RentalSpot spot) {
-        entityManager.persist(spot);
+        session.persist(spot);
         return spot;
     }
 
-    @Transactional
+    @Override
     public RentalSpot update(RentalSpot spot) {
-        return entityManager.merge(spot);
+        return session.merge(spot);
     }
 
-    @Transactional
-    public void deleteById(Integer spotId) {
+    @Override
+    public boolean deleteById(Integer spotId) {
         RentalSpot spot = selectById(spotId);
         if (spot != null) {
-            entityManager.remove(spot);
+            session.remove(spot);
+            return true;
         }
+        return false;
     }
-    // findByCondition 方法可以後續再加入
 
-    @Transactional(readOnly = true)
+    @Override
     public List<RentalSpot> findByCondition(String spotCode, String spotName, String spotStatus, Integer merchantId) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaBuilder cb = session.getCriteriaBuilder();
         CriteriaQuery<RentalSpot> cq = cb.createQuery(RentalSpot.class);
         Root<RentalSpot> root = cq.from(RentalSpot.class);
         List<Predicate> predicates = new ArrayList<>();
@@ -70,6 +72,6 @@ public class RentalSpotService {
         }
 
         cq.where(predicates.toArray(new Predicate[0]));
-        return entityManager.createQuery(cq).getResultList();
+        return session.createQuery(cq).getResultList();
     }
 }

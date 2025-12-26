@@ -1,7 +1,6 @@
 package com.example.backend.controller;
 
 import java.io.IOException;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -10,13 +9,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @WebServlet("/spot/search")
 public class SpotSearchServ extends HttpServlet {
-    private static final long serialVersionUID = 1L;
-
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        request.getRequestDispatcher("/WEB-INF/view/spotSearch.jsp")
-                .forward(request, response);
+    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        req.getRequestDispatcher("/WEB-INF/view/spotSearch.jsp").forward(req, res);
     }
 }

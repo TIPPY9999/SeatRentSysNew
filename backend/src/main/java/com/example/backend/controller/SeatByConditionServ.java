@@ -1,33 +1,47 @@
 package com.example.backend.controller;
 
+import java.io.IOException;
 import java.util.List;
 
 import com.example.backend.model.Seat;
 import com.example.backend.service.SeatService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import com.example.backend.utils.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
-@Controller
-public class SeatByConditionServ {
+@WebServlet("/seat/condition")
+public class SeatByConditionServ extends HttpServlet {
 
-    @Autowired
-    private SeatService seatService;
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        String seatsName = req.getParameter("seatsName");
+        String seatsType = req.getParameter("seatsType");
+        String seatsStatus = req.getParameter("seatsStatus");
+        String serialNumber = req.getParameter("serialNumber");
 
-    @GetMapping("/seat/condition")
-    public String search(
-            @RequestParam(value = "seatsName", required = false) String seatsName,
-            @RequestParam(value = "seatsType", required = false) String seatsType,
-            @RequestParam(value = "seatsStatus", required = false) String seatsStatus,
-            @RequestParam(value = "serialNumber", required = false) String serialNumber,
-            @RequestParam(value = "spotId", required = false) Integer spotId,
-            Model model) {
+        String spotIdStr = req.getParameter("spotId");
+        Integer spotId = (spotIdStr == null || spotIdStr.isBlank()) ? null : Integer.valueOf(spotIdStr);
 
-        List<Seat> seatList = seatService.findByCondition(seatsName, seatsType, seatsStatus, spotId, serialNumber);
-
-        model.addAttribute("seatList", seatList);
-        return "seatResult";
+        SessionFactory factory = HibernateUtil.getSessionFactory();
+        Session session = factory.getCurrentSession();
+        Transaction tx = null;
+        try {
+            tx = session.beginTransaction();
+            SeatService seatService = new SeatService(session);
+            List<Seat> seatList = seatService.findByCondition(seatsName, seatsType, seatsStatus, spotId, serialNumber);
+            req.setAttribute("seatList", seatList);
+            tx.commit();
+            req.getRequestDispatcher("/WEB-INF/view/seatResult.jsp").forward(req, res);
+        } catch (Exception e) {
+            if (tx != null)
+                tx.rollback();
+            throw new ServletException(e);
+        }
     }
 }

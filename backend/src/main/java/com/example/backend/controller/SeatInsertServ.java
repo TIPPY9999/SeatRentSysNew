@@ -1,50 +1,63 @@
 package com.example.backend.controller;
 
+import java.io.IOException;
 import com.example.backend.model.Seat;
 import com.example.backend.service.SeatService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import com.example.backend.utils.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
-@Controller
-public class SeatInsertServ {
-    @Autowired
-    private SeatService seatService;
+@WebServlet("/seat/insert")
+public class SeatInsertServ extends HttpServlet {
 
-    @GetMapping("/seat/insert")
-    public String showForm() {
-        // 對應到 /WEB-INF/view/seatInsert.jsp
-        return "seatInsert";
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        req.getRequestDispatcher("/WEB-INF/view/seatInsert.jsp").forward(req, res);
     }
 
-    @PostMapping("/seat/insert")
-    public String insert(
-            @RequestParam("seatsName") String seatsName,
-            @RequestParam("seatsType") String seatsType,
-            @RequestParam("seatsStatus") String seatsStatus,
-            @RequestParam(value = "spotId", required = false) String spotIdStr,
-            @RequestParam(value = "serialNumber", required = false) String serialNumber) {
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        req.setCharacterEncoding("UTF-8");
+        String seatsName = req.getParameter("seatsName");
+        String seatsType = req.getParameter("seatsType");
+        String seatsStatus = req.getParameter("seatsStatus");
+        String spotIdStr = req.getParameter("spotId");
+        String serialNumber = req.getParameter("serialNumber");
 
         Seat sBean = new Seat();
         sBean.setSeatsName(seatsName);
         sBean.setSeatsType(seatsType);
         sBean.setSeatsStatus(seatsStatus);
 
-        // spotId 防呆
         Integer spotId = null;
         try {
             spotId = (spotIdStr == null || spotIdStr.isBlank()) ? null : Integer.valueOf(spotIdStr.trim());
         } catch (Exception e) {
-            throw new IllegalArgumentException("spotId 格式錯誤");
+            throw new ServletException("spotId 格式錯誤", e);
         }
         sBean.setSpotId(spotId);
 
         sBean.setSerialNumber((serialNumber == null || serialNumber.isBlank()) ? null : serialNumber.trim());
 
-        seatService.insert(sBean);
-
-        return "redirect:/seat/list";
+        SessionFactory factory = HibernateUtil.getSessionFactory();
+        Session session = factory.getCurrentSession();
+        Transaction tx = null;
+        try {
+            tx = session.beginTransaction();
+            SeatService seatService = new SeatService(session);
+            seatService.insert(sBean);
+            tx.commit();
+            res.sendRedirect(req.getContextPath() + "/seat/list");
+        } catch (Exception e) {
+            if (tx != null)
+                tx.rollback();
+            throw new ServletException(e);
+        }
     }
 }

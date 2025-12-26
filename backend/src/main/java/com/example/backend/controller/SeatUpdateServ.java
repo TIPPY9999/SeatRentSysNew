@@ -1,54 +1,85 @@
 package com.example.backend.controller;
 
+import java.io.IOException;
 import com.example.backend.model.Seat;
 import com.example.backend.service.SeatService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import com.example.backend.utils.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
-@Controller
-public class SeatUpdateServ {
+@WebServlet("/seat/update")
+public class SeatUpdateServ extends HttpServlet {
 
-	@Autowired
-	private SeatService seatService;
-
-	@GetMapping("/seat/update")
-	public String showForm(@RequestParam("seatsId") Integer seatsId, Model model) {
-		Seat seat = seatService.selectById(seatsId);
-		model.addAttribute("seat", seat);
-		return "seatUpdate";
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+		String seatsIdStr = req.getParameter("seatsId");
+		SessionFactory factory = HibernateUtil.getSessionFactory();
+		Session session = factory.getCurrentSession();
+		Transaction tx = null;
+		try {
+			tx = session.beginTransaction();
+			if (seatsIdStr != null && !seatsIdStr.isBlank()) {
+				SeatService seatService = new SeatService(session);
+				Seat seat = seatService.selectById(Integer.valueOf(seatsIdStr));
+				req.setAttribute("seat", seat);
+			}
+			tx.commit();
+			req.getRequestDispatcher("/WEB-INF/view/seatUpdate.jsp").forward(req, res);
+		} catch (Exception e) {
+			if (tx != null)
+				tx.rollback();
+			throw new ServletException(e);
+		}
 	}
 
-	@PostMapping("/seat/update")
-	public String update(
-			@RequestParam("seatsId") Integer seatsId,
-			@RequestParam("seatsName") String seatsName,
-			@RequestParam("seatsType") String seatsType,
-			@RequestParam("seatsStatus") String seatsStatus,
-			@RequestParam(value = "spotId", required = false) String spotIdStr,
-			@RequestParam(value = "serialNumber", required = false) String serialNumber) {
-
-		Seat bean = new Seat();
-		bean.setSeatsId(seatsId);
-		bean.setSeatsName(seatsName);
-		bean.setSeatsType(seatsType);
-		bean.setSeatsStatus(seatsStatus);
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+		req.setCharacterEncoding("UTF-8");
+		String seatsIdStr = req.getParameter("seatsId");
+		String seatsName = req.getParameter("seatsName");
+		String seatsType = req.getParameter("seatsType");
+		String seatsStatus = req.getParameter("seatsStatus");
+		String spotIdStr = req.getParameter("spotId");
+		String serialNumber = req.getParameter("serialNumber");
 
 		Integer spotId = null;
 		try {
 			spotId = (spotIdStr == null || spotIdStr.isBlank()) ? null : Integer.valueOf(spotIdStr.trim());
 		} catch (Exception e) {
-			throw new IllegalArgumentException("spotId 格式錯誤");
+			throw new ServletException("spotId 格式錯誤", e);
 		}
-		bean.setSpotId(spotId);
 
-		bean.setSerialNumber((serialNumber == null || serialNumber.isBlank()) ? null : serialNumber.trim());
+		SessionFactory factory = HibernateUtil.getSessionFactory();
+		Session session = factory.getCurrentSession();
+		Transaction tx = null;
+		try {
+			tx = session.beginTransaction();
+			SeatService seatService = new SeatService(session);
 
-		seatService.update(bean);
+			if (seatsIdStr != null && !seatsIdStr.isBlank()) {
+				Seat seat = seatService.selectById(Integer.valueOf(seatsIdStr));
+				if (seat != null) {
+					seat.setSeatsName(seatsName);
+					seat.setSeatsType(seatsType);
+					seat.setSeatsStatus(seatsStatus);
+					seat.setSpotId(spotId);
+					seat.setSerialNumber((serialNumber == null || serialNumber.isBlank()) ? null : serialNumber.trim());
 
-		return "redirect:/seat/list";
+					seatService.update(seat);
+				}
+			}
+			tx.commit();
+			res.sendRedirect(req.getContextPath() + "/seat/list");
+		} catch (Exception e) {
+			if (tx != null)
+				tx.rollback();
+			throw new ServletException(e);
+		}
 	}
 }

@@ -1,35 +1,44 @@
 package com.example.backend.controller;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 
 import com.example.backend.service.RentalSpotService;
+import com.example.backend.utils.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
 import com.example.backend.model.RentalSpot;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
-@Controller
-public class SpotInsertServ {
+@WebServlet("/spot/insert")
+public class SpotInsertServ extends HttpServlet {
 
-    @Autowired
-    private RentalSpotService rentalSpotService;
-
-    @GetMapping("/spot/insert")
-    public String showForm() {
-        return "spotInsert";
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        req.getRequestDispatcher("/WEB-INF/view/spotInsert.jsp").forward(req, res);
     }
 
-    @PostMapping("/spot/insert")
-    public String insert(
-            @RequestParam("spotCode") String spotCode,
-            @RequestParam("spotName") String spotName,
-            @RequestParam("spotAddress") String spotAddress,
-            @RequestParam("spotStatus") String spotStatus,
-            @RequestParam(value = "merchantId", required = false) Integer merchantId,
-            @RequestParam(value = "latitude", required = false) BigDecimal latitude,
-            @RequestParam(value = "longitude", required = false) BigDecimal longitude) {
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        req.setCharacterEncoding("UTF-8");
+        String spotCode = req.getParameter("spotCode");
+        String spotName = req.getParameter("spotName");
+        String spotAddress = req.getParameter("spotAddress");
+        String spotStatus = req.getParameter("spotStatus");
+
+        String merchantIdStr = req.getParameter("merchantId");
+        Integer merchantId = (merchantIdStr == null || merchantIdStr.isBlank()) ? null : Integer.valueOf(merchantIdStr);
+
+        String latStr = req.getParameter("latitude");
+        BigDecimal latitude = (latStr == null || latStr.isBlank()) ? null : new BigDecimal(latStr);
+
+        String lonStr = req.getParameter("longitude");
+        BigDecimal longitude = (lonStr == null || lonStr.isBlank()) ? null : new BigDecimal(lonStr);
 
         RentalSpot spot = new RentalSpot();
         spot.setSpotCode(spotCode);
@@ -37,13 +46,22 @@ public class SpotInsertServ {
         spot.setSpotAddress(spotAddress);
         spot.setSpotStatus(spotStatus);
         spot.setMerchantId(merchantId);
-        if (latitude != null)
-            spot.setLatitude(latitude);
-        if (longitude != null)
-            spot.setLongitude(longitude);
+        spot.setLatitude(latitude);
+        spot.setLongitude(longitude);
 
-        rentalSpotService.insert(spot);
-
-        return "redirect:/spot/list";
+        SessionFactory factory = HibernateUtil.getSessionFactory();
+        Session session = factory.getCurrentSession();
+        Transaction tx = null;
+        try {
+            tx = session.beginTransaction();
+            RentalSpotService rentalSpotService = new RentalSpotService(session);
+            rentalSpotService.insert(spot);
+            tx.commit();
+            res.sendRedirect(req.getContextPath() + "/spot/list");
+        } catch (Exception e) {
+            if (tx != null)
+                tx.rollback();
+            throw new ServletException(e);
+        }
     }
 }

@@ -1,58 +1,60 @@
 package com.example.backend.service;
 
 import com.example.backend.model.Seat;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.hibernate.Session;
+import org.hibernate.query.Query;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Service
-public class SeatService {
+public class SeatService implements ISeatService {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private Session session;
 
-    @Transactional
+    public SeatService(Session session) {
+        this.session = session;
+    }
+
+    @Override
     public Seat insert(Seat seat) {
-        entityManager.persist(seat);
+        session.persist(seat);
         return seat;
     }
 
-    @Transactional
+    @Override
     public Seat update(Seat seat) {
-        // 使用 merge 來處理更新，如果實體存在則更新，不存在則新增
-        return entityManager.merge(seat);
+        return session.merge(seat);
     }
 
-    @Transactional
-    public void deleteById(Integer seatsId) {
+    @Override
+    public boolean deleteById(Integer seatsId) {
         Seat seat = selectById(seatsId);
         if (seat != null) {
-            entityManager.remove(seat);
+            session.remove(seat);
+            return true;
         }
+        return false;
     }
 
-    @Transactional(readOnly = true)
+    @Override
     public Seat selectById(Integer seatsId) {
-        return entityManager.find(Seat.class, seatsId);
+        return session.get(Seat.class, seatsId);
     }
 
-    @Transactional(readOnly = true)
+    @Override
     public List<Seat> selectAll() {
-        return entityManager.createQuery("from Seat", Seat.class).getResultList();
+        Query<Seat> query = session.createQuery("from Seat", Seat.class);
+        return query.list();
     }
 
-    @Transactional(readOnly = true)
+    @Override
     public List<Seat> findByCondition(String seatsName, String seatsType, String seatsStatus, Integer spotId,
             String serialNumber) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaBuilder cb = session.getCriteriaBuilder();
         CriteriaQuery<Seat> cq = cb.createQuery(Seat.class);
         Root<Seat> root = cq.from(Seat.class);
         List<Predicate> predicates = new ArrayList<>();
@@ -74,6 +76,6 @@ public class SeatService {
         }
 
         cq.where(predicates.toArray(new Predicate[0]));
-        return entityManager.createQuery(cq).getResultList();
+        return session.createQuery(cq).getResultList();
     }
 }
