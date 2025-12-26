@@ -55,4 +55,33 @@ public class RentalSpotDao implements IRentSpotDao {
 		}
 		return false;
 	}
+
+	@Override
+	public List<RentalSpot> findByCondition(String spotCode, String spotName, String spotStatus, Integer merchantId) {
+		StringBuilder hql = new StringBuilder("FROM RentalSpot WHERE 1=1");
+		if (spotCode != null && !spotCode.isBlank()) {
+			hql.append(" AND spotCode LIKE :spotCode");
+		}
+		if (spotName != null && !spotName.isBlank()) {
+			hql.append(" AND spotName LIKE :spotName");
+		}
+		if (spotStatus != null && !spotStatus.isBlank()) {
+			hql.append(" AND spotStatus = :spotStatus");
+		}
+		if (merchantId != null) {
+			hql.append(" AND merchantId = :merchantId");
+		}
+
+		Query<RentalSpot> query = session.createQuery(hql.toString(), RentalSpot.class);
+		if (spotCode != null && !spotCode.isBlank())
+			query.setParameter("spotCode", "%" + spotCode + "%");
+		if (spotName != null && !spotName.isBlank())
+			query.setParameter("spotName", "%" + spotName + "%");
+		if (spotStatus != null && !spotStatus.isBlank())
+			query.setParameter("spotStatus", spotStatus);
+		if (merchantId != null)
+			query.setParameter("merchantId", merchantId);
+
+		return query.list();
+	}
 }

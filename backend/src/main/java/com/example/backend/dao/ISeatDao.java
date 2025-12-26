@@ -16,4 +16,7 @@ public interface ISeatDao {
 
     public List<Seat> selectAll();
 
+    public List<Seat> findByCondition(String seatsName, String seatsType, String seatsStatus, Integer spotId,
+            String serialNumber);
+
 }

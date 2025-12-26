@@ -1,26 +1,25 @@
-package com.example.backend.controller.spot;
+package com.example.backend.controller;
 
-import java.io.IOException;
 import java.util.List;
 
-import com.example.backend.dao.spot.SeatDao;
-import com.example.backend.model.spot.SeatBean;
+import com.example.backend.model.Seat;
+import com.example.backend.service.SeatService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+@Controller
+public class SeatListServ {
 
-@WebServlet("/seat/list")
-public class SeatListServ extends HttpServlet {
-    private static final long serialVersionUID = 1L;
+    @Autowired
+    private SeatService seatService;
 
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    @GetMapping("/seat/list")
+    public String list(Model model) {
+        List<Seat> seatList = seatService.selectAll();
 
-        SeatDao dao = new SeatDao();
-        List<SeatBean> seatList = dao.findAll();
-
-        request.setAttribute("seatList", seatList);
-        request.getRequestDispatcher("/WEB-INF/view/spot/seatList.jsp").forward(request, response);
+        model.addAttribute("seatList", seatList);
+        return "seatList";
     }
 }

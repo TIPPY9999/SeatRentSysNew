@@ -1,8 +1,10 @@
-package com.example.backend.controller.spot;
+package com.example.backend.controller;
 
 import java.io.IOException;
 
-import com.example.backend.dao.spot.SeatDao;
+import com.example.backend.service.SeatService;
+import com.example.backend.utils.HibernateUtil;
+import org.hibernate.Session;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -24,7 +26,17 @@ public class SeatDeleteServ extends HttpServlet {
             return;
         }
 
-        new SeatDao().delete(seatsId);
+        Session session = HibernateUtil.getSessionFactory().openSession();
+        try {
+            session.beginTransaction();
+            new SeatService(session).deleteById(seatsId);
+            session.getTransaction().commit();
+        } catch (Exception e) {
+            session.getTransaction().rollback();
+            e.printStackTrace();
+        } finally {
+            session.close();
+        }
         response.sendRedirect(request.getContextPath() + "/seat/list");
     }
 

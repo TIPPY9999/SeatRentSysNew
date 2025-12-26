@@ -16,4 +16,6 @@ public interface IRentSpotDao {
 
     public List<RentalSpot> selectAll();
 
+    public List<RentalSpot> findByCondition(String spotCode, String spotName, String spotStatus, Integer merchantId);
+
 }

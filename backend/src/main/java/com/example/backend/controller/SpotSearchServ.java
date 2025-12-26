@@ -1,4 +1,4 @@
-package com.example.backend.controller.spot;
+package com.example.backend.controller;
 
 import java.io.IOException;
 
@@ -16,7 +16,7 @@ public class SpotSearchServ extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        request.getRequestDispatcher("/WEB-INF/view/spot/spotSearch.jsp")
+        request.getRequestDispatcher("/WEB-INF/view/spotSearch.jsp")
                 .forward(request, response);
     }
 }

@@ -1,62 +1,50 @@
-package com.example.backend.controller.spot;
+package com.example.backend.controller;
 
-import java.io.IOException;
-
-import org.hibernate.Session;
 import com.example.backend.model.Seat;
-import com.example.backend.utils.HibernateUtil;
+import com.example.backend.service.SeatService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+@Controller
+public class SeatInsertServ {
+    @Autowired
+    private SeatService seatService;
 
-@WebServlet("/seat/insert")
-public class SeatInsertServ extends HttpServlet {
-    private static final long serialVersionUID = 1L;
-
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        request.getRequestDispatcher("/WEB-INF/view/spot/seatInsert.jsp").forward(request, response);
+    @GetMapping("/seat/insert")
+    public String showForm() {
+        // 對應到 /WEB-INF/view/seatInsert.jsp
+        return "seatInsert";
     }
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        request.setCharacterEncoding("UTF-8");
+    @PostMapping("/seat/insert")
+    public String insert(
+            @RequestParam("seatsName") String seatsName,
+            @RequestParam("seatsType") String seatsType,
+            @RequestParam("seatsStatus") String seatsStatus,
+            @RequestParam(value = "spotId", required = false) String spotIdStr,
+            @RequestParam(value = "serialNumber", required = false) String serialNumber) {
 
         Seat sBean = new Seat();
-        sBean.setSeatsName(request.getParameter("seatsName"));
-        sBean.setSeatsType(request.getParameter("seatsType"));
-        sBean.setSeatsStatus(request.getParameter("seatsStatus"));
+        sBean.setSeatsName(seatsName);
+        sBean.setSeatsType(seatsType);
+        sBean.setSeatsStatus(seatsStatus);
 
         // spotId 防呆
-        String spotIdStr = request.getParameter("spotId");
         Integer spotId = null;
         try {
             spotId = (spotIdStr == null || spotIdStr.isBlank()) ? null : Integer.valueOf(spotIdStr.trim());
         } catch (Exception e) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "spotId 格式錯誤");
-            return;
+            throw new IllegalArgumentException("spotId 格式錯誤");
         }
         sBean.setSpotId(spotId);
 
-        String serialNumber = request.getParameter("serialNumber");
         sBean.setSerialNumber((serialNumber == null || serialNumber.isBlank()) ? null : serialNumber.trim());
 
-        Session session = HibernateUtil.getSessionFactory().openSession();
-        try {
-            session.beginTransaction();
-            session.persist(sBean);
-            session.getTransaction().commit();
-        } catch (Exception e) {
-            session.getTransaction().rollback();
-            e.printStackTrace();
-        } finally {
-            session.close();
-        }
+        seatService.insert(sBean);
 
-        response.sendRedirect(request.getContextPath() + "/seat/list");
+        return "redirect:/seat/list";
     }
 }

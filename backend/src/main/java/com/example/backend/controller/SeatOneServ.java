@@ -1,9 +1,11 @@
-package com.example.backend.controller.spot;
+package com.example.backend.controller;
 
 import java.io.IOException;
 
-import com.example.backend.dao.spot.SeatDao;
-import com.example.backend.model.spot.SeatBean;
+import com.example.backend.model.Seat;
+import com.example.backend.service.SeatService;
+import com.example.backend.utils.HibernateUtil;
+import org.hibernate.Session;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -34,8 +36,14 @@ public class SeatOneServ extends HttpServlet {
             return;
         }
 
-        SeatBean seat = new SeatDao().findById(seatsId);
+        Seat seat = null;
+        Session session = HibernateUtil.getSessionFactory().openSession();
+        try {
+            seat = new SeatService(session).selectById(seatsId);
+        } finally {
+            session.close();
+        }
         request.setAttribute("seat", seat);
-        request.getRequestDispatcher("/WEB-INF/view/spot/seatOne.jsp").forward(request, response);
+        request.getRequestDispatcher("/WEB-INF/view/seatOne.jsp").forward(request, response);
     }
 }

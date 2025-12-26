@@ -1,83 +1,54 @@
-package com.example.backend.controller.spot;
+package com.example.backend.controller;
 
-import java.io.IOException;
+import com.example.backend.model.Seat;
+import com.example.backend.service.SeatService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-import com.example.backend.dao.spot.SeatDao;
-import com.example.backend.model.spot.SeatBean;
+@Controller
+public class SeatUpdateServ {
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+	@Autowired
+	private SeatService seatService;
 
-@WebServlet("/seat/update")
-public class SeatUpdateServ extends HttpServlet {
-	private static final long serialVersionUID = 1L;
-
-	@Override
-	protected void doGet(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
-
-		String idStr = request.getParameter("seatsId");
-		Integer seatsId = null;
-
-		System.out.println("request.getParameter(spotId): +" + request.getParameter("seatsId"));
-
-		try {
-			seatsId = (idStr == null || idStr.isBlank()) ? null : Integer.valueOf(idStr.trim());
-		} catch (Exception e) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "seatsId 格式錯誤");
-			return;
-		}
-
-		if (seatsId == null) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "seatsId 不可為空");
-			return;
-		}
-
-		SeatBean seat = new SeatDao().findById(seatsId);
-
-		request.setAttribute("seat", seat); // seat 可能為 null，JSP 顯示找不到
-		request.getRequestDispatcher("/WEB-INF/view/spot/seatUpdate.jsp").forward(request, response);
+	@GetMapping("/seat/update")
+	public String showForm(@RequestParam("seatsId") Integer seatsId, Model model) {
+		Seat seat = seatService.selectById(seatsId);
+		model.addAttribute("seat", seat);
+		return "seatUpdate";
 	}
 
-	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
+	@PostMapping("/seat/update")
+	public String update(
+			@RequestParam("seatsId") Integer seatsId,
+			@RequestParam("seatsName") String seatsName,
+			@RequestParam("seatsType") String seatsType,
+			@RequestParam("seatsStatus") String seatsStatus,
+			@RequestParam(value = "spotId", required = false) String spotIdStr,
+			@RequestParam(value = "serialNumber", required = false) String serialNumber) {
 
-		request.setCharacterEncoding("UTF-8");
-
-		// seatsId 防呆
-		Integer seatsId = null;
-		try {
-			seatsId = Integer.valueOf(request.getParameter("seatsId"));
-		} catch (Exception e) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "seatsId 格式錯誤");
-			return;
-		}
-
-		SeatBean bean = new SeatBean();
+		Seat bean = new Seat();
 		bean.setSeatsId(seatsId);
-		bean.setSeatsName(request.getParameter("seatsName"));
-		bean.setSeatsType(request.getParameter("seatsType"));
-		bean.setSeatsStatus(request.getParameter("seatsStatus"));
+		bean.setSeatsName(seatsName);
+		bean.setSeatsType(seatsType);
+		bean.setSeatsStatus(seatsStatus);
 
-		// spotId 防呆
-		String spotIdStr = request.getParameter("spotId");
 		Integer spotId = null;
 		try {
 			spotId = (spotIdStr == null || spotIdStr.isBlank()) ? null : Integer.valueOf(spotIdStr.trim());
 		} catch (Exception e) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "spotId 格式錯誤");
-			return;
+			throw new IllegalArgumentException("spotId 格式錯誤");
 		}
 		bean.setSpotId(spotId);
 
-		String serialNumber = request.getParameter("serialNumber");
 		bean.setSerialNumber((serialNumber == null || serialNumber.isBlank()) ? null : serialNumber.trim());
 
-		// ✅ updatedAt 交給 DAO 的 SQL：updatedAt = GETDATE()
-		new SeatDao().update(bean);
+		seatService.update(bean);
 
-		response.sendRedirect(request.getContextPath() + "/seat/list");
+		return "redirect:/seat/list";
 	}
 }

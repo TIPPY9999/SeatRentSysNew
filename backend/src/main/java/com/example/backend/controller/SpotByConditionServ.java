@@ -1,45 +1,31 @@
-package com.example.backend.controller.spot;
+package com.example.backend.controller;
 
-import java.io.IOException;
 import java.util.List;
 
-import com.example.backend.dao.spot.RentalSpotDao;
-import com.example.backend.model.spot.RentalSpotBean;
+import com.example.backend.service.RentalSpotService;
+import com.example.backend.model.RentalSpot;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+@Controller
+public class SpotByConditionServ {
 
-@WebServlet("/spot/condition")
-public class SpotByConditionServ extends HttpServlet {
-    private static final long serialVersionUID = 1L;
+    @Autowired
+    private RentalSpotService rentalSpotService;
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    @GetMapping("/spot/condition")
+    public String search(
+            @RequestParam(value = "spotCode", required = false) String spotCode,
+            @RequestParam(value = "spotName", required = false) String spotName,
+            @RequestParam(value = "spotStatus", required = false) String spotStatus,
+            @RequestParam(value = "merchantId", required = false) Integer merchantId,
+            Model model) {
 
-        request.setCharacterEncoding("UTF-8");
-
-        String spotCode = request.getParameter("spotCode");
-        String spotName = request.getParameter("spotName");
-        String spotStatus = request.getParameter("spotStatus");
-        Integer merchantId = parseInteger(request.getParameter("merchantId"));
-
-        RentalSpotDao dao = new RentalSpotDao();
-        List<RentalSpot> list = dao.findByCondition(spotCode, spotName, spotStatus, merchantId);
-
-        request.setAttribute("spotList", list);
-        request.getRequestDispatcher("/WEB-INF/view/spot/spotResult.jsp")
-                .forward(request, response);
-    }
-
-    private Integer parseInteger(String str) {
-        try {
-            return (str == null || str.isBlank()) ? null : Integer.valueOf(str);
-        } catch (Exception e) {
-            return null;
-        }
+        List<RentalSpot> list = rentalSpotService.findByCondition(spotCode, spotName, spotStatus, merchantId);
+        model.addAttribute("spotList", list);
+        return "spotResult";
     }
 }

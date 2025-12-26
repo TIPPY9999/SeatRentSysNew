@@ -1,44 +1,33 @@
-package com.example.backend.controller.spot;
+package com.example.backend.controller;
 
-import java.io.IOException;
 import java.util.List;
 
-import com.example.backend.dao.SeatDao;
-import com.example.backend.model.spot.SeatBean;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import com.example.backend.model.Seat;
+import com.example.backend.service.SeatService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-@WebServlet("/seat/condition")
-public class SeatByConditionServ extends HttpServlet {
-    private static final long serialVersionUID = 1L;
+@Controller
+public class SeatByConditionServ {
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    @Autowired
+    private SeatService seatService;
 
-        request.setCharacterEncoding("UTF-8");
+    @GetMapping("/seat/condition")
+    public String search(
+            @RequestParam(value = "seatsName", required = false) String seatsName,
+            @RequestParam(value = "seatsType", required = false) String seatsType,
+            @RequestParam(value = "seatsStatus", required = false) String seatsStatus,
+            @RequestParam(value = "serialNumber", required = false) String serialNumber,
+            @RequestParam(value = "spotId", required = false) Integer spotId,
+            Model model) {
 
-        String seatsName = request.getParameter("seatsName");
-        String seatsType = request.getParameter("seatsType");
-        String seatsStatus = request.getParameter("seatsStatus");
-        String serialNumber = request.getParameter("serialNumber");
+        List<Seat> seatList = seatService.findByCondition(seatsName, seatsType, seatsStatus, spotId, serialNumber);
 
-        String spotIdStr = request.getParameter("spotId");
-        Integer spotId = null;
-        try {
-            spotId = (spotIdStr == null || spotIdStr.isBlank()) ? null : Integer.valueOf(spotIdStr.trim());
-        } catch (Exception e) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "spotId 格式錯誤");
-            return;
-        }
-
-        List<SeatBean> seatList = new SeatDao().findByCondition(
-                seatsName, seatsType, seatsStatus, spotId, serialNumber);
-
-        request.setAttribute("seatList", seatList);
-        request.getRequestDispatcher("/WEB-INF/view/spot/seatResult.jsp").forward(request, response);
+        model.addAttribute("seatList", seatList);
+        return "seatResult";
     }
 }
