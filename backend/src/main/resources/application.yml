@@ -6,17 +6,19 @@ spring:
     name: seat-rent-backend
 
   datasource:
-    # 👇 這裡要改：填入你的資料庫名稱 (例如 SeatDB)
+    # 👇 連線字串
     url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
-    # 👇 這裡要改：你的 SQL Server 帳號 (通常是 sa)
+    # 👇 你的帳號 (保留 tippy 讓你連線)
     username: tippy
-    # 👇 這裡要改：你的 SQL Server 密碼
+    # 👇 你的密碼
     password: 1234
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
 
   jpa:
     show-sql: true
     hibernate:
+      # 👇 照你要求的：手動建表，不讓程式亂動資料庫
+      ddl-auto: none
 
     properties:
       hibernate:
