@@ -1,75 +1,71 @@
 package com.example.backend.controller;
 
 import com.example.backend.model.DiscountBean;
-import com.example.backend.model.Result;
 import com.example.backend.service.DiscountService;
+import com.example.backend.model.Result;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
-import java.io.IOException;
+import java.nio.file.*;
 import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/discounts")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class DiscountController {
 
     @Autowired
     private DiscountService discountService;
 
-    // 從 application.properties 讀取上傳路徑 (例如 D:/SeatRentSys/images/)
     @Value("${file.upload-path:./uploads/}")
     private String uploadPath;
 
-    // 1. 取得清單與搜尋
     @GetMapping
     public Result<List<DiscountBean>> list(@RequestParam(required = false) String keyword) {
-        List<DiscountBean> list = discountService.getAll(keyword);
-        return Result.success(list, "查詢成功");
+        return Result.success(discountService.getAll(keyword), "查詢成功");
     }
 
-    // 2. 新增或更新 (處理圖片上傳)
     @PostMapping
     public Result<String> save(
-            @RequestPart("discount") DiscountBean discount,
+            @RequestPart("discount") String discountJson, // 前端傳來的 JSON Blob
             @RequestPart(value = "image", required = false) MultipartFile file) {
 
         try {
+            // 1. 使用 Jackson 解析 JSON 並處理 LocalDate
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.registerModule(new JavaTimeModule());
+            DiscountBean discount = mapper.readValue(discountJson, DiscountBean.class);
+
+            // 2. 處理圖片上傳
             if (file != null && !file.isEmpty()) {
-                // 生成唯一檔名防止重複
                 String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-                File dest = new File(uploadPath + fileName);
+                Path root = Paths.get(uploadPath).toAbsolutePath().normalize();
+                if (!Files.exists(root))
+                    Files.createDirectories(root);
 
-                // 確保目錄存在
-                if (!dest.getParentFile().exists())
-                    dest.getParentFile().mkdirs();
-
-                file.transferTo(dest);
-                discount.setCouponImg(fileName); // 存入資料庫的是檔名
+                Files.copy(file.getInputStream(), root.resolve(fileName), StandardCopyOption.REPLACE_EXISTING);
+                discount.setCouponImg(fileName);
             }
 
+            // 3. 儲存 (JPA 會根據 ID 自動判定新增或更新)
             discountService.save(discount);
             return Result.success(null, "儲存成功");
-        } catch (IOException e) {
-            return Result.error("圖片上傳失敗: " + e.getMessage());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("伺服器錯誤: " + e.getMessage());
         }
     }
 
-    // 3. 更新狀態 (上架/下架)
-    @PatchMapping("/{id}/status")
-    public Result<String> updateStatus(@PathVariable Integer id, @RequestParam String action) {
-        discountService.updateSingleStatus(id, action);
-        return Result.success(null, "狀態更新成功");
-    }
-
-    // 4. 刪除
     @DeleteMapping("/{id}")
     public Result<String> delete(@PathVariable Integer id) {
         discountService.delete(id);
-        return Result.success(null, "刪除完成");
+        return Result.success(null, "刪除成功");
     }
 }

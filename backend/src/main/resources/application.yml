@@ -1,6 +1,9 @@
 server:
   port: 8080
 
+file:
+  upload-path: D:/SeatRentSysNew/images/
+
 spring:
   application:
     name: seat-rent-backend
@@ -17,7 +20,7 @@ spring:
   jpa:
     show-sql: true
     hibernate:
-       ddl-auto: update # 這行很重要！它會自動幫你在資料庫建 Table
+      ddl-auto: update # 這行很重要！它會自動幫你在資料庫建 Table
     hibernate.naming.physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     hibernate.naming.implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
     properties:
