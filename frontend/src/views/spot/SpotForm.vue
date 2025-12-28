@@ -16,7 +16,11 @@
       </div>
       <div>
         <label>狀態 (Status):</label>
-        <input v-model="formData.spotStatus" type="text" required>
+        <select v-model="formData.spotStatus" required>
+          <option value="" disabled>請選擇狀態</option>
+          <option value="啟用">啟用</option>
+          <option value="停用">停用</option>
+        </select>
       </div>
       <div>
         <label>Merchant ID:</label>
@@ -68,7 +72,7 @@ onMounted(async () => {
       // 2. 動作：axios.get('/spot/update', ...) 會發送一個 HTTP GET 請求到後端。
       // 3. 參數：{ params: { spotId: ... } } 會被轉換成 URL 查詢字串，例如：/spot/update?spotId=123
       // 4. 等待：await 會暫停程式執行，直到後端回傳結果。
-      const response = await axios.get('/spot/update', { params: { spotId: route.params.id } });
+      const response = await axios.get('/api/spot/update', { params: { spotId: route.params.id } });
       // 5. 接收：response.data 就是後端回傳的 JSON 物件 (RentalSpot，即租借據點)，我們把它存入 formData，畫面就會自動更新。
       formData.value = response.data;
     } catch (error) {
@@ -78,28 +82,31 @@ onMounted(async () => {
 });
 
 const saveSpot = async () => {
-  // [資料打包]
-  // 因為後端目前是用 req.getParameter() 接收資料 (傳統表單格式 application/x-www-form-urlencoded)，
-  // 所以我們不能直接傳 JSON 物件，必須用 URLSearchParams 把資料包裝成 key=value&key2=value2 的字串格式。
-  const params = new URLSearchParams();
-  for (const key in formData.value) {
-    if (formData.value[key] !== null && formData.value[key] !== undefined) {
-      params.append(key, formData.value[key]);
-    }
+  // [優化邏輯] 改用 JSON 傳輸
+  // 直接使用 formData 物件，Axios 會自動將其序列化為 JSON
+
+  // [新增] 前端驗證邏輯：確保必填欄位不為空，且不能只輸入空白鍵
+  if (!formData.value.spotCode?.trim() || 
+      !formData.value.spotName?.trim() || 
+      !formData.value.spotAddress?.trim() || 
+      !formData.value.spotStatus?.trim() ||
+      !formData.value.merchantId) {
+    alert('請檢查所有必填欄位 (代碼、名稱、地址、狀態、Merchant ID) 是否皆已填寫！');
+    return; // 驗證失敗，中斷執行，不發送請求
   }
+
   if (isEdit.value) {
-    params.append('spotId', route.params.id);
+    // 確保 ID 包含在資料中
+    formData.value.spotId = route.params.id;
   }
 
   try {
     if (isEdit.value) {
-      // [AXIOS POST 請求原理]
-      // 1. 目的：將打包好的表單資料 (params) 送給後端進行更新。
-      // 2. 動作：發送 HTTP POST 請求。
-      await axios.post('/spot/update', params);
+      // 發送 JSON 資料
+      await axios.post('/api/spot/update', formData.value);
     } else {
       // 同上，只是路徑改為新增
-      await axios.post('/spot/insert', params);
+      await axios.post('/api/spot/insert', formData.value);
     }
     // 3. 後續：如果沒有報錯 (catch)，代表後端處理成功 (HTTP 200)，我們就跳轉回列表頁。
     router.push('/spot/list');

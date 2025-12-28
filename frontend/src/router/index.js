@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import SpotList from '../views/spot/SpotList.vue'
-import SpotForm from '../views/spot/SpotForm.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,17 +10,17 @@ const router = createRouter({
     {
       path: '/spot/list',
       name: 'spot-list',
-      component: SpotList
+      component: () => import('../views/spot/SpotList.vue')
     },
     {
       path: '/spot/add',
       name: 'spot-add',
-      component: SpotForm
+      component: () => import('../views/spot/SpotForm.vue')
     },
     {
       path: '/spot/edit/:id',
       name: 'spot-edit',
-      component: SpotForm
+      component: () => import('../views/spot/SpotForm.vue')
     }
   ]
 })
