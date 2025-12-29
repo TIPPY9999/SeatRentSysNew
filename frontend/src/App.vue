@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 /**
  * App.vue：整個前端的「根容器」
  * [關鍵修正] 這裡只留 RouterView，確保登入頁面是乾淨的。

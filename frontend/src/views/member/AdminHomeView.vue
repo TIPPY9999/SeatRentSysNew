@@ -1,7 +1,7 @@
 <script setup>
 /**
  * AdminHomeView.vue：後台首頁入口
- * 已轉換為純 JavaScript 寫法
+ * 已新增據點管理 (Spot) 功能圖卡
  */
 import { useRouter } from 'vue-router'
 
@@ -29,6 +29,11 @@ const router = useRouter()
             <p>管理後台人員帳號</p>
           </div>
 
+          <div class="card spot-card" @click="router.push('/admin/spot/list')">
+            <h3>據點管理</h3>
+            <p>管理各區域據點與座位分布</p>
+          </div>
+
           <div class="card" @click="router.push('/admin/rec-rent')">
             <h3>租借紀錄</h3>
             <p>查看租借與歸還紀錄</p>
@@ -44,13 +49,11 @@ const router = useRouter()
             <p>追蹤維修進度與派工</p>
           </div>
 
-          <!-- ✅ 新增：商家管理（搬進 cards） -->
           <div class="card" @click="router.push('/admin/merchants')">
             <h3>商家管理</h3>
             <p>管理商家資料與狀態</p>
           </div>
 
-          <!-- ✅ 新增：優惠券管理（搬進 cards） -->
           <div class="card" @click="router.push('/admin/coupons')">
             <h3>優惠券管理</h3>
             <p>管理優惠券與活動</p>
@@ -83,6 +86,11 @@ const router = useRouter()
   transition:
     transform 0.2s,
     box-shadow 0.2s;
+}
+
+/* 讓據點管理卡片稍微有點區隔感 (可選) */
+.spot-card h3 {
+  color: #28a745; /* 綠色，象徵據點與地點 */
 }
 
 .card:hover {

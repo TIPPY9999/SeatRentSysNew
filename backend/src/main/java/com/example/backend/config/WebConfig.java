@@ -4,6 +4,9 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -12,25 +15,35 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * WebConfig 整合設定檔
+ * 1) 靜態資源映射 (圖片上傳路徑 /images/**)
+ * 2) CORS 跨域設定（指定前端 http://localhost:5173）
+ * 3) 健康檢查 API
+ */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    // ✅ 修正：必須與 application.yml 中的 app.file.upload-path 一致
-    @Value("${app.file.upload-path}")
+    // ✅ 必須與 application.yml 中的 app.file.upload-path 一致
+    @Value("${app.file.upload-path:}")
     private String uploadPath;
 
     private String location; // file:/D:/.../images/
 
+    // ==========================================
+    // 1) 圖片路徑映射設定
+    // ==========================================
     @PostConstruct
     public void init() throws IOException {
         if (!StringUtils.hasText(uploadPath)) {
-            throw new IllegalStateException("app.file.upload-path is empty");
+            System.err.println("⚠️ 警告: app.file.upload-path 未設定，圖片功能可能無法使用");
+            return;
         }
 
         Path dir = Paths.get(uploadPath).toAbsolutePath().normalize();
-        Files.createDirectories(dir);      // 沒資料夾就自動建
+        Files.createDirectories(dir);
 
-        location = dir.toUri().toString(); // 自動轉成正確的 file URI
+        location = dir.toUri().toString();
 
         System.out.println("\n--- [圖片映射檢查] ---");
         System.out.println("本地磁碟路徑: " + dir);
@@ -41,8 +54,38 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 將 URL 的 /images/** 請求映射到硬碟實體路徑
-        registry.addResourceHandler("/images/**")
-                .addResourceLocations(location);
+        if (location != null) {
+            registry.addResourceHandler("/images/**")
+                    .addResourceLocations(location);
+        }
+    }
+
+    // ==========================================
+    // 2) CORS 跨域設定（✅穩定版）
+    // ==========================================
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                // ✅ 明確列出前端網址（避免 allowCredentials(true) + "*" 直接炸）
+                .allowedOrigins(
+                        "http://localhost:5173",
+                        "http://127.0.0.1:5173"
+                )
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
+    }
+
+    // ==========================================
+    // 3) 健康檢查控制器
+    // ==========================================
+    @RestController
+    public static class HealthCheckController {
+        @GetMapping("/test")
+        public String check() {
+            return "Backend is running! (後端運作中)";
+        }
     }
 }
+        
