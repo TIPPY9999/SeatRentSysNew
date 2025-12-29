@@ -1,8 +1,50 @@
-.metadata/
-Servers/
-.settings/
-.classpath
-.project
-bin/
-target/
-.vscode/
+# =====================================
+# 1. 系統與 IDE 暫存 (絕對不要進 repo)
+# =====================================
+.DS_Store
+Thumbs.db
+*.log
+**/.metadata/
+**/.recommenders/
+**/.idea/
+**/*.iml
+**/*.ipr
+**/*.iws
+**/.settings/
+**/.classpath
+**/.project
+**/.factorypath
+
+# VS Code 設定：忽略大部分，只保留團隊共用的 settings
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+*.code-workspace
+
+# =====================================
+# 2. 前端保護區 (Frontend - Vue)
+# =====================================
+**/node_modules/
+**/dist/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/coverage/
+**/.eslintcache
+**/.env.local
+**/.env.*.local
+
+# =====================================
+# 3. 後端保護區 (Backend - Spring Boot)
+# =====================================
+**/target/
+**/*.class
+**/HELP.md
+
+# =====================================
+# 4. 特殊保留與排除
+# =====================================
+# 保留空資料夾，不要忽略 .gitkeep 檔案
+!**/.gitkeep
