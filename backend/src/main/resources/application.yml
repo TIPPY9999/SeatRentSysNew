@@ -1,10 +1,9 @@
 server:
   port: 8080
 
-# 自定義路徑 (警告可忽略或在插件中選 Ignore)
 app:
   file:
-    upload-path: D:/SeatRentSysNew/images/
+    upload-path: ${user.dir}/../uploads/images
 
 spring:
   application:
@@ -23,9 +22,6 @@ spring:
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
-
-    # ✅ 修正：確保 properties 與上面的 hibernate、show-sql 完全對齊
-    # 採用最穩定的中括號寫法，消除語法警告
     properties:
       "[hibernate.format_sql]": true
       "[hibernate.default_schema]": dbo

@@ -43,6 +43,18 @@ const router = useRouter()
             <h3>維修工單管理</h3>
             <p>追蹤維修進度與派工</p>
           </div>
+
+          <!-- ✅ 新增：商家管理（搬進 cards） -->
+          <div class="card" @click="router.push('/admin/merchants')">
+            <h3>商家管理</h3>
+            <p>管理商家資料與狀態</p>
+          </div>
+
+          <!-- ✅ 新增：優惠券管理（搬進 cards） -->
+          <div class="card" @click="router.push('/admin/coupons')">
+            <h3>優惠券管理</h3>
+            <p>管理優惠券與活動</p>
+          </div>
         </div>
       </div>
     </section>

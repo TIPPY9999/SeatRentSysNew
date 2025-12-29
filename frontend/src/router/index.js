@@ -121,6 +121,13 @@ const routes = [
         name: 'mtif-form',
         component: () => import('@/views/maintenance/MtifForm.vue'),
       },
+
+      {
+        path: 'discounts',
+        name: 'discounts',
+        component: DiscountList,
+        alias: 'coupons', //  /admin/coupons
+      },
     ],
   },
 
