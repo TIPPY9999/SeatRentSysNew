@@ -1,14 +1,13 @@
-<script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue'
+<script setup>
+// [修正] 移除了 ref，因為下面沒用到
+import { onMounted, reactive, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
 
-// 取得路由參數中的 ID
 const staffId = Number(route.params.id)
-// 判斷是「編輯」還是「新增」
 const isEdit = computed(() => !isNaN(staffId) && staffId > 0)
 
 const form = reactive({
@@ -24,15 +23,14 @@ onMounted(async () => {
     try {
       const res = await axios.get(`http://localhost:8080/api/maintenance/staff/${staffId}`)
       const d = res.data
-      // ✅ 手動挑選欄位，確保不傳回多餘欄位
       form.staffName = d.staffName || ''
       form.staffCompany = d.staffCompany || ''
       form.staffPhone = d.staffPhone || ''
       form.staffEmail = d.staffEmail || ''
       form.staffNote = d.staffNote || ''
-    } catch (error) {
+    } catch {
+      // [修正] 移除了 (error)，因為我們只 alert，沒用到 error 變數
       alert('找不到該人員資料')
-      // 修正：跳轉回列表時需補上 /admin
       router.push('/admin/staff-list')
     }
   }
@@ -47,9 +45,9 @@ const submitForm = async () => {
       await axios.post('http://localhost:8080/api/maintenance/staff', form)
       alert('新增成功')
     }
-    // 修正：儲存成功後跳轉回列表需補上 /admin
     router.push('/admin/staff-list')
-  } catch (error) {
+  } catch {
+    // [修正] 移除了 (error)
     alert('儲存失敗，請檢查網路或後端服務')
   }
 }
@@ -84,7 +82,6 @@ const submitForm = async () => {
                       required
                     />
                   </div>
-
                   <div class="form-group">
                     <label>公司</label>
                     <input
@@ -94,7 +91,6 @@ const submitForm = async () => {
                       placeholder="請輸入公司名稱"
                     />
                   </div>
-
                   <div class="form-group">
                     <label>電話</label>
                     <input
@@ -104,7 +100,6 @@ const submitForm = async () => {
                       placeholder="請輸入聯絡電話"
                     />
                   </div>
-
                   <div class="form-group">
                     <label>Email</label>
                     <input
@@ -114,7 +109,6 @@ const submitForm = async () => {
                       placeholder="example@mail.com"
                     />
                   </div>
-
                   <div class="form-group">
                     <label>備註</label>
                     <textarea
@@ -148,7 +142,6 @@ const submitForm = async () => {
 </template>
 
 <style scoped>
-/* 這裡可以依需求調整間距 */
 .content-header {
   padding: 15px 0.5rem;
 }

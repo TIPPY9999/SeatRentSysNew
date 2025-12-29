@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, reactive, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
@@ -16,18 +16,17 @@ const form = reactive({
   assignedStaffId: null,
 })
 
-const staffOptions = ref<any[]>([])
+const staffOptions = ref([])
 
 onMounted(async () => {
-  // 載入維修人員列表供下拉選單使用
   try {
     const sRes = await axios.get('http://localhost:8080/api/maintenance/staff')
     staffOptions.value = sRes.data
-  } catch (e) {
+  } catch {
+    // [修正] 移除了 unused variable
     console.error('無法載入人員列表')
   }
 
-  // 如果是編輯模式，載入現有工單資料
   if (isEdit.value) {
     try {
       const res = await axios.get(`http://localhost:8080/api/maintenance/tickets/${ticketId}`)
@@ -37,9 +36,9 @@ onMounted(async () => {
       form.issueDesc = d.issueDesc
       form.issuePriority = d.issuePriority
       form.assignedStaffId = d.assignedStaffId
-    } catch (e) {
+    } catch {
+      // [修正] 移除了 unused variable
       alert('找不到該工單資料')
-      // 修正：補上 /admin 前綴
       router.push('/admin/mtif-list')
     }
   }
@@ -48,21 +47,20 @@ onMounted(async () => {
 const submit = async () => {
   try {
     if (isEdit.value) {
-      // 執行更新
       await axios.put(`http://localhost:8080/api/maintenance/tickets/${ticketId}`, form)
-      // 若有指派人員，同時執行指派 API
-      await axios.post(`http://localhost:8080/api/maintenance/tickets/${ticketId}/assign`, {
-        staffId: form.assignedStaffId,
-      })
+      if (form.assignedStaffId) {
+        await axios.post(`http://localhost:8080/api/maintenance/tickets/${ticketId}/assign`, {
+          staffId: form.assignedStaffId,
+        })
+      }
       alert('更新成功')
     } else {
-      // 執行新增
       await axios.post('http://localhost:8080/api/maintenance/tickets', form)
       alert('新增成功')
     }
-    // 修正：補上 /admin 前綴
     router.push('/admin/mtif-list')
-  } catch (e) {
+  } catch {
+    // [修正] 移除了 unused variable
     alert('儲存失敗，請確認欄位內容與後端連線')
   }
 }
@@ -83,7 +81,6 @@ const submit = async () => {
             <div class="card-header">
               <h3 class="card-title">詳細資訊</h3>
             </div>
-
             <form @submit.prevent="submit">
               <div class="card-body">
                 <div class="form-group row">
@@ -100,7 +97,6 @@ const submit = async () => {
                     />
                   </div>
                 </div>
-
                 <div class="form-group row">
                   <label class="col-sm-3 col-form-label"
                     >問題類型 <span class="text-danger">*</span></label
@@ -114,7 +110,6 @@ const submit = async () => {
                     />
                   </div>
                 </div>
-
                 <div class="form-group row">
                   <label class="col-sm-3 col-form-label">詳細描述</label>
                   <div class="col-sm-9">
@@ -126,7 +121,6 @@ const submit = async () => {
                     ></textarea>
                   </div>
                 </div>
-
                 <div class="form-group row">
                   <label class="col-sm-3 col-form-label">優先級</label>
                   <div class="col-sm-9">
@@ -138,7 +132,6 @@ const submit = async () => {
                     </select>
                   </div>
                 </div>
-
                 <div class="form-group row">
                   <label class="col-sm-3 col-form-label">指派維修員</label>
                   <div class="col-sm-9">
@@ -151,7 +144,6 @@ const submit = async () => {
                   </div>
                 </div>
               </div>
-
               <div class="card-footer text-right">
                 <button type="submit" class="btn btn-primary">
                   <i class="fas fa-paper-plane mr-1"></i> 儲存並送出

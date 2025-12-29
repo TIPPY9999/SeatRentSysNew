@@ -1,17 +1,9 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 
-// 定義資料類型
-interface InactiveStaff {
-  staffId: number
-  staffName: string
-  staffCompany: string
-  staffPhone: string
-  staffNote: string
-}
-
-const staffList = ref<InactiveStaff[]>([])
+// 移除 TypeScript 類型定義，回歸純 JS [cite: 18]
+const staffList = ref([])
 const searchText = ref('')
 const loading = ref(false)
 
@@ -21,8 +13,8 @@ const fetchHistory = async () => {
     loading.value = true
     const res = await axios.get('http://localhost:8080/api/maintenance/staff/inactive')
     staffList.value = res.data
-  } catch (error) {
-    console.error('Fetch error:', error)
+  } catch {
+    // 修正：移除未使用的 error 變數 [cite: 18]
     alert('無法載入歷史紀錄，請檢查後端連線')
   } finally {
     loading.value = false
@@ -74,9 +66,7 @@ onMounted(() => fetchHistory())
                   placeholder="搜尋姓名或公司..."
                 />
                 <div class="input-group-append">
-                  <span class="btn btn-default">
-                    <i class="fas fa-search"></i>
-                  </span>
+                  <span class="btn btn-default"><i class="fas fa-search"></i></span>
                 </div>
               </div>
             </div>
@@ -103,9 +93,8 @@ onMounted(() => fetchHistory())
                     <td>{{ s.staffNote }}</td>
                   </tr>
                   <tr v-if="filteredList.length === 0">
-                    <td colspan="5" class="text-center py-4">
-                      <span v-if="loading">載入中...</span>
-                      <span v-else class="text-muted">暫無歷史紀錄資料</span>
+                    <td colspan="5" class="text-center py-4 text-muted">
+                      {{ loading ? '載入中...' : '暫無歷史紀錄資料' }}
                     </td>
                   </tr>
                 </tbody>
@@ -119,17 +108,10 @@ onMounted(() => fetchHistory())
 </template>
 
 <style scoped>
-/* 保持與內容區塊一致的邊距 */
 .content-header {
   padding: 15px 0.5rem;
 }
-
-/* 讓表格在小螢幕上也能橫向捲動 */
 .table-responsive {
   overflow-x: auto;
-}
-
-.jy-table th {
-  white-space: nowrap;
 }
 </style>

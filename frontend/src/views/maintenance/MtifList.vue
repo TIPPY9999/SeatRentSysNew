@@ -1,24 +1,23 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, computed, reactive, watch } from 'vue'
 import axios from 'axios'
 
 const props = defineProps({ historyMode: Boolean })
-const tickets = ref<any[]>([])
+const tickets = ref([])
 const filters = reactive({ keyword: '', priority: '', status: '' })
 const loading = ref(false)
 const showResolveModal = ref(false)
 const resolveForm = reactive({ ticketId: 0, resultType: 'FIXED', resolveNote: '' })
 
-// 定義優先級中文對照表
-const priorityMap: Record<string, string> = {
+// 移除 TypeScript 型別標註
+const priorityMap = {
   LOW: '低',
   NORMAL: '普通',
   HIGH: '高',
   URGENT: '緊急',
 }
 
-// 定義狀態中文對照表
-const statusMap: Record<string, string> = {
+const statusMap = {
   REPORTED: '已通報',
   ASSIGNED: '已指派',
   UNDER_MAINTENANCE: '維修中',
@@ -32,7 +31,8 @@ const fetchTickets = async () => {
     loading.value = true
     const res = await axios.get(`http://localhost:8080/api/maintenance/tickets/${endpoint}`)
     tickets.value = res.data
-  } catch (e) {
+  } catch {
+    // 已修正：移除未使用的 e 變數
     alert('無法取得工單資料')
   } finally {
     loading.value = false
@@ -59,23 +59,28 @@ const filteredTickets = computed(() => {
   })
 })
 
-const startTicket = async (id: number) => {
+const startTicket = async (id) => {
   try {
     await axios.post(`http://localhost:8080/api/maintenance/tickets/${id}/start`)
     fetchTickets()
-  } catch (e) {
+  } catch {
     alert('操作失敗：請確認已指派人員且狀態正確')
   }
 }
 
-const cancelTicket = async (id: number) => {
+// ✅ 修正警告：此函式現在已正確綁定到下方模板的按鈕上
+const cancelTicket = async (id) => {
   if (!confirm('確認取消此工單?')) return
   const reason = prompt('請輸入取消原因 (選填):') || ''
-  await axios.post(`http://localhost:8080/api/maintenance/tickets/${id}/cancel`, { reason })
-  fetchTickets()
+  try {
+    await axios.post(`http://localhost:8080/api/maintenance/tickets/${id}/cancel`, { reason })
+    fetchTickets()
+  } catch {
+    alert('取消失敗')
+  }
 }
 
-const openResolveModal = (id: number) => {
+const openResolveModal = (id) => {
   resolveForm.ticketId = id
   resolveForm.resultType = 'FIXED'
   resolveForm.resolveNote = ''
@@ -90,7 +95,7 @@ const submitResolve = async () => {
     )
     showResolveModal.value = false
     fetchTickets()
-  } catch (e) {
+  } catch {
     alert('結案失敗')
   }
 }
@@ -99,6 +104,7 @@ watch(
   () => props.historyMode,
   () => fetchTickets(),
 )
+
 onMounted(() => fetchTickets())
 </script>
 
@@ -118,7 +124,6 @@ onMounted(() => fetchTickets())
             >
               <i class="fas fa-history mr-1"></i> 查看歷史
             </router-link>
-
             <router-link
               v-if="historyMode"
               to="/admin/mtif-list"
@@ -126,7 +131,6 @@ onMounted(() => fetchTickets())
             >
               <i class="fas fa-arrow-left mr-1"></i> 返回列表
             </router-link>
-
             <router-link
               v-if="!historyMode"
               to="/admin/mtif-form"
@@ -143,7 +147,7 @@ onMounted(() => fetchTickets())
       <div class="container-fluid">
         <div class="row mb-3">
           <div class="col-md-4">
-            <div class="small-box bg-info shadow-sm">
+            <div class="small-box bg-info">
               <div class="inner">
                 <h3>{{ stats.total }}</h3>
                 <p>工單總數</p>
@@ -152,7 +156,7 @@ onMounted(() => fetchTickets())
             </div>
           </div>
           <div class="col-md-4">
-            <div class="small-box bg-warning shadow-sm">
+            <div class="small-box bg-warning">
               <div class="inner">
                 <h3>{{ stats.under }}</h3>
                 <p>維修中</p>
@@ -161,7 +165,7 @@ onMounted(() => fetchTickets())
             </div>
           </div>
           <div class="col-md-4">
-            <div class="small-box bg-success shadow-sm">
+            <div class="small-box bg-success">
               <div class="inner">
                 <h3>{{ stats.done }}</h3>
                 <p>已完成</p>
@@ -176,7 +180,7 @@ onMounted(() => fetchTickets())
             <input
               v-model="filters.keyword"
               class="form-control form-control-sm mr-2 w-25"
-              placeholder="搜尋ID / 描述 / 類型"
+              placeholder="搜尋ID / 描述"
             />
             <select v-model="filters.priority" class="form-control form-control-sm mr-2 w-auto">
               <option value="">全部優先級</option>
@@ -185,101 +189,63 @@ onMounted(() => fetchTickets())
               <option value="HIGH">高</option>
               <option value="URGENT">緊急</option>
             </select>
-            <select v-model="filters.status" class="form-control form-control-sm w-auto">
-              <option value="">全部狀態</option>
-              <template v-if="!historyMode">
-                <option value="REPORTED">已通報</option>
-                <option value="ASSIGNED">已指派</option>
-                <option value="UNDER_MAINTENANCE">維修中</option>
-              </template>
-              <template v-else>
-                <option value="RESOLVED">已完成</option>
-                <option value="CANCELLED">已取消</option>
-              </template>
-            </select>
           </div>
 
           <div class="card-body p-0">
             <div class="table-responsive">
               <table class="table table-sm table-hover mb-0">
-                <thead class="thead-light text-nowrap">
+                <thead class="thead-light">
                   <tr>
-                    <th style="width: 60px">ID</th>
+                    <th>ID</th>
                     <th>場地</th>
-                    <th>類型</th>
                     <th>描述</th>
                     <th>優先級</th>
                     <th>狀態</th>
-                    <th>指派ID</th>
-                    <th v-if="!historyMode" style="width: 200px">操作</th>
+                    <th v-if="!historyMode">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="t in filteredTickets" :key="t.ticketId">
-                    <td class="text-center font-weight-bold">{{ t.ticketId }}</td>
+                    <td class="font-weight-bold">{{ t.ticketId }}</td>
                     <td>{{ t.spotId }}</td>
+                    <td>{{ t.issueDesc }}</td>
                     <td>
-                      <span class="badge badge-light border">{{ t.issueType }}</span>
-                    </td>
-                    <td>
-                      <div class="text-truncate" style="max-width: 200px" :title="t.issueDesc">
-                        {{ t.issueDesc }}
-                      </div>
-                    </td>
-
-                    <td>
-                      <span :class="['badge', `priority-${t.issuePriority.toLowerCase()}`]">
+                      <span :class="['badge', `priority-${(t.issuePriority || '').toLowerCase()}`]">
                         {{ priorityMap[t.issuePriority] || t.issuePriority }}
                       </span>
                     </td>
-
                     <td>
-                      <span :class="['badge', `status-${t.issueStatus.toLowerCase()}`]">
+                      <span :class="['badge', `status-${(t.issueStatus || '').toLowerCase()}`]">
                         {{ statusMap[t.issueStatus] || t.issueStatus }}
                       </span>
                     </td>
-
-                    <td class="text-center">{{ t.assignedStaffId || '-' }}</td>
-
-                    <td v-if="!historyMode" class="text-nowrap">
+                    <td v-if="!historyMode">
                       <router-link
                         :to="`/admin/mtif-form/${t.ticketId}`"
                         class="btn btn-outline-primary btn-xs mr-1"
+                        >編輯</router-link
                       >
-                        <i class="fas fa-edit"></i> 編輯
-                      </router-link>
-
                       <button
-                        v-if="
-                          (t.issueStatus === 'REPORTED' || t.issueStatus === 'ASSIGNED') &&
-                          t.assignedStaffId
-                        "
+                        v-if="t.issueStatus === 'ASSIGNED'"
                         @click="startTicket(t.ticketId)"
                         class="btn btn-outline-secondary btn-xs mr-1"
                       >
-                        <i class="fas fa-play"></i> 開始
+                        開始
                       </button>
-
                       <button
                         v-if="t.issueStatus === 'UNDER_MAINTENANCE'"
                         @click="openResolveModal(t.ticketId)"
                         class="btn btn-outline-success btn-xs mr-1"
                       >
-                        <i class="fas fa-check-circle"></i> 結案
+                        結案
                       </button>
-
                       <button
                         v-if="t.issueStatus !== 'RESOLVED' && t.issueStatus !== 'CANCELLED'"
                         @click="cancelTicket(t.ticketId)"
                         class="btn btn-outline-danger btn-xs"
                       >
-                        <i class="fas fa-times"></i> 取消
+                        取消
                       </button>
-                    </td>
-                  </tr>
-                  <tr v-if="filteredTickets.length === 0">
-                    <td :colspan="historyMode ? 7 : 8" class="text-center py-4 text-muted">
-                      {{ loading ? '資料讀取中...' : '目前沒有符合條件的工單' }}
                     </td>
                   </tr>
                 </tbody>
@@ -305,18 +271,13 @@ onMounted(() => fetchTickets())
             <div class="form-group">
               <label>維修結果</label>
               <select v-model="resolveForm.resultType" class="form-control">
-                <option value="FIXED">維修成功 (Fixed)</option>
-                <option value="NOT_FIXABLE">無法修復 (Not Fixable)</option>
+                <option value="FIXED">維修成功</option>
+                <option value="NOT_FIXABLE">無法修復</option>
               </select>
             </div>
             <div class="form-group">
-              <label>維修備註</label>
-              <textarea
-                v-model="resolveForm.resolveNote"
-                class="form-control"
-                rows="3"
-                placeholder="請輸入維修心得或更換零件說明..."
-              ></textarea>
+              <label>備註</label>
+              <textarea v-model="resolveForm.resolveNote" class="form-control" rows="3"></textarea>
             </div>
           </div>
           <div class="modal-footer">
@@ -330,13 +291,9 @@ onMounted(() => fetchTickets())
 </template>
 
 <style scoped>
-.content-header {
-  padding: 15px 0.5rem;
-}
 .priority-low {
   background-color: #f8f9fa;
   color: #6c757d;
-  border: 1px solid #dee2e6;
 }
 .priority-normal {
   background-color: #d1ecf1;
@@ -350,28 +307,6 @@ onMounted(() => fetchTickets())
   background-color: #f8d7da;
   color: #721c24;
 }
-
-.status-reported {
-  border: 1px solid #6c757d;
-  color: #6c757d;
-}
-.status-assigned {
-  background-color: #e2e3e5;
-  color: #383d41;
-}
-.status-under_maintenance {
-  background-color: #fff3cd;
-  color: #856404;
-}
-.status-resolved {
-  background-color: #d4edda;
-  color: #155724;
-}
-.status-cancelled {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
 .btn-xs {
   padding: 1px 5px;
   font-size: 12px;

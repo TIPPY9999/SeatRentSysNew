@@ -1,12 +1,16 @@
 server:
   port: 8080
 
+# 自定義路徑 (警告可忽略或在插件中選 Ignore)
+app:
+  file:
+    upload-path: D:/SeatRentSysNew/images/
+
 spring:
   application:
     name: seat-rent-backend
 
   datasource:
-    # 使用你的連線字串與帳號 tippy
     url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
     username: tippy
     password: 1234
@@ -16,11 +20,14 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: none
-      # ✅ 修正：naming 必須縮排在 hibernate 之下，設定才會生效
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+
+    # ✅ 修正：確保 properties 與上面的 hibernate、show-sql 完全對齊
+    # 採用最穩定的中括號寫法，消除語法警告
     properties:
-      hibernate:
-        "[format_sql]": true
-        dialect: org.hibernate.dialect.SQLServerDialect
-        "[default_schema]": dbo
+      "[hibernate.format_sql]": true
+      "[hibernate.default_schema]": dbo
+      "[hibernate.dialect]": org.hibernate.dialect.SQLServerDialect
+      "[hibernate.jdbc.lob.non_contextual_creation]": true

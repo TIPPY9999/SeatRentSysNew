@@ -1,18 +1,8 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 
-interface Staff {
-  staffId: number
-  staffName: string
-  staffCompany: string
-  staffPhone: string
-  staffEmail: string
-  staffNote: string
-  createdAt: string
-}
-
-const staffList = ref<Staff[]>([])
+const staffList = ref([])
 const searchText = ref('')
 const loading = ref(false)
 
@@ -22,6 +12,7 @@ const fetchStaff = async () => {
     const res = await axios.get('http://localhost:8080/api/maintenance/staff')
     staffList.value = res.data
   } catch (error) {
+    // 這裡我們有印出 console.error(error)，所以保留 error 是對的
     console.error(error)
     alert('無法載入人員列表，請檢查連線')
   } finally {
@@ -29,13 +20,14 @@ const fetchStaff = async () => {
   }
 }
 
-const handleDelete = async (id: number) => {
+const handleDelete = async (id) => {
   if (!confirm(`確認刪除維護人員 #${id} 嗎？`)) return
   try {
     await axios.delete(`http://localhost:8080/api/maintenance/staff/${id}`)
     alert('刪除成功')
     fetchStaff()
-  } catch (error) {
+  } catch {
+    // [修正] 移除了 unused variable (error)
     alert('刪除失敗')
   }
 }
@@ -52,7 +44,7 @@ const filteredList = computed(() => {
   )
 })
 
-const formatDate = (dateStr: string) => {
+const formatDate = (dateStr) => {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleString('zh-TW', { hour12: false })
 }

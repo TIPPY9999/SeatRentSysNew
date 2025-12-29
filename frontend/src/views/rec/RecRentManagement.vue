@@ -1,11 +1,16 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, reactive } from 'vue'
 import axios from 'axios'
 
-// --- 1. 狀態定義 (完全對應組員的變數) ---
-const rentList = ref<any[]>([])
+/**
+ * RecRentManagement.vue：租借訂單管理系統
+ * [修正] 移除 lang="ts"，轉換為純 JavaScript 並清理未使用變數。
+ */
+
+// --- 1. 狀態定義 ---
+const rentList = ref([]) // 移除 <any[]>
 const activeView = ref('list')
-const API_URL = 'http://localhost:8080/api/rec-rents' // ✅ 配合後端 8080
+const API_URL = 'http://localhost:8080/api/rec-rents'
 
 const formTitle = ref('新增訂單')
 const form = reactive({
@@ -17,14 +22,14 @@ const form = reactive({
   recViolatInt: 0,
 })
 
-// --- 2. 核心邏輯 (完整移植組員的 Function) ---
+// --- 2. 核心邏輯 ---
 
 // 查詢 (Read)
 const loadRents = async () => {
   try {
     const res = await axios.get(API_URL)
     rentList.value = res.data
-  } catch (err: any) {
+  } catch (err) {
     console.error('載入失敗:', err)
     alert('無法載入資料，請確認後端伺服器是否已啟動。\n錯誤: ' + err.message)
   }
@@ -45,13 +50,15 @@ const saveRent = async () => {
     } else {
       alert('儲存失敗，請檢查輸入資料。')
     }
-  } catch (err) {
+  } catch {
+    // [修正] 移除未使用的 err 變數以消除警告
     alert('儲存失敗，請檢查輸入資料。')
   }
 }
 
 // 刪除 (Delete)
-const deleteRent = async (id: number) => {
+const deleteRent = async (id) => {
+  // 移除 : number
   if (!confirm('確定要刪除這筆訂單嗎？(ID: ' + id + ')')) return
   try {
     const res = await axios.delete(`${API_URL}/${id}`)
@@ -60,13 +67,15 @@ const deleteRent = async (id: number) => {
     } else {
       alert('刪除失敗')
     }
-  } catch (err) {
+  } catch {
+    // [修正] 移除未使用的 err 變數以消除警告
     alert('刪除失敗')
   }
 }
 
 // 準備編輯資料
-const editRent = (rent: any) => {
+const editRent = (rent) => {
+  // 移除 : any
   formTitle.value = '編輯訂單 (ID: ' + rent.recSeqId + ')'
   form.recSeqId = rent.recSeqId
   form.memId = rent.memId
@@ -102,13 +111,13 @@ const resetForm = () => {
   form.recViolatInt = 0
 }
 
-// ✅ 新增：封裝「切換到新增畫面」的動作，避免 HTML 報錯
+// 切換到新增畫面
 const goToAddView = () => {
   resetForm()
   activeView.value = 'add'
 }
 
-// ✅ 新增：封裝「取消返回列表」的動作
+// 取消返回列表
 const backToList = () => {
   resetForm()
   activeView.value = 'list'
@@ -122,7 +131,7 @@ onMounted(() => {
 <template>
   <div class="rec-rent-container">
     <div class="sidebar">
-      <h2>後台管理系統</h2>
+      <h2>訂單管理</h2>
       <a @click="activeView = 'list'" :class="{ active: activeView === 'list' }">訂單查詢</a>
       <a @click="goToAddView" :class="{ active: activeView === 'add' }">新增訂單</a>
     </div>
@@ -205,7 +214,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* 樣式部分完全保留組員原始代碼 */
 .rec-rent-container {
   display: flex;
   height: 100%;
@@ -214,7 +222,7 @@ onMounted(() => {
   background-color: #f9f9f9;
 }
 .sidebar {
-  width: 250px;
+  width: 200px;
   background-color: #343a40;
   color: white;
   display: flex;
@@ -225,11 +233,11 @@ onMounted(() => {
 .sidebar h2 {
   color: white;
   text-align: center;
-  font-size: 1.2em;
-  margin-bottom: 30px;
+  font-size: 1.1em;
+  margin-bottom: 20px;
 }
 .sidebar a {
-  padding: 15px 20px;
+  padding: 12px 15px;
   text-decoration: none;
   color: #cfd8dc;
   display: block;
@@ -243,12 +251,8 @@ onMounted(() => {
 }
 .main-content {
   flex: 1;
-  padding: 30px;
+  padding: 20px;
   overflow-y: auto;
-}
-h1,
-h2 {
-  color: #333;
 }
 .form-section {
   background-color: #eef;
@@ -262,7 +266,7 @@ h2 {
   align-items: center;
 }
 .form-group label {
-  width: 180px;
+  width: 160px;
   font-weight: bold;
 }
 .form-group input {
@@ -272,7 +276,7 @@ h2 {
   border-radius: 3px;
 }
 button {
-  padding: 8px 15px;
+  padding: 6px 12px;
   cursor: pointer;
   border: none;
   border-radius: 3px;
@@ -297,9 +301,6 @@ button {
 .ml-1 {
   margin-left: 5px;
 }
-button:hover {
-  opacity: 0.9;
-}
 table {
   width: 100%;
   border-collapse: collapse;
@@ -308,7 +309,7 @@ table {
 th,
 td {
   border: 1px solid #ddd;
-  padding: 10px;
+  padding: 8px;
   text-align: left;
 }
 th {
@@ -323,12 +324,5 @@ tr:nth-child(even) {
 }
 .view-section.active {
   display: block;
-}
-.badge-info {
-  background-color: #17a2b8;
-  color: white;
-  padding: 3px 7px;
-  border-radius: 4px;
-  font-size: 0.85em;
 }
 </style>
