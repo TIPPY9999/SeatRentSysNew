@@ -36,7 +36,25 @@ public class SpotByConditionServ {
         String spotStatus = req.getParameter("spotStatus");
 
         String merchantIdStr = req.getParameter("merchantId");
-        Integer merchantId = (merchantIdStr == null || merchantIdStr.isBlank()) ? null : Integer.valueOf(merchantIdStr);
+        // [修改後] 增加判斷：如果小於 0，就當作 null (不進行該條件過濾)，或是拋出錯誤看你需求。
+        // 這裡建議當作 null 處理，這樣就查不出東西，比較不會報錯。
+        Integer merchantId = null;
+            if (merchantIdStr != null && !merchantIdStr.isBlank()) {
+                try {
+                    int parsedId = Integer.parseInt(merchantIdStr.trim());
+                    // 只接受正整數，負數或0就忽略
+                    if (parsedId >= 0) {
+                        merchantId = parsedId;
+                    }
+                } catch (NumberFormatException e) {
+                    // 如果轉換失敗(例如輸入 "abc")，就當作沒這個條件，不報錯
+                    System.out.println("Invalid merchantId format: " + merchantIdStr);
+                }
+                
+                    
+                }
+    // 如果是負數，merchantId 保持為 null，即忽略此條件
+              
 
         // 2. 處理：呼叫 Service 進行資料庫模糊查詢
         // 3. 回傳：回傳 List<RentalSpot> (租借據點列表)，Spring Boot 會自動轉成 JSON 陣列 (例如

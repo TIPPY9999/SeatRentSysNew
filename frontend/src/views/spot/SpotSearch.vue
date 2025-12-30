@@ -4,51 +4,56 @@
     <form @submit.prevent="handleSearch">
       <div>
         <label for="spotName">景點名稱：</label>
-        <input type="text" id="spotName" v-model="searchCriteria.spotName">
+        <input type="text" id="spotName" v-model="searchCriteria.spotName" />
       </div>
-      
+
       <div>
         <label for="spotCode">景點代碼：</label>
-        <input type="text" id="spotCode" v-model="searchCriteria.spotCode">
+        <input type="text" id="spotCode" v-model="searchCriteria.spotCode" />
       </div>
-      
+
       <div>
         <label for="spotStatus">狀態：</label>
-        <input type="text" id="spotStatus" v-model="searchCriteria.spotStatus" placeholder="啟用/停用">
+        <input
+          type="text"
+          id="spotStatus"
+          v-model="searchCriteria.spotStatus"
+          placeholder="啟用/停用"
+        />
       </div>
 
       <div>
         <label for="merchantId">商家ID：</label>
-        <input type="number" id="merchantId" v-model="searchCriteria.merchantId">
+        <input type="number" id="merchantId" v-model="searchCriteria.merchantId" min="1" step="1" />
       </div>
 
       <div class="actions">
         <button type="submit">查詢</button>
-        <router-link to="/spot/add" class="btn-link">新增景點</router-link>
+        <router-link to="/admin/spot/add" class="btn-link">新增景點</router-link>
       </div>
     </form>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const router = useRouter();
+const router = useRouter()
 const searchCriteria = ref({
   spotName: '',
   spotCode: '',
   spotStatus: '',
-  merchantId: ''
-});
+  merchantId: '',
+})
 
 const handleSearch = () => {
   // 將查詢條件帶入 URL query 參數，跳轉至結果頁
-  router.push({ 
-    path: '/spot/result', 
-    query: { ...searchCriteria.value } 
-  });
-};
+  router.push({
+    path: '/spot/result',
+    query: { ...searchCriteria.value },
+  })
+}
 </script>
 
 <style scoped>
