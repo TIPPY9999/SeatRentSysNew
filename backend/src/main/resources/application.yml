@@ -10,9 +10,15 @@ spring:
 
   datasource:
     # 👇 這裡要改：填入你的資料庫名稱 (例如 SeatDB)
+<<<<<<< HEAD
     url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSysNew;encrypt=true;trustServerCertificate=true
     # 👇 這裡要改：你的 SQL Server 帳號 (通常是 sa)
     username: kang
+=======
+    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
+    # 👇 這裡要改：你的 SQL Server 帳號 (通常是 sa)
+    username: tippy
+>>>>>>> c8ede75c0b930126d3de868f60d383e72b6de1b2
     # 👇 這裡要改：你的 SQL Server 密碼
     password: 1234
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
@@ -20,9 +26,16 @@ spring:
   jpa:
     show-sql: true
     hibernate:
+<<<<<<< HEAD
       ddl-auto: update # 這行很重要！它會自動幫你在資料庫建 Table
     hibernate.naming.physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     hibernate.naming.implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+=======
+      ddl-auto: validate
+>>>>>>> c8ede75c0b930126d3de868f60d383e72b6de1b2
     properties:
-      "[hibernate.format_sql]": true
-      "[hibernate.dialect]": org.hibernate.dialect.SQLServerDialect
+      hibernate:
+        "[format_sql]": true
+        dialect: org.hibernate.dialect.SQLServerDialect
+        "[default_schema]": dbo
+        "[physical_naming_strategy]": org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 </script>
@@ -109,3 +110,8 @@ html, body, #app {
   color: #fff !important;
 }
 </style>
+=======
+<template>
+  <RouterView />
+</template>
+>>>>>>> c8ede75c0b930126d3de868f60d383e72b6de1b2

@@ -1,0 +1,87 @@
+package com.example.backend.model.maintenance;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "maintenanceInformation")
+public class MaintenanceInformation {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ticketId")
+    private Integer ticketId;
+
+    @Column(name = "spotId", nullable = false)
+    private Integer spotId;
+
+    @Column(name = "issueType", nullable = false, length = 200)
+    private String issueType;
+
+    @Column(name = "issueDesc", length = 500)
+    private String issueDesc;
+
+    @Column(name = "issuePriority", nullable = false, length = 100)
+    private String issuePriority;
+
+    @Column(name = "issueStatus", nullable = false, length = 50)
+    private String issueStatus;
+
+    @Column(name = "assignedStaffId")
+    private Integer assignedStaffId;
+
+    // DB DEFAULT SYSDATETIME()：建議由 DB 產生
+    @Column(name = "reportedAt", insertable = false, updatable = false)
+    private LocalDateTime reportedAt;
+
+    @Column(name = "startAt")
+    private LocalDateTime startAt;
+
+    @Column(name = "resolvedAt")
+    private LocalDateTime resolvedAt;
+
+    @Column(name = "resolveNote", length = 500)
+    private String resolveNote;
+
+    @Column(name = "resultType", length = 50)
+    private String resultType;
+
+    public MaintenanceInformation() {}
+
+    // getters/setters
+    public Integer getTicketId() { return ticketId; }
+    public void setTicketId(Integer ticketId) { this.ticketId = ticketId; }
+
+    public Integer getSpotId() { return spotId; }
+    public void setSpotId(Integer spotId) { this.spotId = spotId; }
+
+    public String getIssueType() { return issueType; }
+    public void setIssueType(String issueType) { this.issueType = issueType; }
+
+    public String getIssueDesc() { return issueDesc; }
+    public void setIssueDesc(String issueDesc) { this.issueDesc = issueDesc; }
+
+    public String getIssuePriority() { return issuePriority; }
+    public void setIssuePriority(String issuePriority) { this.issuePriority = issuePriority; }
+
+    public String getIssueStatus() { return issueStatus; }
+    public void setIssueStatus(String issueStatus) { this.issueStatus = issueStatus; }
+
+    public Integer getAssignedStaffId() { return assignedStaffId; }
+    public void setAssignedStaffId(Integer assignedStaffId) { this.assignedStaffId = assignedStaffId; }
+
+    public LocalDateTime getReportedAt() { return reportedAt; }
+    public void setReportedAt(LocalDateTime reportedAt) { this.reportedAt = reportedAt; }
+
+    public LocalDateTime getStartAt() { return startAt; }
+    public void setStartAt(LocalDateTime startAt) { this.startAt = startAt; }
+
+    public LocalDateTime getResolvedAt() { return resolvedAt; }
+    public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }
+
+    public String getResolveNote() { return resolveNote; }
+    public void setResolveNote(String resolveNote) { this.resolveNote = resolveNote; }
+
+    public String getResultType() { return resultType; }
+    public void setResultType(String resultType) { this.resultType = resultType; }
+}
