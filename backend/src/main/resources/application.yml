@@ -1,14 +1,16 @@
 server:
   port: 8080
 
-file:
-  upload-path: D:/SeatRentSysNew/images/
+app:
+  file:
+    upload-path: ${user.dir}/../uploads/images
 
 spring:
   application:
     name: seat-rent-backend
 
   datasource:
+<<<<<<< HEAD
     # 👇 這裡要改：填入你的資料庫名稱 (例如 SeatDB)
 <<<<<<< HEAD
     url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSysNew;encrypt=true;trustServerCertificate=true
@@ -20,6 +22,10 @@ spring:
     username: tippy
 >>>>>>> c8ede75c0b930126d3de868f60d383e72b6de1b2
     # 👇 這裡要改：你的 SQL Server 密碼
+=======
+    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
+    username: tippy
+>>>>>>> fb459a06d9e960dae0f1e03cf5a6da04327101c6
     password: 1234
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
 
@@ -27,15 +33,21 @@ spring:
     show-sql: true
     hibernate:
 <<<<<<< HEAD
+<<<<<<< HEAD
       ddl-auto: update # 這行很重要！它會自動幫你在資料庫建 Table
     hibernate.naming.physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     hibernate.naming.implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
 =======
       ddl-auto: validate
 >>>>>>> c8ede75c0b930126d3de868f60d383e72b6de1b2
+=======
+      ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+>>>>>>> fb459a06d9e960dae0f1e03cf5a6da04327101c6
     properties:
-      hibernate:
-        "[format_sql]": true
-        dialect: org.hibernate.dialect.SQLServerDialect
-        "[default_schema]": dbo
-        "[physical_naming_strategy]": org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      "[hibernate.format_sql]": true
+      "[hibernate.default_schema]": dbo
+      "[hibernate.dialect]": org.hibernate.dialect.SQLServerDialect
+      "[hibernate.jdbc.lob.non_contextual_creation]": true

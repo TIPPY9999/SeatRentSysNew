@@ -4,12 +4,15 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "discount")
-@Data // 自動生成符合 Integer 規範的 Getter/Setter
+@Getter // 改用 Getter/Setter，比 @Data 安全
+@Setter
 @NoArgsConstructor
 public class DiscountBean implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -17,7 +20,7 @@ public class DiscountBean implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "couponId")
-    private Integer couponId; // 必須是大寫 Integer
+    private Integer couponId;
 
     @Column(name = "couponName")
     private String couponName;
@@ -29,13 +32,13 @@ public class DiscountBean implements Serializable {
     private Integer pointsRequired;
 
     @Column(name = "startDate")
-    private LocalDate startDate; // 對應 HTML <input type="date">
+    private LocalDate startDate;
 
     @Column(name = "endDate")
     private LocalDate endDate;
 
     @Column(name = "merchantId")
-    private Integer merchantId; // 改為 Integer 確保外鍵能正確對接
+    private Integer merchantId;
 
     @Column(name = "couponStatus")
     private Integer couponStatus;
@@ -46,11 +49,18 @@ public class DiscountBean implements Serializable {
     @Column(name = "createdTime", insertable = false, updatable = false)
     private LocalDateTime createdTime;
 
-    // 關聯商家 (用於顯示名稱)
-    @ManyToOne
+    // 關聯商家 (加上 Lazy 載入，並防止序列化報錯)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "merchantId", insertable = false, updatable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private MerchantBean merchant;
 
+    /**
+     * 這裡不是資料庫欄位，但轉 JSON 時會自動產生 "merchantName" 屬性。
+     * 前端 Vue 看到的 JSON 結構跟原本一模一樣，所以畫面不會壞。
+     */
     @Transient
-    private String merchantName;
+    public String getMerchantName() {
+        return merchant != null ? merchant.getMerchantName() : null;
+    }
 }

@@ -99,6 +99,19 @@ public class MaintenanceController {
         return mtifService.updateTicket(mtif);
     }
 
+
+    // 1. 依 ID 查詢單一維護人員 (編輯表單用)
+    @GetMapping("/staff/{id}")
+    public MaintenanceStaff getStaffById(@PathVariable Integer id) {
+        return staffService.getRequiredStaff(id);
+    }
+
+    // 2. 查詢已停用的維護人員 (歷史紀錄用)
+    @GetMapping("/staff/inactive")
+    public List<MaintenanceStaff> getInactiveStaff() {
+        return staffService.getInactiveStaff();
+    }
+
     // ================== 流程控制 (State Changes) ==================
 
     // 8. 指派人員

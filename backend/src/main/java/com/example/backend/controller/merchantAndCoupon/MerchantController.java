@@ -1,27 +1,24 @@
-package com.example.backend.controller;
+package com.example.backend.controller.merchantAndCoupon;
 
-import com.example.backend.model.MerchantBean;
-import com.example.backend.service.MerchantService;
-import com.example.backend.model.Result;
+import com.example.backend.model.merchantAndCoupon.MerchantBean;
+import com.example.backend.model.merchantAndCoupon.Result; 
+import com.example.backend.service.merchantAndCoupon.MerchantService;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException; // [新增]
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
-@Slf4j // 自動生成日誌物件 log
+@Slf4j
 @RestController
 @RequestMapping("/api/merchants")
-@CrossOrigin(origins = "*") // 允許所有來源，開發環境較方便
+
 public class MerchantController {
 
     @Autowired
     private MerchantService merchantService;
 
-    /**
-     * 1. 取得商家清單 (支援關鍵字搜尋)
-     * URL: GET /api/merchants?keyword=...
-     */
     @GetMapping
     public Result<List<MerchantBean>> list(@RequestParam(required = false) String keyword) {
         log.info("開始查詢商家列表, 關鍵字: {}", keyword);
@@ -40,15 +37,10 @@ public class MerchantController {
         }
     }
 
-    /**
-     * 2. 新增商家
-     * URL: POST /api/merchants
-     */
     @PostMapping
     public Result<String> create(@RequestBody MerchantBean merchant) {
         log.info("收到新增商家請求: {}", merchant.getMerchantName());
         try {
-            // 強制將 ID 設為空，確保底層執行 INSERT
             merchant.setMerchantId(null);
             merchantService.saveOrUpdate(merchant);
             return Result.success(null, "新增商家成功");
@@ -58,22 +50,15 @@ public class MerchantController {
         }
     }
 
-    /**
-     * 3. 修改商家 (RESTful 建議使用 PUT)
-     * URL: PUT /api/merchants/{id}
-     */
     @PutMapping("/{id}")
     public Result<String> update(@PathVariable Integer id, @RequestBody MerchantBean merchant) {
         log.info("收到更新商家請求, ID: {}, 資料: {}", id, merchant);
         try {
-            // 先檢查該 ID 是否真的存在
             MerchantBean existing = merchantService.getById(id);
             if (existing == null) {
                 log.warn("更新失敗，找不到 ID 為 {} 的商家", id);
                 return Result.error("更新失敗：找不到該商家資料");
             }
-
-            // 確保物件的 ID 與 URL 上的 ID 一致
             merchant.setMerchantId(id);
             merchantService.saveOrUpdate(merchant);
 
@@ -85,10 +70,6 @@ public class MerchantController {
         }
     }
 
-    /**
-     * 4. 刪除商家
-     * URL: DELETE /api/merchants/{id}
-     */
     @DeleteMapping("/{id}")
     public Result<String> delete(@PathVariable Integer id) {
         log.warn("收到刪除商家請求, ID: {}", id);
@@ -96,13 +77,16 @@ public class MerchantController {
             merchantService.deleteMerchant(id);
             log.info("商家 ID: {} 已成功刪除", id);
             return Result.success(null, "刪除成功");
+        } catch (EmptyResultDataAccessException e) {
+            // [新增] 找不到 ID 時的處理
+            return Result.error("刪除失敗：找不到該商家");
         } catch (Exception e) {
             log.error("刪除商家失敗", e);
-            // 判斷是否為資料庫關聯錯誤 (常見於還有優惠券存在時)
-            if (e.getMessage().contains("ConstraintViolationException") || e.getMessage().contains("foreign key")) {
-                return Result.error("刪除失敗：該商家旗下還有關聯資料（如優惠券），請先刪除關聯資料或將商家改為「停用」。");
+            String msg = String.valueOf(e.getMessage());
+            if (msg.contains("ConstraintViolationException") || msg.toLowerCase().contains("foreign key")) {
+                return Result.error("刪除失敗：該商家旗下還有關聯資料（如優惠券），請先刪除關聯資料。");
             }
-            return Result.error("刪除失敗: " + e.getMessage());
+            return Result.error("刪除失敗: " + msg);
         }
     }
 }
