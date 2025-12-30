@@ -34,6 +34,11 @@ const router = useRouter()
             <p>管理各區域據點與座位分布</p>
           </div>
 
+          <div class="card seat-card" @click="router.push('/admin/seat/list')">
+            <h3>座位管理</h3>
+            <p>管理座位狀態與配置</p>
+          </div>
+
           <div class="card" @click="router.push('/admin/rec-rent')">
             <h3>租借紀錄</h3>
             <p>查看租借與歸還紀錄</p>

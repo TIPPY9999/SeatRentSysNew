@@ -1,63 +1,77 @@
 <template>
-  <div class="seat-search">
-    <h2>Seat 條件查詢</h2>
+  <div class="seat-search container-fluid">
+    <div class="card card-info card-outline mt-3">
+      <div class="card-header">
+        <h3 class="card-title">Seat 條件查詢</h3>
+      </div>
 
-    <form @submit.prevent="handleSearch">
-      <div>
-        <label>名稱(模糊)：</label>
-        <input type="text" v-model="searchCriteria.seatsName">
-      </div>
-      <br>
-      <div>
-        <label>類型(模糊)：</label>
-        <input type="text" v-model="searchCriteria.seatsType">
-      </div>
-      <br>
-      <div>
-        <label>狀態：</label>
-        <select v-model="searchCriteria.seatsStatus">
-          <option value="">(不限制)</option>
-          <option value="可用">可用</option>
-          <option value="維修">維修</option>
-          <option value="停用">停用</option>
-        </select>
-      </div>
-      <br>
-      <div>
-        <label>SpotId(精準)：</label>
-        <input type="number" v-model="searchCriteria.spotId">
-      </div>
-      <br>
-      <div>
-        <label>序號(模糊)：</label>
-        <input type="text" v-model="searchCriteria.serialNumber">
-      </div>
-      <br>
+      <form @submit.prevent="handleSearch">
+        <div class="card-body">
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label">名稱 (模糊)</label>
+            <div class="col-sm-10">
+              <input type="text" v-model="searchCriteria.seatsName" class="form-control" />
+            </div>
+          </div>
 
-      <button type="submit">查詢</button>
-    </form>
+          <div class="form-group row mt-3">
+            <label class="col-sm-2 col-form-label">類型 (模糊)</label>
+            <div class="col-sm-10">
+              <input type="text" v-model="searchCriteria.seatsType" class="form-control" />
+            </div>
+          </div>
 
-    <br>
-    <router-link to="/seat/list">回清單</router-link>
+          <div class="form-group row mt-3">
+            <label class="col-sm-2 col-form-label">狀態</label>
+            <div class="col-sm-10">
+              <select v-model="searchCriteria.seatsStatus" class="form-control">
+                <option value="">(不限制)</option>
+                <option value="可用">可用</option>
+                <option value="維修">維修</option>
+                <option value="停用">停用</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group row mt-3">
+            <label class="col-sm-2 col-form-label">SpotId (精準)</label>
+            <div class="col-sm-10">
+              <input type="number" v-model="searchCriteria.spotId" class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-group row mt-3">
+            <label class="col-sm-2 col-form-label">序號 (模糊)</label>
+            <div class="col-sm-10">
+              <input type="text" v-model="searchCriteria.serialNumber" class="form-control" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <button type="submit" class="btn btn-info mr-2">查詢</button>
+          <router-link to="/admin/seat/list" class="btn btn-secondary">回清單</router-link>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const router = useRouter();
+const router = useRouter()
 const searchCriteria = ref({
   seatsName: '',
   seatsType: '',
   seatsStatus: '',
   spotId: '',
-  serialNumber: ''
-});
+  serialNumber: '',
+})
 
 const handleSearch = () => {
-  // 將查詢條件帶入 URL query 參數，跳轉至結果頁
-  // 過濾掉空字串可視後端需求決定，這裡直接傳遞
-  router.push({ path: '/seat/result', query: { ...searchCriteria.value } });
-};
+  // [修正] 加上 /admin
+  router.push({ path: '/admin/seat/result', query: { ...searchCriteria.value } })
+}
 </script>

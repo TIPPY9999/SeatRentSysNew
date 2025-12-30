@@ -43,7 +43,7 @@ const login = () => {
     <div class="login-box">
       <div class="card card-outline card-primary">
         <div class="card-header text-center">
-          <h1 class="h1"><b>SeatRent</b>Sys</h1>
+          <h1 class="h1"><b>SeatRentSys</b></h1>
         </div>
         <div class="card-body">
           <form @submit.prevent="login">

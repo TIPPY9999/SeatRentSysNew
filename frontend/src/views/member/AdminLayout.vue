@@ -27,7 +27,7 @@ onBeforeUnmount(() => {
 })
 
 /**
- * 判斷目前路由是否屬於某個功能組 [cite: 2]
+ * 判斷目前路由是否屬於某個功能組
  */
 const isActiveGroup = (prefix) => {
   // 移除 : string
@@ -75,6 +75,30 @@ const logout = () => {
       <div class="sidebar">
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+            <li class="nav-header">據點與座位管理</li>
+
+            <li class="nav-item">
+              <RouterLink
+                to="/admin/spot/list"
+                class="nav-link"
+                :class="{ active: isActiveGroup('/admin/spot') }"
+              >
+                <i class="nav-icon fas fa-map-marker-alt"></i>
+                <p>據點管理</p>
+              </RouterLink>
+            </li>
+
+            <li class="nav-item">
+              <RouterLink
+                to="/admin/seat/list"
+                class="nav-link"
+                :class="{ active: isActiveGroup('/admin/seat') }"
+              >
+                <i class="nav-icon fas fa-chair"></i>
+                <p>座位管理</p>
+              </RouterLink>
+            </li>
+
             <li class="nav-header">基礎與會員管理</li>
 
             <li class="nav-item">

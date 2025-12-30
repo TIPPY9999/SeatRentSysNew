@@ -1,13 +1,14 @@
 <template>
-  <div class="seat-list">
-    <h2>Seat 清單</h2>
-
-    <div class="actions">
-      <router-link to="/seat/insert">新增 Seat</router-link>
-      <router-link to="/seat/search">條件查詢</router-link>
+  <div class="seat-list container">
+    <div class="header">
+      <h2>Seat 清單</h2>
+      <div class="actions">
+        <router-link to="/admin/seat/search" class="btn-search">條件查詢</router-link>
+        <button class="btn-add" @click="$router.push('/admin/seat/insert')">新增 Seat</button>
+      </div>
     </div>
 
-    <table>
+    <table class="table">
       <thead>
         <tr>
           <th>ID</th>
@@ -22,7 +23,7 @@
       </thead>
       <tbody>
         <tr v-if="seatList.length === 0">
-          <td colspan="8" style="text-align: center;">目前沒有資料。</td>
+          <td colspan="8" style="text-align: center">目前沒有資料。</td>
         </tr>
         <tr v-for="s in seatList" :key="s.seatsId">
           <td>{{ s.seatsId }}</td>
@@ -31,11 +32,11 @@
           <td>{{ s.seatsStatus }}</td>
           <td>{{ s.spotId }}</td>
           <td>{{ s.serialNumber }}</td>
-          <td>{{ s.updatedAt }}</td>
+          <td>{{ s.updatedAt?.replace('T', ' ').substring(0, 19) }}</td>
           <td>
-            <router-link :to="`/seat/view/${s.seatsId}`">詳細</router-link>
-            <router-link :to="`/seat/edit/${s.seatsId}`">修改</router-link>
-            <button @click="deleteSeat(s.seatsId)">刪除</button>
+            <router-link :to="`/admin/seat/view/${s.seatsId}`" class="btn-detail">詳細</router-link>
+            <router-link :to="`/admin/seat/edit/${s.seatsId}`" class="btn-edit">修改</router-link>
+            <button class="btn-delete" @click="deleteSeat(s.seatsId, s.seatsName)">刪除</button>
           </td>
         </tr>
       </tbody>
@@ -44,66 +45,113 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import axios from 'axios';
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
 
-const seatList = ref([]);
+const seatList = ref([])
 
 onMounted(async () => {
-  fetchSeats();
-});
+  fetchSeats()
+})
 
 const fetchSeats = async () => {
   try {
-    const response = await axios.get('/seat/list');
-    seatList.value = response.data;
+    // [修正 API 路徑] 加上 /api
+    const response = await axios.get('/api/seat/list')
+    seatList.value = response.data
   } catch (error) {
-    console.error('Error fetching seats:', error);
+    console.error('Error fetching seats:', error)
   }
-};
+}
 
-const deleteSeat = async (id) => {
-  if (!confirm('確定刪除?')) return;
-  
+const deleteSeat = async (id, name) => {
+  if (!confirm(`確定刪除座位 ${name} (ID: ${id})?`)) return
   try {
-    const params = new URLSearchParams();
-    params.append('seatsId', id);
-    await axios.post('/seat/delete', params);
-    // 刪除成功後重新整理列表
-    fetchSeats();
+    // [修正 API 路徑與參數] 使用 URLSearchParams 確保後端讀取正確
+    const params = new URLSearchParams()
+    params.append('seatsId', String(id))
+
+    await axios.post('/api/seat/delete', params, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+
+    fetchSeats() // 重新整理列表
+    alert('刪除成功')
   } catch (error) {
-    console.error('Delete failed:', error);
+    console.error('Delete failed:', error)
+    alert('刪除失敗')
   }
-};
+}
 </script>
 
 <style scoped>
-table {
-  width: 95%;
+/* [UI 優化] 移植 SpotList 的 CSS 樣式 */
+.seat-list {
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.table {
+  width: 100%;
   border-collapse: collapse;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
-th, td {
-  border: 1px solid #aaa;
+.table th,
+.table td {
+  border: 1px solid #ddd;
   padding: 8px;
+  text-align: left;
+}
+.table th {
+  background-color: #f4f4f4;
 }
 
-th {
-  background: #eee;
+/* 按鈕樣式 */
+button,
+.btn-detail,
+.btn-edit,
+.btn-search {
+  cursor: pointer;
+  padding: 5px 10px;
+  margin-right: 5px;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  text-decoration: none; /* 移除超連結底線 */
+  display: inline-block;
+  font-size: 14px;
 }
 
-a, button {
+.btn-add {
+  background-color: #28a745;
+  font-size: 1.1em;
+  padding: 8px 16px;
+}
+.btn-search {
+  background-color: #17a2b8;
+  font-size: 1.1em;
+  padding: 8px 16px;
   margin-right: 10px;
 }
-
-.actions {
-  margin-bottom: 15px;
+.btn-detail {
+  background-color: #17a2b8;
+}
+.btn-edit {
+  background-color: #007bff;
+}
+.btn-delete {
+  background-color: #dc3545;
 }
 
-.actions a {
-  margin-right: 15px;
-  text-decoration: none;
-  color: blue;
+button:hover,
+a:hover {
+  opacity: 0.9;
 }
 </style>
