@@ -1,5 +1,5 @@
 # =====================================
-# 1. 系統與 IDE 暫存 (絕對不要進 repo)
+# 1. 系統與 IDE 暫存
 # =====================================
 .DS_Store
 Thumbs.db
@@ -15,7 +15,7 @@ Thumbs.db
 **/.project
 **/.factorypath
 
-# VS Code 設定：忽略大部分，只保留團隊共用的 settings
+# VS Code 設定
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
@@ -26,9 +26,12 @@ Thumbs.db
 # =====================================
 # 2. 前端保護區 (Frontend - Vue)
 # =====================================
-**/node_modules/
 node_modules/
-**/dist/
+
+# ⭐️ [關鍵修改]：只忽略 Vue 打包出來的那個特定 dist 資料夾
+frontend/dist/
+
+# 其他前端暫存
 **/npm-debug.log*
 **/yarn-debug.log*
 **/yarn-error.log*
@@ -45,7 +48,6 @@ node_modules/
 **/HELP.md
 
 # =====================================
-# 4. 特殊保留與排除
+# 4. 特殊保留
 # =====================================
-# 保留空資料夾，不要忽略 .gitkeep 檔案
 !**/.gitkeep
