@@ -3,15 +3,15 @@ server:
 
 app:
   file:
-    upload-path: ${user.dir}/../uploads/images
+    upload-path: uploads
 
 spring:
   application:
     name: seat-rent-backend
 
   datasource:
-    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
-    username: tippy
+    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSysNew;encrypt=false;trustServerCertificate=true
+    username: kang
     password: 1234
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
 

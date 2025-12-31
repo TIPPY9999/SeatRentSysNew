@@ -97,34 +97,32 @@ const openEditModal = (item = null) => {
 
 // 5. 儲存資料 (包含檔案上傳)
 const handleSave = async () => {
-  if (!editingDiscount.value.merchantId) {
-    Swal.fire('提醒', '請選擇商家', 'warning')
-    return
-  }
+try {
+    const formData = new FormData();
 
-  try {
-    const formData = new FormData()
+    // 1. 包裝 JSON (確保包含 couponId 以觸發修改)
+    const jsonBlob = new Blob([JSON.stringify(editingDiscount.value)], { type: 'application/json' });
+    formData.append('discount', jsonBlob);
 
-    // 將 JSON 物件轉為 Blob 以符合後端 @RequestPart 要求
-    const jsonBlob = new Blob([JSON.stringify(editingDiscount.value)], { type: 'application/json' })
-    formData.append('discount', jsonBlob)
-
+    // 2. 檔案 Key 必須是 'image' (對應後端 @RequestPart("image"))
     if (selectedFile.value) {
-      formData.append('image', selectedFile.value)
+      formData.append('image', selectedFile.value);
     }
 
-    const res = await axios.post('http://localhost:8080/api/discounts', formData)
+    // 3. 發送請求
+    const res = await axios.post('http://localhost:8080/api/discounts', formData);
 
     if (res.data.code === 200) {
-      Swal.fire('成功', '資料已儲存', 'success')
-      isEditModalOpen.value = false
-      fetchDiscounts()
+      Swal.fire('成功', '資料已儲存', 'success');
+      isEditModalOpen.value = false;
+      fetchDiscounts(); // 重新整理清單
     }
   } catch (e) {
-    // 這裡有用到 e，所以保留
-    Swal.fire('儲存失敗', e.response?.data?.message || '網路錯誤', 'error')
+    // 如果報錯 400 或 500，這裡會抓到
+    console.error("儲存失敗：", e.response?.data);
+    Swal.fire('儲存失敗', e.response?.data?.message || '網路錯誤', 'error');
   }
-}
+};
 
 // 6. 刪除優惠券
 const deleteDiscount = (id) => {
