@@ -4,9 +4,9 @@ import lombok.Data;
 
 @Data
 public class Result<T> {
-    private Integer code;    // 200:成功, 500:失敗
-    private String message;  // 提示訊息
-    private T data;          // 實際資料內容
+    private Integer code; // 200:成功, 500:失敗
+    private String message; // 提示訊息
+    private T data; // 實際資料內容
 
     public static <T> Result<T> success(T data, String msg) {
         Result<T> r = new Result<>();

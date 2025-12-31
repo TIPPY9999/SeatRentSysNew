@@ -1,8 +1,8 @@
-package com.example.backend.controller.merchantAndCoupon;
+package com.example.backend.controller;
 
 import com.example.backend.model.merchantAndCoupon.MerchantBean;
 import com.example.backend.model.merchantAndCoupon.Result;
-import com.example.backend.service.merchantAndCoupon.MerchantService;
+import com.example.backend.service.MerchantService;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

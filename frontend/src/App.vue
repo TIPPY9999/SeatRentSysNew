@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-<script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-=======
 <script setup>
 /**
  * App.vue：整個前端的「根容器」
@@ -10,7 +5,6 @@ import { RouterLink, RouterView } from 'vue-router'
  * 後台的側邊欄與導覽列，已經全部搬家到 AdminLayout.vue 了，這裡不需要留。
  */
 import { RouterView } from 'vue-router'
->>>>>>> fb459a06d9e960dae0f1e03cf5a6da04327101c6
 </script>
 
 <template>
@@ -39,11 +33,8 @@ body,
   color: #fff !important;
 }
 </style>
-<<<<<<< HEAD
-=======
 <template>
   <RouterView />
 </template>
->>>>>>> c8ede75c0b930126d3de868f60d383e72b6de1b2
 =======
 >>>>>>> fb459a06d9e960dae0f1e03cf5a6da04327101c6
