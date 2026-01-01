@@ -1,20 +1,37 @@
 # =====================================
-# 1. 全域設定 (不管在哪裡都不要傳)
+# 1. 系統與 IDE 暫存
 # =====================================
 .DS_Store
 Thumbs.db
 *.log
-.vscode/
+**/.metadata/
+**/.recommenders/
+**/.idea/
+**/*.iml
+**/*.ipr
+**/*.iws
+**/.settings/
+**/.classpath
+**/.project
+**/.factorypath
+
+# VS Code 設定
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
 *.code-workspace
 
 # =====================================
 # 2. 前端保護區 (Frontend - Vue)
 # =====================================
-# 🛑 絕對死都不能傳這兩個，不然 Git 會爆炸
-**/node_modules/
-**/dist/
+node_modules/
 
-# 其他前端暫存檔
+# ⭐️ [關鍵修改]：只忽略 Vue 打包出來的那個特定 dist 資料夾
+frontend/dist/
+
+# 其他前端暫存
 **/npm-debug.log*
 **/yarn-debug.log*
 **/yarn-error.log*
@@ -26,23 +43,11 @@ Thumbs.db
 # =====================================
 # 3. 後端保護區 (Backend - Spring Boot)
 # =====================================
-# 🛑 絕對不能傳編譯後的垃圾
 **/target/
 **/*.class
-
-# IDE 設定檔
-
-**/.settings/
-**/.classpath
-**/.project
-**/.factorypath
-**/*.iml
-**/*.ipr
-**/*.iws
 **/HELP.md
 
 # =====================================
 # 4. 特殊保留
 # =====================================
-# 這是為了保留空資料夾用的，不要忽略它
 !**/.gitkeep

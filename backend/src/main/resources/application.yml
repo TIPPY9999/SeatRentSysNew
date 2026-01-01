@@ -1,25 +1,29 @@
 server:
   port: 8080
 
+app:
+  file:
+    upload-path: uploads
+
 spring:
   application:
     name: seat-rent-backend
 
   datasource:
-    # 👇 這裡要改：填入你的資料庫名稱 (例如 SeatDB)
-    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
-    # 👇 這裡要改：你的 SQL Server 帳號 (通常是 sa)
-    username: Tippy
-    # 👇 這裡要改：你的 SQL Server 密碼
+    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSysNew;encrypt=false;trustServerCertificate=true
+    username: kang
     password: 1234
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
 
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: update # 這行很重要！它會自動幫你在資料庫建 Table
+      ddl-auto: none
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
     properties:
       "[hibernate.format_sql]": true
+      "[hibernate.default_schema]": dbo
       "[hibernate.dialect]": org.hibernate.dialect.SQLServerDialect
+      "[hibernate.jdbc.lob.non_contextual_creation]": true
