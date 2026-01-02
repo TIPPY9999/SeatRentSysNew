@@ -97,14 +97,17 @@ const openEditModal = (item = null) => {
 
 // 5. 儲存資料 (包含檔案上傳)
 const handleSave = async () => {
-try {
+  try {
     const formData = new FormData();
 
-    // 1. 包裝 JSON (確保包含 couponId 以觸發修改)
+    // 重要：先檢查一下要傳送的資料裡面有沒有 ID
+    console.log("準備儲存的資料：", editingDiscount.value);
+
+    // 1. 包裝 JSON (這裡會包含 couponId，後端 save() 方法靠它判斷是修改還是新增)
     const jsonBlob = new Blob([JSON.stringify(editingDiscount.value)], { type: 'application/json' });
     formData.append('discount', jsonBlob);
 
-    // 2. 檔案 Key 必須是 'image' (對應後端 @RequestPart("image"))
+    // 2. 檔案 Key 必須是 'image'
     if (selectedFile.value) {
       formData.append('image', selectedFile.value);
     }
@@ -115,15 +118,15 @@ try {
     if (res.data.code === 200) {
       Swal.fire('成功', '資料已儲存', 'success');
       isEditModalOpen.value = false;
-      fetchDiscounts(); // 重新整理清單
+      fetchDiscounts(); 
+    } else {
+      Swal.fire('失敗', res.data.message, 'error');
     }
   } catch (e) {
-    // 如果報錯 400 或 500，這裡會抓到
-    console.error("儲存失敗：", e.response?.data);
+    console.error("儲存出錯：", e.response?.data);
     Swal.fire('儲存失敗', e.response?.data?.message || '網路錯誤', 'error');
   }
 };
-
 // 6. 刪除優惠券
 const deleteDiscount = (id) => {
   Swal.fire({
@@ -174,54 +177,54 @@ onMounted(() => {
 
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-          <thead class="table-light small fw-bold">
-            <tr>
-              <th class="text-center">ID</th>
-              <th>圖片</th>
-              <th>優惠名稱</th>
-              <th>隸屬商家</th>
-              <th>活動期限</th>
-              <th class="text-center">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="d in discounts" :key="d.couponId">
-              <td class="text-center text-muted small">{{ d.couponId }}</td>
-              <td>
-                <img
-                  v-if="d.couponImg"
-                  :src="`http://localhost:8080/images/${d.couponImg}`"
-                  class="rounded border"
-                  width="50"
-                  height="50"
-                />
-                <div v-else class="no-img">無圖</div>
-              </td>
-              <td>
-                <div class="fw-bold">{{ d.couponName }}</div>
-                <div class="small text-muted text-truncate" style="max-width: 200px">
-                  {{ d.couponDescription }}
-                </div>
-              </td>
-              <td>
-                <span class="badge bg-light text-primary border">{{
-                  d.merchantName || (d.merchant ? d.merchant.merchantName : '')
-                }}</span>
-              </td>
-              <td class="small">{{ d.startDate }} ~ {{ d.endDate }}</td>
-              <td class="text-center">
-                <div class="btn-group">
-                  <button class="btn btn-sm btn-outline-primary" @click="openEditModal(d)">
-                    編輯
-                  </button>
-                  <button class="btn btn-sm btn-outline-danger" @click="deleteDiscount(d.couponId)">
-                    刪除
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+  <thead class="table-light small fw-bold">
+    <tr>
+      <th class="text-center">ID</th>
+      <th>圖片</th>
+      <th>優惠名稱 / 內容</th> <th>隸屬商家</th>
+      <th class="text-center">所需點數</th> <th class="text-center">狀態</th>     <th>活動期限</th>
+      <th class="text-center">操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr v-for="d in discounts" :key="d.couponId">
+      <td class="text-center text-muted small">{{ d.couponId }}</td>
+      <td>
+        <img v-if="d.couponImg" :src="`http://localhost:8080/images/${d.couponImg}`"
+             class="rounded border" width="50" height="50" />
+        <div v-else class="no-img">無圖</div>
+      </td>
+      <td>
+        <div class="fw-bold">{{ d.couponName }}</div>
+        <div class="small text-muted text-truncate" style="max-width: 250px" :title="d.couponDescription">
+          {{ d.couponDescription }}
+        </div>
+      </td>
+      <td>
+        <span class="badge bg-light text-primary border">
+          {{ d.merchantName || (d.merchant ? d.merchant.merchantName : '') }}
+        </span>
+      </td>
+      <td class="text-center">
+        <span class="fw-bold text-orange">{{ d.pointsRequired }}</span> <small>Pts</small>
+      </td>
+      <td class="text-center">
+        <span v-if="d.couponStatus === 0" class="badge bg-secondary">未開始</span>
+        <span v-else-if="d.couponStatus === 1" class="badge bg-success">進行中</span>
+        <span v-else-if="d.couponStatus === 2" class="badge bg-danger">已結束</span>
+        <span v-else-if="d.couponStatus === 3" class="badge bg-dark">已下架</span>
+        <span v-else class="badge bg-info">未知</span>
+      </td>
+      <td class="small">{{ d.startDate }} ~ {{ d.endDate }}</td>
+      <td class="text-center">
+        <div class="btn-group">
+          <button class="btn btn-sm btn-outline-primary" @click="openEditModal(d)">編輯</button>
+          <button class="btn btn-sm btn-outline-danger" @click="deleteDiscount(d.couponId)">刪除</button>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
       </div>
     </div>
 
