@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @Getter // 改用 Getter/Setter，比 @Data 安全
 @Setter
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DiscountBean implements Serializable {
     private static final long serialVersionUID = 1L;
 
