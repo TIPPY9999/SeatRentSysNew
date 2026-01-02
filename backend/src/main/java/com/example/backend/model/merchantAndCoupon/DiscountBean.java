@@ -52,7 +52,7 @@ public class DiscountBean implements Serializable {
     // 關聯商家 (加上 Lazy 載入，並防止序列化報錯)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "merchantId", insertable = false, updatable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private MerchantBean merchant;
 
     /**
