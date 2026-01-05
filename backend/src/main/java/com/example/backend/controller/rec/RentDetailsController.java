@@ -22,7 +22,7 @@ public class RentDetailsController {
     private RentDetailsRepository rentDetailsRepository;
 
     // 1. 搜尋全部
-    @GetMapping
+    @GetMapping("/all")
     public List<RentDetails> getAll() {
         return rentDetailsRepository.findAll();
     }
@@ -34,7 +34,7 @@ public class RentDetailsController {
     }
 
     // 3. 依成員姓名搜尋 (例如: /api/rent-details/search?name=Tippy)
-    @GetMapping("/search")
+    @GetMapping("/{name})")
     public List<RentDetails> searchByName(@RequestParam String name) {
         // The findByMemNameContaining method returns List<RentDetails>, so no casting
         // is needed.

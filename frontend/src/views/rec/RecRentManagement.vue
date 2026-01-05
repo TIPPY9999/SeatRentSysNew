@@ -2,10 +2,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import axios from 'axios'
 
-/**
- * RecRentManagement.vue：租借訂單管理系統
- * [修正] 移除 lang="ts"，轉換為純 JavaScript 並清理未使用變數。
- */
+
 
 // --- 1. 狀態定義 ---
 const rentList = ref([]) // 移除 <any[]>

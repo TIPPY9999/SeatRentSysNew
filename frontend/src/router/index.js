@@ -21,14 +21,23 @@ import MemberCreateView from '@/views/member/MemberCreateView.vue'
  */
 const MerchantList = () => import('@/views/merchantAndCoupon/MerchantList.vue')
 const DiscountList = () => import('@/views/merchantAndCoupon/DiscountList.vue')
+const RecRentUserOrder = () => import('@/views/rec/RecRentUserOrder.vue')
 
 // 定義路由表
 const routes = [
-  // --- 登入頁面：獨立路徑，不套用 Admin 佈局框架 ---
+
+  // --- MEM登入頁面：獨立路徑，不套用 Admin 佈局框架 ---
   {
     path: '/login',
-    name: 'login',
     component: LoginView,
+    children: [
+      // // --- 使用者租借頁 ---
+      // {
+      //   path: '/rent',
+      //   name: 'user-rent',
+      //   component: RecRentUserOrder,
+      // },
+    ]
   },
 
   /**
