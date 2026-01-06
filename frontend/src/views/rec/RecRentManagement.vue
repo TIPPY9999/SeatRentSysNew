@@ -124,15 +124,23 @@ onMounted(() => {
 </script>
 
 <template>
+  <div class="top-nav">
+    <button
+      @click="activeView = 'list'"
+      :class="{ active: activeView === 'list' }"
+      :disabled="activeView === 'list'"
+    >
+      訂單查詢
+    </button>
+    <button
+      @click="goToAddView"
+      :class="{ active: activeView === 'add' }"
+      :disabled="activeView === 'add'"
+    >
+      新增訂單
+    </button>
+  </div>
   <div class="rec-rent-container">
-    <div class="sidebar">
-      <h2>訂單管理</h2>
-      <a @click="activeView = 'list'" :class="{ active: activeView === 'list' }"
-        >訂單查詢</a
-      >
-      <a @click="goToAddView" :class="{ active: activeView === 'add' }">新增訂單</a>
-    </div>
-
     <div class="main-content">
       <h1>訂單管理系統 (RecRent)</h1>
 
@@ -173,6 +181,10 @@ onMounted(() => {
           <input v-model="form.recRentDT2" type="datetime-local" step="1" required />
         </div>
         <div class="form-group">
+          <label>歸還時間 (recReturnDT2):</label>
+          <input v-model="form.recRentDT2" type="datetime-local" step="1" required />
+        </div>
+        <div class="form-group">
           <label>違規記點 (recViolatInt):</label>
           <input v-model="form.recViolatInt" type="number" required />
         </div>
@@ -194,7 +206,7 @@ onMounted(() => {
           <thead>
             <tr>
               <th width="50">ID</th>
-              <th>業務編號</th>
+              <th>訂單編號</th>
               <th>會員ID</th>
               <th>會員姓名</th>
               <th>座位</th>
@@ -203,6 +215,7 @@ onMounted(() => {
               <th>歸還站點ID</th>
               <th>歸還站點名稱</th>
               <th>租借時間</th>
+              <th>歸還時間</th>
               <th width="150">操作</th>
             </tr>
           </thead>
@@ -217,10 +230,11 @@ onMounted(() => {
               <td>{{ rent.memName }}</td>
               <td>{{ rent.seatsId }}</td>
               <td>{{ rent.spotIdRent }}</td>
-              <td>{{ rent.rentSpotName}}</td>
+              <td>{{ rent.rentSpotName }}</td>
               <td>{{ rent.spotIdReturn }}</td>
               <td>{{ rent.returnSpotName }}</td>
               <td>{{ rent.recRentDT2 ? rent.recRentDT2.replace("T", " ") : "" }}</td>
+              <td>{{ rent.recReturnDT2 ? rent.recReturnDT2.replace("T", " ") : "" }}</td>
               <td>
                 <button class="btn-warning" @click="editRent(rent)">編輯</button>
                 <button class="btn-danger ml-1" @click="deleteRent(rent.recSeqId)">
@@ -241,27 +255,40 @@ onMounted(() => {
 <style scoped>
 .rec-rent-container {
   display: flex;
+  flex-direction: column;
   height: 100%;
   width: 100%;
   font-family: "Microsoft JhengHei", Arial, sans-serif;
   background-color: #f9f9f9;
 }
-.sidebar {
-  width: 200px;
-  background-color: #343a40;
+
+.top-nav {
+  width: 100%;
+  background-color: #acacac;
   color: white;
   display: flex;
-  flex-direction: column;
-  padding-top: 20px;
+  /* flex-direction: row; */
+  padding-top: 0px;
   flex-shrink: 0;
 }
-.sidebar h2 {
+
+.top-nav button {
+  background-color: #01e68e;
+  color: #2b2b2b;
+  font-weight:500;
+  display: flex;
+  margin: 10px;
+  border: none;
+}
+
+.top-nav h2 {
   color: white;
   text-align: center;
   font-size: 1.1em;
   margin-bottom: 20px;
 }
-.sidebar a {
+
+.top-nav a {
   padding: 12px 15px;
   text-decoration: none;
   color: #cfd8dc;
@@ -269,37 +296,48 @@ onMounted(() => {
   transition: 0.3s;
   cursor: pointer;
 }
-.sidebar a:hover,
-.sidebar a.active {
-  background-color: #495057;
+
+.top-nav a:hover,
+.top-nav a.active {
+  background-color: #0080ff;
   color: white;
+}
+.top-nav button.active {
+  background-color: #00ff9d;
+  color: black;
+  font-weight: bold;
 }
 .main-content {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
 }
+
 .form-section {
   background-color: #eef;
   padding: 15px;
   border-radius: 5px;
   margin-bottom: 20px;
 }
+
 .form-group {
   margin-bottom: 10px;
   display: flex;
   align-items: center;
 }
+
 .form-group label {
   width: 160px;
   font-weight: bold;
 }
+
 .form-group input {
   padding: 5px;
   flex: 1;
   border: 1px solid #ccc;
   border-radius: 3px;
 }
+
 button {
   padding: 6px 12px;
   cursor: pointer;
@@ -307,46 +345,57 @@ button {
   border-radius: 3px;
   font-weight: bold;
 }
+
 .btn-primary {
   background-color: #007bff;
   color: white;
 }
+
 .btn-secondary {
-  background-color: #6c757d;
+  background-color: #4e597e;
   color: white;
 }
+
 .btn-danger {
   background-color: #dc3545;
   color: white;
 }
+
 .btn-warning {
   background-color: #ffc107;
   color: black;
 }
+
 .ml-1 {
   margin-left: 5px;
 }
+
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
 }
+
 th,
 td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
 }
+
 th {
   background-color: #343a40;
   color: white;
 }
+
 tr:nth-child(even) {
   background-color: #f2f2f2;
 }
+
 .view-section {
   display: none;
 }
+
 .view-section.active {
   display: block;
 }
