@@ -8,7 +8,4 @@ import jakarta.transaction.Transactional;
 @Transactional
 public class RecDetailUserService {
 
-    // @Autowired
-    // private final RecRentRepository recRepos;
-
 }

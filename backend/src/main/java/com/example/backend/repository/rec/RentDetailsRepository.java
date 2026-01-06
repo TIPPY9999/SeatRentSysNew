@@ -11,6 +11,8 @@ import com.example.backend.model.rec.RentDetails;
 @Repository
 public interface RentDetailsRepository extends JpaRepository<RentDetails, String> {
 
+    // List<RentDetails> findAll();
+
     // 依據會員ID搜尋
     List<RentDetails> findByMemId(Integer memId);
 
