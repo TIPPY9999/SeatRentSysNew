@@ -1,9 +1,10 @@
 package com.example.backend.service.rec;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +12,7 @@ import com.example.backend.model.rec.RecRent;
 import com.example.backend.model.rec.RentDetails;
 import com.example.backend.repository.rec.RecRentRepository;
 import com.example.backend.repository.rec.RentDetailsRepository;
+import com.example.backend.repository.rec.RentDetailsSpecs;
 
 @Service
 @Transactional
@@ -25,45 +27,50 @@ public class RecDetailMgnService {
 
     }
 
+    public List<RentDetails> search(
+            String recId,
+            Integer memId,
+            String memName,
+            String recStatus,
+            Integer spotId,
+            String spotName,
+            LocalDate rentDate,
+            LocalDate returnDate) {
+
+        Specification<RentDetails> spec = Specification.where(null);
+
+        if (recId != null && !recId.isEmpty()) {
+            spec = spec.and(RentDetailsSpecs.hasRecId(recId));
+        }
+        if (memId != null) {
+            spec = spec.and(RentDetailsSpecs.hasMemId(memId));
+        }
+        if (memName != null && !memName.isEmpty()) {
+            spec = spec.and(RentDetailsSpecs.memNameContains(memName));
+        }
+        if (recStatus != null && !recStatus.isEmpty()) {
+            spec = spec.and(RentDetailsSpecs.hasRecStatus(recStatus));
+        }
+        if (spotId != null) {
+            spec = spec.and(RentDetailsSpecs.hasSpotId(spotId));
+        }
+        if (spotName != null && !spotName.isEmpty()) {
+            spec = spec.and(RentDetailsSpecs.spotNameContains(spotName));
+        }
+        if (rentDate != null) {
+            spec = spec.and(RentDetailsSpecs.hasRentDate(rentDate));
+        }
+        if (returnDate != null) {
+            spec = spec.and(RentDetailsSpecs.hasReturnDate(returnDate));
+        }
+
+        return detailRepos.findAll(spec);
+    }
+
     public RentDetails getRecById(String recId) {
         // 找不到ID回傳ERR MSG
         return detailRepos.findById(recId).orElseThrow(
                 () -> new RuntimeException("RentDetails not found with ID: " + recId));// ??
-    }
-
-    // 依據會員ID搜尋
-    public List<RentDetails> findByMemId(Integer memId) {
-        return detailRepos.findByMemId(memId);//
-    }
-
-    // 依據會員姓名模糊搜尋 (WHERE memName LIKE %name%)
-    public List<RentDetails> findByMemNameContaining(String memName) {
-        return detailRepos.findByMemNameContaining(memName);
-    }
-
-    // 依據站點ID搜尋 (WHERE staId = id)
-    public List<RentDetails> findBySpotIdRent(Integer spotId) {
-        return detailRepos.findBySpotIdRent(spotId);
-    }
-
-    // 依據站點名稱模糊搜尋 (WHERE staName LIKE %name%)
-    public List<RentDetails> findByRentSpotNameContaining(String spotName) {
-        return detailRepos.findByRentSpotNameContaining(spotName);
-    }
-
-    // 依據訂單狀態搜尋
-    public List<RentDetails> findByRecStatus(String rentStatus) {
-        return detailRepos.findByRecStatus(rentStatus);
-    }
-
-    // 依據租借日期搜尋
-    public List<RentDetails> findByRecRentDT2(LocalDateTime rentDate) {
-        return detailRepos.findByRecRentDT2(rentDate);
-    }
-
-    // 依據歸還日期搜尋
-    public List<RentDetails> findByRecReturnDT2(LocalDateTime returnDate) {
-        return detailRepos.findByRecReturnDT2(returnDate);
     }
 
     // 新增訂單

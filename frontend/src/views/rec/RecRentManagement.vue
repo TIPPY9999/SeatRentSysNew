@@ -17,17 +17,54 @@ const form = reactive({
   recViolatInt: 0,
 });
 
+// 搜尋條件
+const searchCriteria = reactive({
+  recId: "",
+  memId: "",
+  memName: "",
+  recStatus: "",
+  spotId: "",
+  spotName: "",
+  returnDate: "",
+  rentDate: "",
+});
+
 // --- 2. 核心邏輯 ---
 
 // 查詢 (Read)
 const loadRents = async () => {
   try {
-    const res = await axios.get(API_URL);
+    const params = new URLSearchParams();
+    if (searchCriteria.recId) params.append("recId", searchCriteria.recId);
+    if (searchCriteria.memId) params.append("memId", searchCriteria.memId);
+    if (searchCriteria.memName) params.append("memName", searchCriteria.memName);
+    if (searchCriteria.recStatus)
+      params.append("recStatus", searchCriteria.recStatus);
+    if (searchCriteria.spotId) params.append("spotId", searchCriteria.spotId);
+    if (searchCriteria.spotName)
+      params.append("spotName", searchCriteria.spotName);
+    if (searchCriteria.returnDate)
+      params.append("returnDate", searchCriteria.returnDate);
+    if (searchCriteria.rentDate)
+      params.append("rentDate", searchCriteria.rentDate);
+
+    const queryString = params.toString();
+    const requestUrl = queryString ? `${API_URL}?${queryString}` : API_URL;
+
+    const res = await axios.get(requestUrl);
     rentList.value = res.data;
   } catch (err) {
     console.error("載入失敗:", err);
     alert("無法載入資料，請確認後端伺服器是否已啟動。\n錯誤: " + err.message);
   }
+};
+
+// 清除搜尋
+const clearSearch = () => {
+  for (const key in searchCriteria) {
+    searchCriteria[key] = "";
+  }
+  loadRents();
 };
 
 // 新增或更新 (Create / Update)
@@ -202,6 +239,79 @@ onMounted(() => {
             重新整理
           </button>
         </h2>
+
+        <!-- 搜尋表單 -->
+        <div class="search-form-container">
+          <div class="search-form">
+            <div class="form-group-search">
+              <label>訂單編號:</label>
+              <input
+                v-model="searchCriteria.recId"
+                type="text"
+                placeholder="依訂單編號"
+                @keyup.enter="loadRents"
+              />
+            </div>
+            <div class="form-group-search">
+              <label>會員編號:</label>
+              <input
+                v-model="searchCriteria.memId"
+                type="text"
+                placeholder="依會員編號"
+                @keyup.enter="loadRents"
+              />
+            </div>
+            <div class="form-group-search">
+              <label>會員姓名:</label>
+              <input
+                v-model="searchCriteria.memName"
+                type="text"
+                placeholder="依會員姓名(模糊)"
+                @keyup.enter="loadRents"
+              />
+            </div>
+            <div class="form-group-search">
+              <label>訂單狀態:</label>
+              <select v-model="searchCriteria.recStatus">
+                <option value="">所有狀態</option>
+                <option value="使用中">使用中</option>
+                <option value="已完成">已完成</option>
+                <option value="逾期">逾期</option>
+              </select>
+            </div>
+            <div class="form-group-search">
+              <label>站點ID:</label>
+              <input
+                v-model="searchCriteria.spotId"
+                type="text"
+                placeholder="依站點ID"
+                @keyup.enter="loadRents"
+              />
+            </div>
+            <div class="form-group-search">
+              <label>站點名稱:</label>
+              <input
+                v-model="searchCriteria.spotName"
+                type="text"
+                placeholder="依站點名稱(模糊)"
+                @keyup.enter="loadRents"
+              />
+            </div>
+            <div class="form-group-search">
+              <label>租借日期:</label>
+              <input v-model="searchCriteria.rentDate" type="date" />
+            </div>
+            <div class="form-group-search">
+              <label>歸還日期:</label>
+              <input v-model="searchCriteria.returnDate" type="date" />
+            </div>
+          </div>
+          <div class="search-actions">
+            <button class="btn-primary" @click="loadRents">搜尋</button>
+            <button class="btn-secondary" @click="clearSearch">清除</button>
+          </div>
+        </div>
+
         <table>
           <thead>
             <tr>
@@ -243,7 +353,7 @@ onMounted(() => {
               </td>
             </tr>
             <tr v-if="rentList.length === 0">
-              <td colspan="7" class="text-center">暫無資料</td>
+              <td colspan="12" class="text-center">暫無資料或查無結果</td>
             </tr>
           </tbody>
         </table>
@@ -275,7 +385,7 @@ onMounted(() => {
 .top-nav button {
   background-color: #01e68e;
   color: #2b2b2b;
-  font-weight:500;
+  font-weight: 500;
   display: flex;
   margin: 10px;
   border: none;
@@ -336,6 +446,43 @@ onMounted(() => {
   flex: 1;
   border: 1px solid #ccc;
   border-radius: 3px;
+}
+.search-form-container {
+  background-color: #f0f8ff;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.search-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+  align-items: center;
+}
+
+.form-group-search {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group-search label {
+  font-weight: bold;
+  margin-bottom: 5px;
+  font-size: 0.9em;
+}
+
+.form-group-search input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.search-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
 }
 
 button {
