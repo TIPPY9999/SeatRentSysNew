@@ -10,9 +10,9 @@ spring:
     name: seat-rent-backend
 
   datasource:
-    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
-    username: tippy
-    password: 1234
+    url: jdbc:sqlserver://localhost:1433;databaseName=RentalSystemDB;encrypt=false;trustServerCertificate=true
+    username: tom
+    password: 654832
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
 
   jpa:
