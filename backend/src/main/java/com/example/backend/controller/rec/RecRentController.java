@@ -43,12 +43,13 @@ public class RecRentController {
             @RequestParam(required = false) String spotName,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate rentDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate returnDate) {
-        
+
         // 如果所有參數都為空，則返回所有列表
-        if (recId == null && memId == null && memName == null && recStatus == null && spotId == null && spotName == null && rentDate == null && returnDate == null) {
+        if (recId == null && memId == null && memName == null && recStatus == null && spotId == null && spotName == null
+                && rentDate == null && returnDate == null) {
             return recDetailService.getAllRec();
         }
-        
+
         // 否則，呼叫 search service
         return recDetailService.search(recId, memId, memName, recStatus, spotId, spotName, rentDate, returnDate);
     }

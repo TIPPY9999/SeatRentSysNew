@@ -151,12 +151,12 @@ defineExpose({
         <tr>
           <th>訂單狀態</th>
           <th>訂單編號</th>
-          <th>會員ID</th>
+          <th>會員編號</th>
           <th>會員姓名</th>
           <th>座椅編號</th>
-          <th>租借點ID</th>
+          <th>租借點編號</th>
           <th>租借點名稱</th>
-          <th>歸還點ID</th>
+          <th>歸還點編號</th>
           <th>歸還點名稱</th>
           <th>租借時間</th>
           <th>歸還時間</th>
@@ -180,7 +180,8 @@ defineExpose({
           <td>{{ rent.recRentDT2 ? rent.recRentDT2.replace("T", " ") : "" }}</td>
           <td>{{ rent.recReturnDT2 ? rent.recReturnDT2.replace("T", " ") : "" }}</td>
           <td>
-            <button class="btn-warning" @click="editRent(rent)">編輯</button>
+            <button class="btn-warning" @click="editRent(rent)">編輯</button
+            ><span> / </span>
             <button class="btn-danger ml-1" @click="deleteRent(rent.recSeqId)">
               刪除
             </button>
@@ -233,7 +234,8 @@ table {
   border-collapse: collapse;
   margin-top: 10px;
 }
-th, td {
+th,
+td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
@@ -246,7 +248,7 @@ tr:nth-child(even) {
   background-color: #f2f2f2;
 }
 .text-center {
-    text-align: center;
+  text-align: center;
 }
 .view-section.active {
   display: block;

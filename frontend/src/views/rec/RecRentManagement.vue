@@ -3,11 +3,12 @@ import { ref, reactive } from "vue";
 import axios from "axios";
 import RecRentSearch from "../../components/rec/RecRentSearch.vue";
 import RecRentAdd from "../../components/rec/RecRentAdd.vue";
+import RecRentEdit from "../../components/rec/RecRentEdit.vue"; // 1. 引入 Edit 組件
 import RecRentUserOrder from "../../components/rec/RecRentUserOrder.vue";
-import RecRentUserReturn from "../../components/rec/RecRentUserReturn.vue";
+import RecRentUserComplete from "../../components/rec/RecRentUserComplete.vue";
 
 // --- 1. 狀態定義 ---
-const activeView = ref("list"); // 'list' or 'add'
+const activeView = ref("list"); // 'list', 'add', 'edit', 'order', 'complete'
 const editingRent = ref(null); // Holds the data for the rent being edited
 const searchComponent = ref(null); // Ref to access the search component instance
 const API_URL = "http://localhost:8080/api/rec-rents";
@@ -61,8 +62,9 @@ const handleDeleteRent = async (id) => {
 
 // 準備編輯資料
 const handleEditRent = (rent) => {
+  
   editingRent.value = { ...rent };
-  activeView.value = "add";
+  activeView.value = "edit"; // 切換到編輯視圖
 
   // Scroll to top for better user experience
   setTimeout(() => {
@@ -76,7 +78,7 @@ const handleEditRent = (rent) => {
 // 切換到新增畫面
 const goToAddView = () => {
   editingRent.value = null; // Clear any editing data
-  activeView.value = "add";
+  activeView.value = "add"; // 切換到新增視圖
 };
 
 // 取消並返回列表
@@ -108,7 +110,7 @@ const completeOrder = () => {
       @click="goToAddView"
       :class="{ active: activeView === 'add' }"
       :disabled="activeView === 'add'"
-    >新增或修改訂單</button>
+    >新增訂單</button>
 
     <button
       @click="makeOrder"
@@ -129,23 +131,31 @@ const completeOrder = () => {
     <div class="main-content">
       <h1>訂單管理系統 (RecRent)</h1>
 
-      <div v-if="activeView === 'add'" class="view-section active">
+      <div v-if="activeView === 'add'" class="view-section">
         <rec-rent-add
+          @save-rent="handleSaveRent"
+          @cancel="backToList"
+        />
+      </div>
+
+      <!-- 2. 新增 RecRentEdit 組件的區塊 -->
+      <div v-if="activeView === 'edit'" class="view-section">
+        <rec-rent-edit
           :initial-data="editingRent"
           @save-rent="handleSaveRent"
           @cancel="backToList"
         />
       </div>
 
-      <div v-else-if="activeView === 'order'" class="view-section active">
+      <div v-if="activeView === 'order'" class="view-section">
         <rec-rent-user-order />
       </div>
 
-      <div v-else-if="activeView === 'return'" class="view-section active">
-        <rec-rent-user-return />
+      <div v-if="activeView === 'complete'" class="view-section">
+        <rec-rent-user-complete />
       </div>
 
-      <div v-else class="view-section active">
+      <div v-if="activeView === 'list'" class="view-section">
         <rec-rent-search
           ref="searchComponent"
           @edit-rent="handleEditRent"
@@ -205,10 +215,6 @@ const completeOrder = () => {
 }
 
 .view-section {
-  display: none;
-}
-
-.view-section.active {
-  display: block;
+  display: block; /* Make sections visible by default for v-show */
 }
 </style>

@@ -21,7 +21,7 @@ import MemberCreateView from '@/views/member/MemberCreateView.vue'
  */
 const MerchantList = () => import('@/views/merchantAndCoupon/MerchantList.vue')
 const DiscountList = () => import('@/views/merchantAndCoupon/DiscountList.vue')
-const RecRentUserOrder = () => import('@/views/rec/RecRentUserOrder.vue')
+
 
 // 定義路由表
 const routes = [
