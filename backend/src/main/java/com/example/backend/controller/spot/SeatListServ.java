@@ -2,11 +2,13 @@ package com.example.backend.controller.spot;
 
 import java.util.List;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.backend.model.spot.Seat;
 import com.example.backend.service.spot.SeatService;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 // import org.springframework.beans.factory.annotation.Autowired;
 
 // 改用 @RestController：
@@ -47,4 +49,10 @@ public class SeatListServ {
         // 我們只要輕鬆地把拿到的座位列表回傳回去，任務就完成了。
         return seatService.selectAll();
     }
+
+    @GetMapping("/seat/listBySoptId")
+    public List<Seat> listBySoptId(HttpServletRequest req) {
+        return seatService.selectBySpotId(Integer.valueOf(req.getParameter("spotId")));
+    }
+
 }

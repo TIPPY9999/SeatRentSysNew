@@ -12,6 +12,8 @@ public interface ISeatService {
 
     public Seat selectById(Integer seatId);
 
+    public List<Seat> selectBySpotId(Integer seatsId);
+
     public boolean deleteById(Integer seatId);
 
     public List<Seat> selectAll();
