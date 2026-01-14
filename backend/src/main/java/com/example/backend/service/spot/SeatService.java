@@ -1,14 +1,15 @@
 package com.example.backend.service.spot;
 
-import com.example.backend.model.spot.Seat;
-import com.example.backend.repository.spot.SeatRepository;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.criteria.Predicate;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.example.backend.model.spot.Seat;
+import com.example.backend.repository.spot.SeatRepository;
+
+import jakarta.persistence.criteria.Predicate;
 
 @Service
 @Transactional
@@ -55,6 +56,11 @@ public class SeatService implements ISeatService {
     public List<Seat> selectAll() {
         // findAll(): 查詢全部。
         return seatRepository.findAll();
+    }
+
+    @Override
+    public List<Seat> selectBySpotId(Integer seatsId) {
+        return seatRepository.findBySpotId(seatsId);
     }
 
     @Override
