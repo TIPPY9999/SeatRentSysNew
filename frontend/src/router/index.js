@@ -12,6 +12,11 @@ import AdminHomeView from '@/views/member/AdminHomeView.vue' // 後臺首頁(儀
 import MemberListView from '@/views/member/MemberListView.vue'
 import MemberEditView from '@/views/member/MemberEditView.vue'
 import MemberCreateView from '@/views/member/MemberCreateView.vue'
+import AdminListView from '@/views/member/AdminListView.vue'
+import AdminCreateView from '@/views/member/AdminCreateView.vue'
+import AdminEditView from '@/views/member/AdminEditView.vue'
+import MemberLayout from '@/views/member/MemberLayout.vue'
+import MemberProfileView from '@/views/member/MemberProfileView.vue'
 
 /**
  * ==========================================
@@ -29,6 +34,17 @@ const routes = [
     path: '/login',
     name: 'login',
     component: LoginView,
+  },
+
+  {
+    path: '/member',
+    component: MemberLayout,
+    children: [
+      {
+        path: 'profile',
+        component: MemberProfileView,
+      },
+    ],
   },
 
   /**
@@ -139,7 +155,17 @@ const routes = [
       {
         path: 'admins',
         name: 'admin-list',
-        component: AdminHomeView,
+        component: AdminListView,
+      },
+      {
+        path: 'admins/create',
+        name: 'admin-create',
+        component: AdminCreateView,
+      },
+      {
+        path: 'admins/edit/:id',
+        name: 'admin-edit',
+        component: AdminEditView,
       },
 
       // ==========================================

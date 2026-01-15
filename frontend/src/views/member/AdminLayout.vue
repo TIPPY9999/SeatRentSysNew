@@ -114,6 +114,17 @@ const logout = () => {
 
             <li class="nav-item">
               <RouterLink
+                to="/admin/admins"
+                class="nav-link"
+                :class="{ active: isActiveGroup('/admin/admins') }"
+              >
+                <i class="nav-icon fas fa-user-cog"></i>
+                <p>管理員列表</p>
+              </RouterLink>
+            </li>
+
+            <li class="nav-item">
+              <RouterLink
                 to="/admin/merchants"
                 class="nav-link"
                 :class="{ active: isActiveGroup('/admin/merchants') }"
@@ -180,11 +191,6 @@ const logout = () => {
         </div>
       </section>
     </div>
-
-    <footer class="main-footer">
-      <div class="float-right d-none d-sm-block"><b>Version</b> 1.0.0</div>
-      <strong>SeatRentSys &copy; 2025 All Rights Reserved.</strong>
-    </footer>
   </div>
 </template>
 

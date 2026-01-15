@@ -1,40 +1,60 @@
 <script setup>
-/**
- * LoginView.vue：登入頁面
- * 已轉換為純 JS，並移除所有會干擾執行的標記。
- */
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
 
-const memUsername = ref('')
-const memPassword = ref('')
+// 登入類型
+const loginType = ref('member') // member | admin
+
+// 共用輸入欄位（重點）
+const account = ref('')
+const password = ref('')
+
 const errorMsg = ref('')
 const successMsg = ref('')
+
+// 切換登入身分時，清空輸入
+watch(loginType, () => {
+  account.value = ''
+  password.value = ''
+  errorMsg.value = ''
+})
 
 const login = () => {
   errorMsg.value = ''
   successMsg.value = ''
 
-  axios
-    .post('http://localhost:8080/login/member', {
-      memUsername: memUsername.value,
-      memPassword: memPassword.value,
-    })
-    .then(() => {
-      successMsg.value = '登入成功'
-      router.push('/admin')
-    })
-    .catch((err) => {
-      // 這裡有使用到 err 變數，所以保留它
-      if (err.response && err.response.data) {
-        errorMsg.value = err.response.data
-      } else {
-        errorMsg.value = '伺服器連線失敗'
+  if (loginType.value === 'member') {
+    axios
+      .post('http://localhost:8080/login/member', {
+        memUsername: account.value,
+        memPassword: password.value,
+      },
+      {
+        withCredentials: true,
       }
-    })
+    )
+      .then(() => {
+        router.push('/member/profile') // 之後要做的會員頁
+      })
+      .catch((err) => {
+        errorMsg.value = err.response?.data || '登入失敗'
+      })
+  } else {
+    axios
+      .post('http://localhost:8080/login/admin', {
+        admUsername: account.value,
+        admPassword: password.value,
+      })
+      .then(() => {
+        router.push('/admin')
+      })
+      .catch((err) => {
+        errorMsg.value = err.response?.data || '登入失敗'
+      })
+  }
 }
 </script>
 
@@ -46,22 +66,39 @@ const login = () => {
           <h1 class="h1"><b>SeatRentSys</b></h1>
         </div>
         <div class="card-body">
+          <div class="login-switch">
+            <button
+              :class="{ active: loginType === 'member' }"
+              @click="loginType = 'member'"
+              type="button"
+            >
+              會員登入
+            </button>
+
+            <button
+              :class="{ active: loginType === 'admin' }"
+              @click="loginType = 'admin'"
+              type="button"
+            >
+              管理員登入
+            </button>
+          </div>
           <form @submit.prevent="login">
             <div class="input-group mb-3">
               <input
-                v-model="memUsername"
+                v-model="account"
                 type="text"
                 class="form-control"
-                placeholder="帳號"
+                :placeholder="loginType === 'member' ? '會員帳號' : '管理員帳號'"
                 required
               />
             </div>
             <div class="input-group mb-3">
               <input
-                v-model="memPassword"
+                v-model="password"
                 type="password"
                 class="form-control"
-                placeholder="密碼"
+                :placeholder="loginType === 'member' ? '會員密碼' : '管理員密碼'"
                 required
               />
             </div>
@@ -82,7 +119,30 @@ const login = () => {
   align-items: center;
   justify-content: center;
 }
+
 .login-box {
   width: 360px;
+}
+
+.login-switch {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.login-switch button {
+  padding: 6px 16px;
+  border: 1px solid #ccc;
+  background-color: #f3f4f6;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.login-switch button.active {
+  background-color: #007bff;
+  color: #fff;
+  border-color: #007bff;
 }
 </style>

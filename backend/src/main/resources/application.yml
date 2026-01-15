@@ -11,7 +11,7 @@ spring:
 
   datasource:
     url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
-    username: tippy
+    username: alan
     password: 1234
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
 
