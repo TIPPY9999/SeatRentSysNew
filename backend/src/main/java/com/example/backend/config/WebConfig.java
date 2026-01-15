@@ -41,8 +41,10 @@ public class WebConfig implements WebMvcConfigurer {
         }
 
         Path dir = Paths.get(uploadPath).toAbsolutePath().normalize();
-        Files.createDirectories(dir);
-
+        if (!Files.exists(dir)) {
+            Files.createDirectories(dir);
+            System.out.println("✅ 已成功建立上傳目錄: " + dir);
+        }
         location = dir.toUri().toString();
 
         System.out.println("\n--- [圖片映射檢查] ---");
@@ -56,7 +58,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         if (location != null) {
             registry.addResourceHandler("/images/**")
-                    .addResourceLocations(location);
+                    .addResourceLocations("file:./uploads/");
         }
     }
 
@@ -69,8 +71,7 @@ public class WebConfig implements WebMvcConfigurer {
                 // ✅ 明確列出前端網址（避免 allowCredentials(true) + "*" 直接炸）
                 .allowedOrigins(
                         "http://localhost:5173",
-                        "http://127.0.0.1:5173"
-                )
+                        "http://127.0.0.1:5173")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
@@ -88,4 +89,3 @@ public class WebConfig implements WebMvcConfigurer {
         }
     }
 }
-        

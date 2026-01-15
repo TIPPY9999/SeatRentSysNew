@@ -155,6 +155,20 @@
         .view-section.active {
             display: block;
         }
+
+        /* 搜尋列樣式 */
+        .search-container {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-container input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            width: 250px;
+        }
     </style>
 </head>
 
@@ -164,6 +178,9 @@
         <h2>後台管理系統</h2>
         <a onclick="switchView('list')" id="nav-list" class="active">訂單查詢</a>
         <a onclick="resetForm(); switchView('add')" id="nav-add">新增訂單</a>
+        <a onclick="switchView('member')" id="nav-member">會員管理</a>
+        <a onclick="switchView('report')" id="nav-report">報表分析</a>
+        <a onclick="switchView('settings')" id="nav-settings">系統設定</a>
     </div>
 
     <!-- Main Content -->
@@ -206,6 +223,15 @@
         <!-- 列表區塊 (預設顯示) -->
         <div id="view-list" class="view-section active">
             <h2>訂單列表 <button class="btn-secondary" style="font-size: 0.8em;" onclick="loadRents()">重新整理</button></h2>
+
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="輸入會員ID、座位或訂單ID搜尋..."
+                    onkeyup="if(event.key === 'Enter') searchRents()">
+                <button class="btn-primary" onclick="searchRents()">搜尋</button>
+                <button class="btn-secondary"
+                    onclick="document.getElementById('searchInput').value=''; searchRents();">清除</button>
+            </div>
+
             <table>
                 <thead>
                     <tr>
@@ -223,6 +249,25 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- 新增的頁面區塊 (預設隱藏) -->
+        <div id="view-member" class="view-section">
+            <h2>會員管理</h2>
+            <p>這裡是會員管理功能的區塊 (範例)...</p>
+            <button class="btn-primary">新增會員</button>
+        </div>
+
+        <div id="view-report" class="view-section">
+            <h2>報表分析</h2>
+            <p>這裡是報表分析功能的區塊 (範例)...</p>
+            <div style="background: #ddd; height: 200px; display: flex; align-items: center; justify-content: center;">
+                圖表預留位置</div>
+        </div>
+
+        <div id="view-settings" class="view-section">
+            <h2>系統設定</h2>
+            <p>這裡是系統設定功能的區塊 (範例)...</p>
+        </div>
     </div>
 
     <script>
@@ -239,30 +284,60 @@
                 .then(res => res.json())
                 .then(data => {
                     currentRents = data;
-                    const tbody = document.getElementById('rentTableBody');
-                    tbody.innerHTML = '';
-
-                    data.forEach((rent, index) => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td>${rent.recSeqId}</td>
-                            <td>${rent.recId || '<span style="color:gray">處理中...</span>'}</td>
-                            <td>${rent.memId}</td>
-                            <td>${rent.seatsId}</td>
-                            <td>${rent.spotIdRent}</td>
-                            <td>${rent.recRentDT2 ? rent.recRentDT2.replace('T', ' ') : ''}</td>
-                            <td>
-                                <button class="btn-warning" onclick="editRent(${index})">編輯</button>
-                                <button class="btn-danger" onclick="deleteRent(${rent.recSeqId})">刪除</button>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
+                    renderTable(data);
                 })
                 .catch(err => {
                     console.error('載入失敗:', err);
                     alert('無法載入資料，請確認後端伺服器是否已啟動。\n錯誤: ' + err.message);
                 });
+        }
+
+        // 渲染表格 (支援搜尋過濾)
+        function renderTable(data) {
+            const tbody = document.getElementById('rentTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">查無資料</td></tr>';
+                return;
+            }
+
+            data.forEach((rent) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${rent.recSeqId}</td>
+                    <td>${rent.recId || '<span style="color:gray">處理中...</span>'}</td>
+                    <td>${rent.memId}</td>
+                    <td>${rent.seatsId}</td>
+                    <td>${rent.spotIdRent}</td>
+                    <td>${rent.recRentDT2 ? rent.recRentDT2.replace('T', ' ') : ''}</td>
+                    <td>
+                        <!-- 改為傳遞 ID 而非 index，確保搜尋後編輯對象正確 -->
+                        <button class="btn-warning" onclick="editRent(${rent.recSeqId})">編輯</button>
+                        <button class="btn-danger" onclick="deleteRent(${rent.recSeqId})">刪除</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 搜尋功能
+        function searchRents() {
+            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+
+            // 若無輸入則顯示全部
+            if (!keyword) {
+                renderTable(currentRents);
+                return;
+            }
+
+            // 過濾資料 (比對 ID, 會員ID, 座位)
+            const filtered = currentRents.filter(rent =>
+                String(rent.recSeqId).includes(keyword) ||
+                String(rent.memId).includes(keyword) ||
+                (rent.seatsId && rent.seatsId.toLowerCase().includes(keyword))
+            );
+            renderTable(filtered);
         }
 
         // 2. 新增或更新 (Create / Update)
@@ -311,8 +386,11 @@
         }
 
         // 準備編輯資料
-        function editRent(index) {
-            const rent = currentRents[index];
+        function editRent(id) {
+            // 改用 ID 尋找資料，避免搜尋過濾後 index 對不上的問題
+            const rent = currentRents.find(r => r.recSeqId == id);
+            if (!rent) return;
+
             document.getElementById('formTitle').innerText = '編輯訂單 (ID: ' + rent.recSeqId + ')';
             document.getElementById('recSeqId').value = rent.recSeqId;
             document.getElementById('memId').value = rent.memId;
