@@ -12,6 +12,7 @@ import AdminHomeView from '@/views/member/AdminHomeView.vue' // 後臺首頁(儀
 import MemberListView from '@/views/member/MemberListView.vue'
 import MemberEditView from '@/views/member/MemberEditView.vue'
 import MemberCreateView from '@/views/member/MemberCreateView.vue'
+import PaymentView from '@/views/ecpay/PaymentView.vue'
 
 /**
  * ==========================================
@@ -22,10 +23,8 @@ import MemberCreateView from '@/views/member/MemberCreateView.vue'
 const MerchantList = () => import('@/views/merchantAndCoupon/MerchantList.vue')
 const DiscountList = () => import('@/views/merchantAndCoupon/DiscountList.vue')
 
-
 // 定義路由表
 const routes = [
-
   // --- MEM登入頁面：獨立路徑，不套用 Admin 佈局框架 ---
   {
     path: '/login',
@@ -37,7 +36,7 @@ const routes = [
       //   name: 'user-rent',
       //   component: RecRentUserOrder,
       // },
-    ]
+    ],
   },
 
   /**
@@ -125,7 +124,14 @@ const routes = [
         component: DiscountList,
         alias: 'coupons', // 設定別名，訪問 /admin/coupons 也會通
       },
-
+      // ==========================================
+      // [新增功能] 金流模組
+      // ==========================================
+      {
+        path: 'payment',
+        name: 'Payment',
+        component: PaymentView,
+      },
       // ==========================================
       // [既有功能] 會員管理模組
       // ==========================================

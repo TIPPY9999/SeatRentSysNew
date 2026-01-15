@@ -63,6 +63,10 @@ const router = useRouter()
             <h3>優惠券管理</h3>
             <p>管理優惠券與活動</p>
           </div>
+          <div class="card" @click="router.push('/admin/payment')">
+            <h3>金流管理</h3>
+            <p>管理金流相關設定</p>
+          </div>
         </div>
       </div>
     </section>
