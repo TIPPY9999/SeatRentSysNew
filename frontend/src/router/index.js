@@ -22,6 +22,7 @@ import PaymentView from '@/views/ecpay/PaymentView.vue'
  */
 const MerchantList = () => import('@/views/merchantAndCoupon/MerchantList.vue')
 const DiscountList = () => import('@/views/merchantAndCoupon/DiscountList.vue')
+const SnakeGame = () => import('@/views/game/SnakeGame.vue')
 
 // 定義路由表
 const routes = [
@@ -131,6 +132,14 @@ const routes = [
         path: 'payment',
         name: 'Payment',
         component: PaymentView,
+      },
+      // ==========================================
+      // [新增功能] 娛樂模組 - 貪吃蛇小遊戲
+      // ==========================================
+      {
+        path: 'snake-game',
+        name: 'snake-game',
+        component: SnakeGame,
       },
       // ==========================================
       // [既有功能] 會員管理模組

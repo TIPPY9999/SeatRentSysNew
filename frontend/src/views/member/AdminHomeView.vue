@@ -67,6 +67,10 @@ const router = useRouter()
             <h3>金流管理</h3>
             <p>管理金流相關設定</p>
           </div>
+           <div class="card" @click="router.push('/admin/snake-game')">
+            <h3>小遊戲</h3>
+            <p>貪吃蛇</p>
+          </div>
         </div>
       </div>
     </section>
