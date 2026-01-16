@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@fawmi/vue-google-maps": "^0.9.79",
+    "@googlemaps/extended-component-library": "^0.6.14",
     "apexcharts": "^5.3.6",
     "axios": "^1.13.2",
     "element-plus": "^2.13.1",

@@ -13,6 +13,7 @@ import AdminHomeView from '@/views/member/AdminHomeView.vue' // 後臺首頁(儀
 import MemberListView from '@/views/member/MemberListView.vue'
 import MemberEditView from '@/views/member/MemberEditView.vue'
 import MemberCreateView from '@/views/member/MemberCreateView.vue'
+import UserRentView from '@/views/rec/RecRentUserPage.vue'
 
 /**
  * ==========================================
@@ -30,17 +31,16 @@ const routes = [
     path: '/login',
     component: LoginView,
     children: [
-      // // --- 使用者租借頁 ---
-      // {
-      //   path: '/rent',
-      //   name: 'user-rent',
-      //   component: RecRentUserOrder,
-      // },
+      // --- 使用者租借頁 (已移至下方獨立路由，此處保留空結構以免報錯) ---
     ],
   },
+  {
+    path: '/rent',
+    name: 'user-rent',
+    component: UserRentView,
+  },
 
-  /**
-   * ==========================================
+  /** * ==========================================
    * 3. 管理後臺嵌套路由 (Nested Routes)
    * 所有的 children 子路徑都會渲染在 AdminLayout 內的 <RouterView /> 位置
    * 網址前綴統一為 /admin
@@ -156,7 +156,7 @@ const routes = [
       {
         path: 'rec-rent',
         name: 'rec-rent',
-        component: () => import('@/views/rec/RecRentManagement.vue'),
+        component: () => import('@/views/rec/RecRentMgnPage.vue'),
       },
 
       // ==========================================
