@@ -83,4 +83,34 @@ public class AdminController {
     public List<Admin> search(@RequestParam String keyword) {
         return adminService.findByKeyword(keyword);
     }
+
+    // 停權
+    @GetMapping("/disable")
+    public String disable(@RequestParam Integer admId) {
+
+        Admin admin = adminService.findById(admId);
+        if (admin == null) {
+            return "查無此管理員";
+        }
+
+        admin.setAdmStatus(0);
+        adminService.update(admin);
+
+        return "管理員已停權（admId=" + admId + "）";
+    }
+
+    // 啟用
+    @GetMapping("/enable")
+    public String enable(@RequestParam Integer admId) {
+
+        Admin admin = adminService.findById(admId);
+        if (admin == null) {
+            return "查無此管理員";
+        }
+
+        admin.setAdmStatus(1);
+        adminService.update(admin);
+
+        return "管理員已啟用（admId=" + admId + "）";
+    }
 }

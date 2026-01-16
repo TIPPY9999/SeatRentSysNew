@@ -5,20 +5,22 @@
  */
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, RouterLink, RouterView } from 'vue-router'
+import { useAdminAuthStore } from '@/stores/adminAuth'
+
+const adminAuthStore = useAdminAuthStore()
 
 const router = useRouter()
 const route = useRoute()
 
 // AdminLTE 3 必備的 Body Class
-const bodyClasses = ['hold-transition', 'sidebar-mini', 'layout-fixed']
+const bodyClasses = ['hold-transition', 'layout-fixed']
 
 onMounted(() => {
   document.body.classList.add(...bodyClasses)
 
-  // [修正] JS 環境中不需要斷言為 any
-  const win = window
-  if (win.$ && win.$.AdminLTE) {
-    win.$(document).trigger('adminlte.layout.activate')
+  const savedAdmin = localStorage.getItem('admin')
+  if (savedAdmin) {
+    adminAuthStore.setAdmin(JSON.parse(savedAdmin))
   }
 })
 
@@ -39,9 +41,13 @@ const isActiveGroup = (prefix) => {
  */
 const logout = () => {
   if (confirm('確定要登出嗎？')) {
+    localStorage.removeItem('token') // 清 token
+    localStorage.removeItem('admin')
+    adminAuthStore.clearAdmin()
     router.push('/login')
   }
 }
+
 </script>
 
 <template>
@@ -73,6 +79,20 @@ const logout = () => {
       </RouterLink>
 
       <div class="sidebar">
+        <!-- 管理員資訊區塊 -->
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+          <div class="image">
+            <i class="fas fa-user-circle fa-2x text-white"></i>
+          </div>
+          <div class="info">
+            <a href="#" class="d-block text-white">
+              {{ adminAuthStore.admin.name }}
+            </a>
+            <span class="text-white-50 small">
+              {{ adminAuthStore.admin.username }}
+            </span>
+          </div>
+        </div>
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
             <li class="nav-header">據點與座位管理</li>
@@ -202,5 +222,17 @@ const logout = () => {
 .router-link-active {
   background-color: #007bff !important;
   color: #fff !important;
+}
+.user-panel .info {
+  margin-left: 8px;
+  line-height: 1.2;
+}
+.user-panel {
+  align-items: center;
+}
+.user-panel .image {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
 }
 </style>

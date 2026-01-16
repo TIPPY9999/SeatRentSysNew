@@ -35,4 +35,7 @@ public class Admin {
 
     @Column(name = "updatedAt", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "admStatus")
+    private Integer admStatus;
 }

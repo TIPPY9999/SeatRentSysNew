@@ -108,7 +108,7 @@ onMounted(() => {
           <th>發票載具</th>
           <th>建立時間</th>
           <th>更新時間</th>
-          <th>修改</th>
+          <th>編輯</th>
           <th>刪除</th>
         </tr>
       </thead>
@@ -134,7 +134,7 @@ onMounted(() => {
               class="btn-edit"
               @click="router.push(`/admin/members/edit/${m.memId}`)"
             >
-              修改
+              編輯
             </button>
           </td>
           <td>

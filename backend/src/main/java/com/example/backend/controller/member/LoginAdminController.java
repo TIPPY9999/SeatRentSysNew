@@ -1,5 +1,6 @@
 package com.example.backend.controller.member;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -13,7 +14,7 @@ import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/login")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class LoginAdminController {
 
     private final AdminRepository adminRepository;
@@ -46,9 +47,22 @@ public class LoginAdminController {
                     .body("帳號或密碼錯誤");
         }
 
+        // 停權判斷
+        if (admin.getAdmStatus() != null && admin.getAdmStatus() == 0) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("帳號已停權，請聯絡管理員");
+        }
+
         // 登入成功
         session.setAttribute("loginAdmin", admin);
 
-        return ResponseEntity.ok("管理員登入成功");
+        // 回傳給前端用的資料
+        // 使用 HashMap 避免 Map.of 因欄位為 null 而拋出 NullPointerException
+        Map<String, Object> result = new HashMap<>();
+        result.put("admUsername", admin.getAdmUsername());
+        result.put("admName", admin.getAdmName());
+        result.put("admRole", admin.getAdmRole());
+
+        return ResponseEntity.ok(result);
     }
 }

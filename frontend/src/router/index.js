@@ -7,7 +7,7 @@ import { createRouter, createWebHistory } from 'vue-router'
  * ==========================================
  */
 import LoginView from '@/views/member/LoginView.vue' // 登入頁
-import AdminLayout from '@/views/member/AdminLayout.vue' // 後臺主框架 (包含側邊欄與 Header)
+import AdminLayout from '@/layouts/AdminLayout.vue' // 後臺主框架 (包含側邊欄與 Header)
 import AdminHomeView from '@/views/member/AdminHomeView.vue' // 後臺首頁(儀表板)
 import MemberListView from '@/views/member/MemberListView.vue'
 import MemberEditView from '@/views/member/MemberEditView.vue'
@@ -15,7 +15,7 @@ import MemberCreateView from '@/views/member/MemberCreateView.vue'
 import AdminListView from '@/views/member/AdminListView.vue'
 import AdminCreateView from '@/views/member/AdminCreateView.vue'
 import AdminEditView from '@/views/member/AdminEditView.vue'
-import MemberLayout from '@/views/member/MemberLayout.vue'
+import MemberLayout from '@/layouts/MemberLayout.vue'
 import MemberProfileView from '@/views/member/MemberProfileView.vue'
 
 /**
@@ -248,6 +248,23 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+})
+
+// ==========================================
+// 全域路由守衛：後台登入驗證
+// ==========================================
+router.beforeEach((to, from, next) => {
+  const admin = localStorage.getItem('admin')
+
+  // 只保護後台
+  if (to.path.startsWith('/admin')) {
+    if (!admin) {
+      next('/login')
+      return
+    }
+  }
+
+  next()
 })
 
 export default router

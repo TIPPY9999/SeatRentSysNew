@@ -2,6 +2,9 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import { useAdminAuthStore } from '@/stores/adminAuth'
+
+const adminAuthStore = useAdminAuthStore()
 
 const router = useRouter()
 
@@ -47,19 +50,78 @@ const login = () => {
       .post('http://localhost:8080/login/admin', {
         admUsername: account.value,
         admPassword: password.value,
+      }, {
+        withCredentials: true, // 🔥 一定要有（Session）
       })
-      .then(() => {
-        router.push('/admin')
+      .then((res) => {
+        // 🔥 直接用後端回傳的 admin 物件
+        const adminData = {
+          username: res.data.admUsername,
+          name: res.data.admName,
+          role: res.data.admRole,
+        }
+
+        // 存 Pinia
+        adminAuthStore.setAdmin(adminData)
+
+        // 存 localStorage（給重新整理用）
+        localStorage.setItem('admin', JSON.stringify(adminData))
+
+        // 進後台
+        router.replace('/admin')
       })
       .catch((err) => {
         errorMsg.value = err.response?.data || '登入失敗'
       })
   }
 }
+
+// Particles 背景設定（只影響視覺）
+const particlesOptions = {
+  background: {
+    color: { value: "#e9ecef" } 
+  },
+  particles: {
+    color: { value: "#6c757d" },
+    links: {
+      enable: true,
+      color: "#6c757d",
+      distance: 150,
+      opacity: 0.3,
+      width: 1,
+    },
+    move: {
+      enable: true,
+      speed: 1.2,
+    },
+    number: {
+      value: 60,
+    },
+    size: {
+      value: { min: 1, max: 3 },
+    },
+  },
+  interactivity: {
+    events: {
+      onHover: {
+        enable: true,
+        mode: "grab",
+      },
+    },
+  },
+}
 </script>
 
 <template>
   <div class="login-page">
+
+    <!-- 粒子背景 -->
+    <vue-particles
+      id="tsparticles"
+      :options="particlesOptions"
+      class="particles-bg"
+    />
+
     <div class="login-box">
       <div class="card card-outline card-primary">
         <div class="card-header text-center">
@@ -113,15 +175,26 @@ const login = () => {
 
 <style scoped>
 .login-page {
-  background-color: #e9ecef;
+  position: relative;
   height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
+/* 粒子背景：最底層 */
+.particles-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* 登入框：浮在上面 */
 .login-box {
   width: 360px;
+  position: relative;
+  z-index: 10;
 }
 
 .login-switch {
