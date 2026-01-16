@@ -3,16 +3,16 @@ server:
 
 app:
   file:
-    upload-path: ${user.dir}/../uploads/images
+    upload-path: uploads
 
 spring:
+  profiles:
+    active: local
+
   application:
     name: seat-rent-backend
 
   datasource:
-    url: jdbc:sqlserver://localhost:1433;databaseName=RentalSystemDB;encrypt=false;trustServerCertificate=true
-    username: tom
-    password: 654832
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
 
   jpa:

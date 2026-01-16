@@ -10,7 +10,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/files") // [建議] 加上統一前綴，避免汙染根路徑
+@RequestMapping("/files") // 加上統一前綴，避免汙染根路徑
 public class FileController {
 
     private final FileStorageService fileStorageService;

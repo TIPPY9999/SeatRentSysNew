@@ -1,6 +1,6 @@
 package com.example.backend.repository.spot;
 
-import java.util.List;
+import java.util.List; // 確認這裡是 java.util.List，絕對不能是 java.awt.List
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -13,7 +13,7 @@ import com.example.backend.model.spot.Seat;
 @Repository
 public interface SeatRepository extends JpaRepository<Seat, Integer>, JpaSpecificationExecutor<Seat> {
 
-    // [修正] 補上 Service 層呼叫的模糊查詢方法
+    // 補上 Service 層呼叫的模糊查詢方法
     @Query("SELECT s FROM Seat s WHERE s.seatsName LIKE %:keyword% OR s.serialNumber LIKE %:keyword% OR s.seatsType LIKE %:keyword%")
     List<Seat> findByKeyword(@Param("keyword") String keyword);
 
@@ -24,4 +24,7 @@ public interface SeatRepository extends JpaRepository<Seat, Integer>, JpaSpecifi
      * @return 如果存在則返回 true，否則返回 false。
      */
     boolean existsBySerialNumber(String serialNumber);
+
+    // 根據據點 ID 查詢該據點下的所有座位
+    List<Seat> findBySpotId(Integer spotId);
 }

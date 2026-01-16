@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.model.rec.RentDetails;
@@ -22,7 +21,7 @@ public class RentDetailsController {
     private RentDetailsRepository rentDetailsRepository;
 
     // 1. 搜尋全部
-    @GetMapping
+    @GetMapping("/all")
     public List<RentDetails> getAll() {
         return rentDetailsRepository.findAll();
     }
@@ -33,15 +32,4 @@ public class RentDetailsController {
         return rentDetailsRepository.findById(id).orElse(null);
     }
 
-    // 3. 依成員姓名搜尋 (例如: /api/rent-details/search?name=Tippy)
-    @GetMapping("/search")
-    public List<RentDetails> searchByName(@RequestParam String name) {
-        // The findByMemNameContaining method returns List<RentDetails>, so no casting
-        // is needed.
-        // If it were returning List<Object>, we would need to cast each element.
-        // For example: return
-        // rentDetailsRepository.findByMemNameContaining(name).stream().map(obj ->
-        // (RentDetails) obj).collect(Collectors.toList());
-        return rentDetailsRepository.findByMemNameContaining(name);
-    }
 }

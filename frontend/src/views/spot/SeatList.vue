@@ -111,8 +111,8 @@ const fetchSeats = async () => {
     // [修正] 改用 /api/seats/search
     const res = await axios.get('/api/seats/search', {
       params: {
-        seatsName: keyword.value, // 目前暫時映射到名稱搜尋，若需全域搜尋需後端支援
-        // TODO: 建議與後端確認是否支援分頁
+        // [修正] 參數名稱需與後端 SeatRepository 的 @Param("keyword") 一致
+        keyword: keyword.value
       }
     })
     seats.value = res.data

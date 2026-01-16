@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @Getter // 改用 Getter/Setter，比 @Data 安全
 @Setter
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DiscountBean implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -52,7 +53,7 @@ public class DiscountBean implements Serializable {
     // 關聯商家 (加上 Lazy 載入，並防止序列化報錯)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "merchantId", insertable = false, updatable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     private MerchantBean merchant;
 
     /**

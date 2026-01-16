@@ -10,9 +10,11 @@ public interface ISeatService {
 
     public Seat update(Seat updateBean);
 
-    public Seat selectById(Integer seatId);
+    public Seat selectById(Integer seatsId);
 
-    public boolean deleteById(Integer seatId);
+    public List<Seat> selectBySpotId(Integer spotId);
+
+    public boolean deleteById(Integer seatsId);
 
     public List<Seat> selectAll();
 

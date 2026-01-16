@@ -1,15 +1,16 @@
 package com.example.backend.service.spot;
 
-import com.example.backend.model.spot.Seat;
-import com.example.backend.repository.spot.SeatRepository;
+import java.util.ArrayList;
+import java.util.List; // 確認這裡是 java.util.List
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.model.spot.Seat;
+import com.example.backend.repository.spot.SeatRepository;
+
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.util.StringUtils;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @Transactional
@@ -52,11 +53,18 @@ public class SeatService implements ISeatService {
     @Override
     public Seat update(Seat seat) {
         // save(): 這裡是修改。
+        // [修正] 確保 Update 操作有 ID，避免變成 Insert
+        if (seat.getSeatsId() == null) {
+            throw new IllegalArgumentException("更新失敗：座位 ID 不能為空");
+        }
         return seatRepository.save(seat);
     }
 
     @Override
     public boolean deleteById(Integer seatsId) {
+        if (seatsId == null) {
+            return false;
+        }
         // 先檢查是否存在，再刪除。
         if (seatRepository.existsById(seatsId)) {
             seatRepository.deleteById(seatsId);
@@ -67,6 +75,9 @@ public class SeatService implements ISeatService {
 
     @Override
     public Seat selectById(Integer seatsId) {
+        if (seatsId == null) {
+            return null;
+        }
         // findById(): 根據主鍵查詢。
         return seatRepository.findById(seatsId).orElse(null);
     }
@@ -78,11 +89,19 @@ public class SeatService implements ISeatService {
     }
 
     @Override
+    public List<Seat> selectBySpotId(Integer spotId) {
+        if (spotId == null) {
+            return new ArrayList<>();
+        }
+        return seatRepository.findBySpotId(spotId);
+    }
+
+    @Override
     public List<Seat> findByCondition(String seatsName, String seatsType, String seatsStatus, Integer spotId,
             String serialNumber) {
         // 使用 Specification 進行動態查詢，避免手寫 SQL/HQL。
         return seatRepository.findAll((root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
+            List<Predicate> predicates = new ArrayList<>(); // 確認 Predicate 後面沒有 <...>
 
             if (seatsName != null && !seatsName.isBlank()) {
                 predicates.add(cb.like(root.get("seatsName"), "%" + seatsName + "%"));

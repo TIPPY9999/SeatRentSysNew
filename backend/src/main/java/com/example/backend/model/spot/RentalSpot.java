@@ -9,12 +9,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.CreationTimestamp;
 import jakarta.validation.constraints.NotBlank;
-import org.hibernate.annotations.UpdateTimestamp;
 import lombok.Data;
-import lombok.Setter;
-import lombok.AccessLevel;
 
 @Entity
 @Table(name = "renting_Spot")
@@ -45,12 +41,10 @@ public class RentalSpot {
     private Integer merchantId;
 
     // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
-    @CreationTimestamp
     @Column(name = "createdAt", updatable = false, insertable = false)
     private LocalDateTime createdAt;
 
     // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
-    @UpdateTimestamp
     @Column(name = "updatedAt", updatable = false, insertable = false)
     private LocalDateTime updatedAt;
 
@@ -60,7 +54,7 @@ public class RentalSpot {
     @Column(name = "longitude", precision = 10, scale = 7) // 10 總位數，7 小數位
     private BigDecimal longitude;
 
-    // [新增] 對應前端 SpotForm.vue 的描述欄位
+    // [修正] 資料庫欄位名稱為 spotDescription，需與 DB 一致
     // 對應 SQL: spotDescription NVARCHAR(500)
     @Column(name = "spotDescription", length = 500)
     private String spotDescription;

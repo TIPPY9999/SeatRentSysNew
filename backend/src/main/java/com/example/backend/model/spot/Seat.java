@@ -4,9 +4,6 @@ import java.time.LocalDateTime;
 
 import lombok.Data;
 
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -44,12 +41,10 @@ public class Seat {
     private String serialNumber;
 
     // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
-    @CreationTimestamp
     @Column(name = "createdAt", updatable = false, insertable = false)
     private LocalDateTime createdAt;
 
     // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
-    @UpdateTimestamp
     @Column(name = "updatedAt", updatable = false, insertable = false)
     private LocalDateTime updatedAt;
 
