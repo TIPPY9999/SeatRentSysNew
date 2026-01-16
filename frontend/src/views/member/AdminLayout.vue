@@ -2,9 +2,12 @@
 /**
  * AdminLayout.vue：AdminLTE 3 後台版型
  * [修正] 移除 lang="ts" 與型別標註，轉換為純 JS 寫法
+ * [新增] 整合 SweetAlert2 登出確認
  */
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, RouterLink, RouterView } from 'vue-router'
+// 1. 引入 SweetAlert2
+import Swal from 'sweetalert2'
 
 const router = useRouter()
 const route = useRoute()
@@ -35,12 +38,37 @@ const isActiveGroup = (prefix) => {
 }
 
 /**
- * 登出功能
+ * 登出功能 (SweetAlert2 版)
  */
 const logout = () => {
-  if (confirm('確定要登出嗎？')) {
-    router.push('/login')
-  }
+  // 2. 跳出確認視窗
+  Swal.fire({
+    title: '確定要登出嗎？',
+    text: '登出後將無法存取後台頁面',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33', // 紅色按鈕表示警告
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '登出',
+    cancelButtonText: '取消',
+  }).then((result) => {
+    // 3. 使用者按了「確定」
+    if (result.isConfirmed) {
+      // 清除 Token (對應 LoginView 使用的 sessionStorage)
+      sessionStorage.removeItem('token')
+
+      // 顯示成功訊息並跳轉
+      Swal.fire({
+        title: '已登出！',
+        text: '登出成功!',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+      }).then(() => {
+        router.push('/login')
+      })
+    }
+  })
 }
 </script>
 

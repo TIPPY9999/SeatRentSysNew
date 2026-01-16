@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import Swal from 'sweetalert2'
 
 /**
  * ==========================================
@@ -22,10 +23,8 @@ import MemberCreateView from '@/views/member/MemberCreateView.vue'
 const MerchantList = () => import('@/views/merchantAndCoupon/MerchantList.vue')
 const DiscountList = () => import('@/views/merchantAndCoupon/DiscountList.vue')
 
-
 // 定義路由表
 const routes = [
-
   // --- MEM登入頁面：獨立路徑，不套用 Admin 佈局框架 ---
   {
     path: '/login',
@@ -37,7 +36,7 @@ const routes = [
       //   name: 'user-rent',
       //   component: RecRentUserOrder,
       // },
-    ]
+    ],
   },
 
   /**
@@ -222,6 +221,34 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+})
+/**
+ * ==============
+ * 路由守衛(並補上SweetAlert2)
+ * 目的：檢查使用者是否已登入，未登入則導向登入頁
+ * ==============
+ */
+router.beforeEach((to, from, next) => {
+  //1檢查token在不在
+  const isAuthenticated = sessionStorage.getItem('token')
+
+  //2判斷規則
+  if (to.path.startsWith('/admin') && !isAuthenticated) {
+    //3攔截未登入使用者導向登入頁
+    Swal.fire({
+      icon: 'warning',
+      title: '請先登入',
+      text: '您沒有權限訪問此頁面，請重新登入。',
+      confirmButtonText: '去登入',
+      allowOutsideClick: false, // 強制使用者一定要按按鈕
+    }).then(() => {
+      // 按下確認後導向登入頁
+      next('/login')
+    })
+  } else {
+    //放行
+    next()
+  }
 })
 
 export default router

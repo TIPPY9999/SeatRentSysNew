@@ -1,5 +1,6 @@
 package com.example.backend.controller.maintenance;
 
+import com.example.backend.dto.maintenance.SpotOptionDto;
 import com.example.backend.model.maintenance.MaintenanceInformation;
 import com.example.backend.model.maintenance.MaintenanceStaff;
 import com.example.backend.service.maintenance.MaintenanceInformationService;
@@ -20,6 +21,11 @@ public class MaintenanceController {
 
     @Autowired
     private MaintenanceInformationService mtifService;
+
+    @GetMapping("/spots")
+    public List<SpotOptionDto> getSpotOptions() {
+        return mtifService.getSpotOptions();
+    }
 
     // ================== 維護人員 (Staff) ==================
 

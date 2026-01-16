@@ -1,12 +1,17 @@
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import maintenanceApi from '@/api/modules/maintenance'
+import Swal from 'sweetalert2'
 
 const route = useRoute()
 const router = useRouter()
 const ticketId = Number(route.params.id)
 const isEdit = computed(() => !isNaN(ticketId) && ticketId > 0)
+
+const formRef = ref(null)
+const loading = ref(false) // 頁面資料讀取中
+const submitting = ref(false) // 送出按鈕讀取中
 
 const form = reactive({
   spotId: null,
@@ -17,52 +22,69 @@ const form = reactive({
 })
 
 const staffOptions = ref([])
+const spotOptions = ref([])
+
+// 驗證規則
+const rules = {
+  spotId: [{ required: true, message: '請選擇一個場地', trigger: 'change' }],
+  issueType: [{ required: true, message: '請輸入問題類型', trigger: 'blur' }],
+  issuePriority: [{ required: true, message: '請選擇優先級', trigger: 'change' }],
+}
 
 onMounted(async () => {
+  loading.value = true
   try {
-    const sRes = await axios.get('http://localhost:8080/api/maintenance/staff')
-    staffOptions.value = sRes.data
-  } catch {
-    // [修正] 移除了 unused variable
-    console.error('無法載入人員列表')
-  }
+    // 平行載入所有需要的資料
+    const [spotRes, staffRes] = await Promise.all([
+      maintenanceApi.getAllSpots().catch(() => ({ data: [] })),
+      maintenanceApi.getAllStaff().catch(() => ({ data: [] })),
+    ])
 
-  if (isEdit.value) {
-    try {
-      const res = await axios.get(`http://localhost:8080/api/maintenance/tickets/${ticketId}`)
-      const d = res.data
-      form.spotId = d.spotId
-      form.issueType = d.issueType
-      form.issueDesc = d.issueDesc
-      form.issuePriority = d.issuePriority
-      form.assignedStaffId = d.assignedStaffId
-    } catch {
-      // [修正] 移除了 unused variable
-      alert('找不到該工單資料')
-      router.push('/admin/mtif-list')
+    spotOptions.value = Array.isArray(spotRes.data) ? spotRes.data : []
+    staffOptions.value = staffRes.data || []
+
+    if (isEdit.value) {
+      const res = await maintenanceApi.getTicketById(ticketId)
+      Object.assign(form, res.data)
+    } else {
+      // 預設選取第一個場地，減少點擊
+      if (spotOptions.value.length > 0) form.spotId = spotOptions.value[0].spotId
     }
+  } catch {
+    // 錯誤已由 http.js 攔截器處理
+    router.push('/admin/mtif-list')
+  } finally {
+    loading.value = false
   }
 })
 
 const submit = async () => {
-  try {
-    if (isEdit.value) {
-      await axios.put(`http://localhost:8080/api/maintenance/tickets/${ticketId}`, form)
-      if (form.assignedStaffId) {
-        await axios.post(`http://localhost:8080/api/maintenance/tickets/${ticketId}/assign`, {
-          staffId: form.assignedStaffId,
-        })
+  if (!formRef.value) return
+
+  await formRef.value.validate(async (valid) => {
+    if (valid) {
+      submitting.value = true
+      try {
+        if (isEdit.value) {
+          await maintenanceApi.updateTicket(ticketId, form)
+          // ★ 修復：無論 assignedStaffId 是有值還是 null，都要呼叫指派 API
+          // 這樣使用者才能「取消指派」讓後端重置狀態
+          await maintenanceApi.assignStaff(ticketId, form.assignedStaffId)
+          Swal.fire('成功', '工單已更新', 'success')
+        } else {
+          await maintenanceApi.createTicket(form)
+          Swal.fire('成功', '新工單已建立', 'success')
+        }
+        router.push('/admin/mtif-list')
+      } catch {
+        // 錯誤已由 http.js 攔截器處理
+      } finally {
+        submitting.value = false
       }
-      alert('更新成功')
     } else {
-      await axios.post('http://localhost:8080/api/maintenance/tickets', form)
-      alert('新增成功')
+      Swal.fire('提示', '請檢查必填欄位', 'warning')
     }
-    router.push('/admin/mtif-list')
-  } catch {
-    // [修正] 移除了 unused variable
-    alert('儲存失敗，請確認欄位內容與後端連線')
-  }
+  })
 }
 </script>
 
@@ -70,95 +92,86 @@ const submit = async () => {
   <div>
     <section class="content-header">
       <div class="container-fluid">
-        <h1>{{ isEdit ? '編輯' : '新增' }}維修工單</h1>
+        <h1>{{ isEdit ? '編輯工單' : '新增工單' }}</h1>
       </div>
     </section>
 
     <section class="content">
-      <div class="container-fluid row justify-content-center">
-        <div class="col-lg-8">
-          <div class="card card-primary shadow-sm">
-            <div class="card-header">
-              <h3 class="card-title">詳細資訊</h3>
+      <div class="container-fluid d-flex justify-content-center">
+        <el-card shadow="always" style="width: 100%; max-width: 800px" v-loading="loading">
+          <template #header>
+            <div class="d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-edit mr-1"></i> 工單資訊</span>
+              <el-button link type="info" @click="router.push('/admin/mtif-list')">返回</el-button>
             </div>
-            <form @submit.prevent="submit">
-              <div class="card-body">
-                <div class="form-group row">
-                  <label class="col-sm-3 col-form-label"
-                    >場地編號 <span class="text-danger">*</span></label
-                  >
-                  <div class="col-sm-9">
-                    <input
-                      v-model.number="form.spotId"
-                      type="number"
-                      class="form-control"
-                      placeholder="請輸入座位或場地編號"
-                      required
-                    />
-                  </div>
-                </div>
-                <div class="form-group row">
-                  <label class="col-sm-3 col-form-label"
-                    >問題類型 <span class="text-danger">*</span></label
-                  >
-                  <div class="col-sm-9">
-                    <input
-                      v-model="form.issueType"
-                      class="form-control"
-                      placeholder="例如：硬體故障、網路問題"
-                      required
-                    />
-                  </div>
-                </div>
-                <div class="form-group row">
-                  <label class="col-sm-3 col-form-label">詳細描述</label>
-                  <div class="col-sm-9">
-                    <textarea
-                      v-model="form.issueDesc"
-                      class="form-control"
-                      rows="4"
-                      placeholder="請詳細說明故障情況..."
-                    ></textarea>
-                  </div>
-                </div>
-                <div class="form-group row">
-                  <label class="col-sm-3 col-form-label">優先級</label>
-                  <div class="col-sm-9">
-                    <select v-model="form.issuePriority" class="form-control">
-                      <option value="LOW">低 (Low)</option>
-                      <option value="NORMAL">普通 (Normal)</option>
-                      <option value="HIGH">高 (High)</option>
-                      <option value="URGENT">緊急 (Urgent)</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="form-group row">
-                  <label class="col-sm-3 col-form-label">指派維修員</label>
-                  <div class="col-sm-9">
-                    <select v-model="form.assignedStaffId" class="form-control">
-                      <option :value="null">-- 暫不指派 --</option>
-                      <option v-for="s in staffOptions" :key="s.staffId" :value="s.staffId">
-                        {{ s.staffName }} ({{ s.staffCompany || '外部廠商' }})
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="card-footer text-right">
-                <button type="submit" class="btn btn-primary">
-                  <i class="fas fa-paper-plane mr-1"></i> 儲存並送出
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-secondary ml-2"
-                  @click="router.push('/admin/mtif-list')"
-                >
-                  取消
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+          </template>
+
+          <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" status-icon>
+            <el-form-item label="場地編號" prop="spotId">
+              <el-select
+                v-model="form.spotId"
+                placeholder="搜尋場地..."
+                class="w-100"
+                filterable
+                :disabled="isEdit"
+              >
+                <el-option
+                  v-for="s in spotOptions"
+                  :key="s.spotId"
+                  :label="`${s.spotCode || s.spotId} - ${s.spotName}`"
+                  :value="s.spotId"
+                />
+              </el-select>
+              <small v-if="spotOptions.length === 0" class="text-muted">無可用場地資料</small>
+            </el-form-item>
+
+            <el-form-item label="問題類型" prop="issueType">
+              <el-input v-model="form.issueType" placeholder="例如：螢幕故障、椅子損壞" />
+            </el-form-item>
+
+            <el-form-item label="詳細描述" prop="issueDesc">
+              <el-input
+                v-model="form.issueDesc"
+                type="textarea"
+                :rows="4"
+                placeholder="請詳細描述狀況..."
+              />
+            </el-form-item>
+
+            <el-form-item label="優先級" prop="issuePriority">
+              <el-radio-group v-model="form.issuePriority">
+                <el-radio-button label="LOW">低</el-radio-button>
+                <el-radio-button label="NORMAL">普通</el-radio-button>
+                <el-radio-button label="HIGH">高</el-radio-button>
+                <el-radio-button label="URGENT">緊急</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="指派維修員" prop="assignedStaffId">
+              <el-select
+                v-model="form.assignedStaffId"
+                placeholder="暫不指派"
+                class="w-100"
+                filterable
+                clearable
+              >
+                <el-option
+                  v-for="s in staffOptions"
+                  :key="s.staffId"
+                  :label="`${s.staffName} (${s.staffCompany || '外部'})`"
+                  :value="s.staffId"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item>
+              <el-button type="primary" @click="submit" :loading="submitting">
+                <i class="fas fa-save mr-1"></i> 儲存並送出
+              </el-button>
+              <el-button @click="router.push('/admin/mtif-list')">取消</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
       </div>
     </section>
   </div>
@@ -168,8 +181,7 @@ const submit = async () => {
 .content-header {
   padding: 15px 0.5rem;
 }
-.card-title {
-  font-size: 1.1rem;
-  font-weight: 600;
+.w-100 {
+  width: 100%;
 }
 </style>
