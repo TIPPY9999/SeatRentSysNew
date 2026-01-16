@@ -1,3 +1,26 @@
+--子桓 DB =================================
+--Table: recRent, V_RentDetails
+--Version Log: 2026/01/16
+
+--C TABLE
+CREATE TABLE--
+
+--Test DATA
+INSERT INTO--
+VALUES--
+
+--R
+SWLWCT * FROM --
+
+--D
+DELETE --
+DROP TABLE --
+--==========================================
+
+
+
+
+
 
 CREATE TABLE renting_Spot (
     spotId        INT IDENTITY(1,1) PRIMARY KEY,        -- 租借點編號
