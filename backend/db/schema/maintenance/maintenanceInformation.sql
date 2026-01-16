@@ -24,4 +24,4 @@ ADD CONSTRAINT fkMaintAssignedStaffId -- 維護工單 assignedStaffId 對應 mai
 ALTER TABLE maintenanceInformation  
 ADD CONSTRAINT fkMaintSpotId          -- 維護工單spotId 對應 rentingSpot.spotId
     FOREIGN KEY (spotId)
-    REFERENCES rentingSpot(spotId);
+    REFERENCES renting_Spot(spotId);

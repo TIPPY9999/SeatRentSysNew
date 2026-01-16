@@ -1,14 +1,19 @@
 package com.example.backend.service.maintenance;
 
+import com.example.backend.dto.maintenance.SpotOptionDto;
 import com.example.backend.model.maintenance.MaintenanceInformation;
 import com.example.backend.model.maintenance.MaintenanceStaff;
+import com.example.backend.model.spot.RentalSpot;
 import com.example.backend.repository.maintenance.MaintenanceInformationRepository;
 import com.example.backend.repository.maintenance.MaintenanceStaffRepository;
+import com.example.backend.repository.spot.RentalSpotRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -36,14 +41,43 @@ public class MaintenanceInformationService {
     private final MaintenanceInformationRepository mtifRepo;
     private final MaintenanceStaffRepository staffRepo;
 
+    //新增租借點 Repository，用來驗證 spotId 是否存在
+    private final RentalSpotRepository rentalSpotRepo;
+
     public MaintenanceInformationService(MaintenanceInformationRepository mtifRepo,
-                                         MaintenanceStaffRepository staffRepo) {
+                                         MaintenanceStaffRepository staffRepo,RentalSpotRepository rentalSpotRepo) {
         this.mtifRepo = mtifRepo;
         this.staffRepo = staffRepo;
+        this.rentalSpotRepo = rentalSpotRepo;
     }
 
     private boolean isBlank(String s) {
         return s == null || s.isBlank();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Integer> getAllSpotIds(){
+        return rentalSpotRepo.findAll()
+                .stream()
+                .map(RentalSpot::getSpotId)    
+                .sorted(Comparator.naturalOrder())
+                .toList();
+
+    }
+
+    public List<SpotOptionDto> getSpotOptions(){
+        return rentalSpotRepo.findAll()
+                .stream()
+                .map(spot -> new SpotOptionDto(
+                        spot.getSpotId(),
+                        spot.getSpotCode(),
+                        spot.getSpotName(),
+                        spot.getSpotAddress(),
+                        spot.getSpotStatus()
+                ))
+                .filter(s ->"營運中".equals(s.getSpotStatus()))
+                .sorted((a, b) -> Integer.compare(a.getSpotId(), b.getSpotId()))
+                .toList();
     }
 
     // ============ 建立 / 更新 / 刪除 ============
@@ -266,6 +300,10 @@ public class MaintenanceInformationService {
         if (mtif.getSpotId() == null) throw new IllegalArgumentException("spotId 為必填欄位");
         if (mtif.getSpotId() <= 0) throw new IllegalArgumentException("spotId 必須是正數");
         if (isBlank(mtif.getIssueType())) throw new IllegalArgumentException("issueType 為必填欄位");
+
+        if(!rentalSpotRepo.existsById(mtif.getSpotId())){
+            throw new IllegalArgumentException("找不到指定的租借點" + mtif.getSpotId());
+        }
     }
 
     private void validateAssignedStaff(Integer staffId) {
@@ -287,4 +325,6 @@ public class MaintenanceInformationService {
         return Arrays.asList(PRIORITY_LOW, PRIORITY_NORMAL, PRIORITY_HIGH, PRIORITY_URGENT)
                      .contains(priority);
     }
+
+    
 }
