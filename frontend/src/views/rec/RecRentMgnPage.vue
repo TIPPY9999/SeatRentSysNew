@@ -138,7 +138,7 @@ const completeOrder = () => {
         />
       </div>
 
-      <!-- 2. 新增 RecRentEdit 組件的區塊 -->
+      <!--  組件的區塊 -->
       <div v-if="activeView === 'edit'" class="view-section">
         <rec-rent-edit
           :initial-data="editingRent"
