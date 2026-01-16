@@ -1,108 +1,177 @@
 <template>
   <div class="seat-list container">
-    <div class="header">
-      <h2>Seat 清單</h2>
-      <div class="actions">
-        <router-link to="/admin/seat/search" class="btn-search">條件查詢</router-link>
-        <button class="btn-add" @click="$router.push('/admin/seat/insert')">新增 Seat</button>
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="header">
+          <h2>座位管理列表</h2>
+          <!-- 搜尋區塊 -->
+          <div class="search-bar">
+            <input v-model="keyword" type="text" class="search-input" placeholder="搜尋名稱、序號或類型..."
+              @keyup.enter="fetchSeats" />
+            <button class="btn-edit" @click="fetchSeats">
+              搜尋
+            </button>
+            <button class="btn-delete" @click="resetSearch" style="background-color: #6c757d;">
+              重置
+            </button>
+          </div>
+          <button class="btn-add" @click="goToAdd">新增座位</button>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>名稱</th>
+              <th>類型</th>
+              <th>序號</th>
+              <th>所屬據點 ID</th>
+              <th>狀態</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="seat in seats" :key="seat.seatsId">
+              <td>{{ seat.seatsId }}</td>
+              <td>{{ seat.seatsName }}</td>
+              <td>{{ seat.seatsType }}</td>
+              <td>{{ seat.serialNumber }}</td>
+              <!-- 建議後端 DTO 回傳 spotName，若無則顯示 ID -->
+              <td>{{ seat.spotName || seat.spotId }}</td>
+              <td>
+                <!-- 增加對後端可能回傳 1/0 或 ACTIVE/INACTIVE 的相容性判斷 -->
+                <span
+                  :class="['badge', (seat.seatsStatus === '啟用' || seat.seatsStatus === 1 || seat.seatsStatus === 'ACTIVE') ? 'bg-success' : 'bg-danger']">
+                  {{ seat.seatsStatus }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-info btn-sm me-1 text-white" 
+                @click="goToView(seat.seatsId)">
+                  詳細
+                </button>
+                
+                <button class="btn-edit" @click="goToEdit(seat.seatsId)">
+                  編輯
+                </button>
+                <button class="btn-delete" @click="deleteSeat(seat.seatsId)">
+                  刪除
+                </button>
+              </td>
+            </tr>
+            <tr v-if="seats.length === 0">
+              <td colspan="7" style="text-align: center">
+                {{ loading ? '載入中...' : '查無資料' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-
-    <table class="table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>名稱</th>
-          <th>類型</th>
-          <th>狀態</th>
-          <th>SpotId</th>
-          <th>序號</th>
-          <th>UpdatedAt</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-if="seatList.length === 0">
-          <td colspan="8" style="text-align: center">目前沒有資料。</td>
-        </tr>
-        <tr v-for="s in seatList" :key="s.seatsId">
-          <td>{{ s.seatsId }}</td>
-          <td>{{ s.seatsName }}</td>
-          <td>{{ s.seatsType }}</td>
-          <td>{{ s.seatsStatus }}</td>
-          <td>{{ s.spotId }}</td>
-          <td>{{ s.serialNumber }}</td>
-          <td>{{ s.updatedAt?.replace('T', ' ').substring(0, 19) }}</td>
-          <td>
-            <router-link :to="`/admin/seat/view/${s.seatsId}`" class="btn-detail">詳細</router-link>
-            <router-link :to="`/admin/seat/edit/${s.seatsId}`" class="btn-edit">修改</router-link>
-            <button class="btn-delete" @click="deleteSeat(s.seatsId, s.seatsName)">刪除</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router' // [新增] 引入 useRouter
 import axios from 'axios'
+import Swal from 'sweetalert2' // 假設您有安裝，若無可改用 alert
 
-const seatList = ref([])
-
-onMounted(async () => {
-  fetchSeats()
+// 明確定義元件名稱
+defineOptions({
+  name: 'SeatList'
 })
 
+const router = useRouter() // [新增] 初始化 router
+const seats = ref([])
+const keyword = ref('')
+const loading = ref(false)
+
+
+// [新增] 跳轉到詳細頁 (使用具名路由，更安全)
+const goToView = (id) => {
+  router.push({ name: 'seat-view', params: { id } })
+}
+
+// [新增] 跳轉到編輯頁
+const goToEdit = (id) => {
+  router.push({ name: 'seat-edit', params: { id } })
+}
+
+// [新增] 跳轉到新增頁
+const goToAdd = () => {
+  router.push({ name: 'seat-insert' })
+}
+
+// 查詢座位
 const fetchSeats = async () => {
+  loading.value = true
   try {
-    // [修正 API 路徑] 加上 /api
-    const response = await axios.get('/api/seat/list')
-    seatList.value = response.data
-  } catch (error) {
-    console.error('Error fetching seats:', error)
-  }
-}
-
-const deleteSeat = async (id, name) => {
-  if (!confirm(`確定刪除座位 ${name} (ID: ${id})?`)) return
-  try {
-    // [修正 API 路徑與參數] 使用 URLSearchParams 確保後端讀取正確
-    const params = new URLSearchParams()
-    params.append('seatsId', String(id))
-
-    await axios.post('/api/seat/delete', params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    // 發送 GET 請求，並帶上 keyword 參數
+    // [修正] 改用 /api/seats/search
+    const res = await axios.get('/api/seats/search', {
+      params: {
+        seatsName: keyword.value, // 目前暫時映射到名稱搜尋，若需全域搜尋需後端支援
+        // TODO: 建議與後端確認是否支援分頁
+      }
     })
-
-    fetchSeats() // 重新整理列表
-    alert('刪除成功')
-  } catch (error) {
-    console.error('Delete failed:', error)
-    alert('刪除失敗')
+    seats.value = res.data
+  } catch (err) {
+    console.error('載入失敗:', err)
+    Swal.fire('錯誤', '無法載入座位列表', 'error')
+  } finally {
+    loading.value = false
   }
 }
+
+// 重置搜尋
+const resetSearch = () => {
+  keyword.value = ''
+  fetchSeats()
+}
+
+// 刪除座位
+const deleteSeat = async (id) => {
+  const result = await Swal.fire({
+    title: '確定刪除?',
+    text: "刪除後將無法復原！",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    confirmButtonText: '是的，刪除'
+  })
+
+  if (result.isConfirmed) {
+    try {
+      await axios.delete(`/api/seats/${id}`)
+      Swal.fire('已刪除', '該座位已被移除', 'success')
+      fetchSeats() // 重新整理列表
+    } catch (err) {
+      Swal.fire('失敗', '刪除失敗，可能尚有相關聯的訂單', 'error')
+    }
+  }
+}
+
+onMounted(() => {
+  fetchSeats()
+})
 </script>
 
 <style scoped>
-/* [UI 優化] 移植 SpotList 的 CSS 樣式 */
 .seat-list {
   padding: 20px;
 }
-
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
-
 .table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
 }
-
 .table th,
 .table td {
   border: 1px solid #ddd;
@@ -113,35 +182,31 @@ const deleteSeat = async (id, name) => {
   background-color: #f4f4f4;
 }
 
+/* 搜尋框樣式 */
+.search-bar input {
+  padding: 8px;
+  width: 250px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.search-bar .search-input {
+  width: 250px;
+  margin-right: 10px;
+}
+
 /* 按鈕樣式 */
-button,
-.btn-detail,
-.btn-edit,
-.btn-search {
+button {
   cursor: pointer;
   padding: 5px 10px;
   margin-right: 5px;
   border: none;
   border-radius: 4px;
   color: white;
-  text-decoration: none; /* 移除超連結底線 */
-  display: inline-block;
-  font-size: 14px;
 }
-
 .btn-add {
   background-color: #28a745;
   font-size: 1.1em;
   padding: 8px 16px;
-}
-.btn-search {
-  background-color: #17a2b8;
-  font-size: 1.1em;
-  padding: 8px 16px;
-  margin-right: 10px;
-}
-.btn-detail {
-  background-color: #17a2b8;
 }
 .btn-edit {
   background-color: #007bff;
@@ -149,9 +214,7 @@ button,
 .btn-delete {
   background-color: #dc3545;
 }
-
-button:hover,
-a:hover {
+button:hover {
   opacity: 0.9;
 }
 </style>

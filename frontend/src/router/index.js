@@ -67,6 +67,11 @@ const routes = [
         name: 'spot-edit',
         component: () => import('@/views/spot/SpotForm.vue'),
       },
+      {
+        path: 'spot/view/:id', // 網址: /admin/spot/view/1
+        name: 'spot-view',
+        component: () => import('@/views/spot/SpotOne.vue'),
+      },
 
       // ==========================================
       // [整合] 座位管理模組 (Seat) - 來自組員 TXT 檔案
@@ -79,12 +84,12 @@ const routes = [
       {
         path: 'seat/insert', // 網址: /admin/seat/insert
         name: 'seat-insert',
-        component: () => import('@/views/spot/SeatInsert.vue'),
+        component: () => import('@/views/spot/SeatForm.vue'),
       },
       {
         path: 'seat/edit/:id', // 網址: /admin/seat/edit/5
         name: 'seat-edit',
-        component: () => import('@/views/spot/SeatUpdate.vue'),
+        component: () => import('@/views/spot/SeatForm.vue'),
       },
       {
         path: 'seat/view/:id', // 網址: /admin/seat/view/5 (詳細資料)

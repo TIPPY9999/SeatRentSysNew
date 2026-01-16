@@ -36,7 +36,7 @@
     </div>
 
     <br>
-    <router-link to="/spot/search">返回搜尋頁</router-link>
+    <router-link to="/admin/spot/search">返回搜尋頁</router-link>
   </div>
 </template>
 
@@ -48,12 +48,17 @@ import axios from 'axios';
 const route = useRoute();
 const spotList = ref([]);
 
+// 明確定義元件名稱，方便識別與除錯
+defineOptions({
+  name: 'SpotResult'
+})
+
 onMounted(async () => {
   const query = route.query;
   try {
     // [AXIOS GET 請求原理]
     // 1. 動作：發送 GET 請求到 /spot/condition，並帶上查詢參數 (query)。
-    const response = await axios.get('/spot/condition', { params: query });
+    const response = await axios.get('/api/spots/search', { params: query });
     // 2. 接收：後端回傳的是一個 JSON 陣列 (List<RentalSpot>，即租借據點列表)。
     // 3. 更新：將資料存入 spotList，Vue 的 v-for 就會自動把表格畫出來。
     spotList.value = response.data;

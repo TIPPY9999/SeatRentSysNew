@@ -69,13 +69,18 @@ import axios from 'axios'
 const route = useRoute()
 const seatList = ref([])
 
+// 明確定義元件名稱，方便識別與除錯
+defineOptions({
+  name: 'SeatResult'
+})
+
 onMounted(async () => {
   const query = route.query
   console.log('Search query:', query)
 
   try {
-    // [修正] 加上 /api 前綴
-    const response = await axios.get('/api/seat/condition', { params: query })
+    // 改用 RESTful API: GET /api/seats/search (搭配查詢參數)
+    const response = await axios.get('/api/seats/search', { params: query })
     seatList.value = response.data
   } catch (error) {
     console.error('Error fetching seats:', error)

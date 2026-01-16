@@ -2,6 +2,8 @@ package com.example.backend.model.spot;
 
 import java.time.LocalDateTime;
 
+import lombok.Data;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -11,9 +13,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
-@Table(name = "seats", schema = "dbo")
+@Table(name = "seats")
+@Data
 public class Seat {
 
     @Id
@@ -21,27 +25,32 @@ public class Seat {
     @Column(name = "seatsId")
     private Integer seatsId;
 
-    @Column(name = "seatsName")
+    @NotBlank(message = "座位名稱不得為空")
+    @Column(name = "seatsName", length = 100, nullable = false)
     private String seatsName;
 
-    @Column(name = "seatsType")
+    @NotBlank(message = "座位類型不得為空")
+    @Column(name = "seatsType", length = 50, nullable = false)
     private String seatsType;
 
-    @Column(name = "seatsStatus")
+    @NotBlank(message = "座位狀態不得為空")
+    @Column(name = "seatsStatus", length = 20, nullable = false)
     private String seatsStatus;
 
     @Column(name = "spotId")
     private Integer spotId;
 
-    @Column(name = "serialNumber")
+    @Column(name = "serialNumber", length = 50)
     private String serialNumber;
 
+    // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
     @CreationTimestamp
-    @Column(name = "createdAt", updatable = false)
+    @Column(name = "createdAt", updatable = false, insertable = false)
     private LocalDateTime createdAt;
 
+    // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
     @UpdateTimestamp
-    @Column(name = "updatedAt")
+    @Column(name = "updatedAt", updatable = false, insertable = false)
     private LocalDateTime updatedAt;
 
     public Seat() {
@@ -56,72 +65,6 @@ public class Seat {
         this.spotId = spotId;
         this.updatedAt = updatedAt;
         this.serialNumber = serialNumber;
-        this.createdAt = createdAt;
-    }
-
-    // --- Getter 和 Setter 方法 ---
-
-    public Integer getSeatsId() {
-        return seatsId;
-    }
-
-    public void setSeatsId(Integer seatsId) {
-        this.seatsId = seatsId;
-    }
-
-    public String getSeatsName() {
-        return seatsName;
-    }
-
-    public void setSeatsName(String seatsName) {
-        this.seatsName = seatsName;
-    }
-
-    public String getSeatsType() {
-        return seatsType;
-    }
-
-    public void setSeatsType(String seatsType) {
-        this.seatsType = seatsType;
-    }
-
-    public String getSeatsStatus() {
-        return seatsStatus;
-    }
-
-    public void setSeatsStatus(String seatsStatus) {
-        this.seatsStatus = seatsStatus;
-    }
-
-    public Integer getSpotId() {
-        return spotId;
-    }
-
-    public void setSpotId(Integer spotId) {
-        this.spotId = spotId;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getSerialNumber() {
-        return serialNumber;
-    }
-
-    public void setSerialNumber(String serialNumber) {
-        this.serialNumber = serialNumber;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 

@@ -1,65 +1,88 @@
 <template>
   <div class="spot-list container">
-    <div class="header">
-      <h2>據點管理列表</h2>
-      <!-- 新增搜尋框 -->
-      <div class="search-bar">
-        <!-- Merchant ID 搜尋框 ，說明：min="0" 讓點擊上下箭頭時不會變負數；oninput 則是防止使用者直接用鍵盤打 - 號。-->
-        <input
-          type="number"
-          v-model.number="searchMerchantId"
-          placeholder="搜尋ID"
-          class="search-input-mid"
-          min="1"
-          step="1"
-          @input="sanitizeMerchantId"
-        />
-        <!-- 狀態下拉選單 -->
-        <select v-model="searchStatus" class="search-select">
-          <option value="">全部狀態</option>
-          <option value="啟用">啟用</option>
-          <option value="停用">停用</option>
-        </select>
-      </div>
-      <!-- 點擊新增，跳轉到 SpotForm (無 ID) -->
-      <button class="btn-add" @click="goToAdd">新增據點</button>
-    </div>
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="header">
+          <h2>據點管理列表</h2>
+          <!-- 新增搜尋框 -->
+          <div class="search-bar">
+            <!-- [修復] 補上遺失的關鍵字搜尋框 -->
+            <input
+              type="text"
+              v-model="searchKeyword"
+              placeholder="搜尋名稱、代碼或地址"
+              class="search-input"
+            />
+            <!-- Merchant ID 搜尋框 ，說明：min="0" 讓點擊上下箭頭時不會變負數；oninput 則是防止使用者直接用鍵盤打 - 號。-->
+            <input
+              type="number"
+              v-model.number="searchMerchantId"
+              placeholder="搜尋ID"
+              class="search-input-mid"
+              min="1"
+              step="1"
+              @input="sanitizeMerchantId"
+            />
+            <!-- 狀態下拉選單 -->
+            <select v-model="searchStatus" class="search-select">
+              <option value="">全部狀態</option>
+              <option value="啟用">啟用</option>
+              <option value="停用">停用</option>
+            </select>
+          </div>
+          <!-- 點擊新增，跳轉到 SpotForm (無 ID) -->
+          <button class="btn-add" @click="goToAdd">新增據點</button>
+        </div>
 
-    <table class="table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>代碼</th>
-          <th>名稱</th>
-          <th>地址</th>
-          <!-- 這裡新增了 Merchant ID 的標題欄位 -->
-          <th>Merchant ID</th>
-          <th>狀態</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- 修改：改為遍歷過濾後的 filteredSpots -->
-        <tr v-for="spot in filteredSpots" :key="spot.spotId">
-          <td>{{ spot.spotId }}</td>
-          <td>{{ spot.spotCode }}</td>
-          <td>{{ spot.spotName }}</td>
-          <td>{{ spot.spotAddress }}</td>
-          <!-- 這裡對應顯示每一筆資料的 merchantId 數值 -->
-          <td>{{ spot.merchantId }}</td>
-          <td>{{ spot.spotStatus }}</td>
-          <td>
-            <!-- 點擊編輯，跳轉到 SpotForm (帶 ID) -->
-            <button class="btn-edit" @click="goToEdit(spot.spotId)">編輯</button>
-            <button class="btn-delete" @click="deleteSpot(spot.spotId, spot.spotName)">刪除</button>
-          </td>
-        </tr>
-        <tr v-if="filteredSpots.length === 0">
-          <!-- 因為我們新增了 Merchant ID，現在表格總共有 7 個欄位，所以這裡 colspan (跨欄) 要改成 7，讓這行字能置中佔滿整列 -->
-          <td colspan="7" style="text-align: center">目前沒有資料</td>
-        </tr>
-      </tbody>
-    </table>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>代碼</th>
+              <th>名稱</th>
+              <th>地址</th>
+              <!-- 這裡新增了 Merchant ID 的標題欄位 -->
+              <th>Merchant ID</th>
+              <th>狀態</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 修改：改為遍歷過濾後的 filteredSpots -->
+            <tr v-for="spot in filteredSpots" :key="spot.spotId">
+              <td>{{ spot.spotId }}</td>
+              <td>{{ spot.spotCode }}</td>
+              <td>{{ spot.spotName }}</td>
+              <td>{{ spot.spotAddress }}</td>
+              <!-- 這裡對應顯示每一筆資料的 merchantId 數值 -->
+              <!-- 建議後端 DTO 補上 merchantName -->
+              <td>{{ spot.merchantName || spot.merchantId }}</td>
+              <td>
+                <span :class="['badge', (spot.spotStatus === '啟用' || spot.spotStatus === 1) ? 'bg-success' : 'bg-secondary']">
+                  {{ spot.spotStatus }}
+                </span>
+              </td>
+              <td>
+                <!-- [修改] 改用 button 統一操作風格，並呼叫 goToView 函式 -->
+                <button
+                  class="btn btn-info btn-sm me-1 text-white"
+                  @click="goToView(spot.spotId)"
+                >
+                  詳細
+                </button>
+                <!-- 點擊編輯，跳轉到 SpotForm (帶 ID) -->
+                <button class="btn-edit" @click="goToEdit(spot.spotId)">編輯</button>
+                <button class="btn-delete" @click="deleteSpot(spot.spotId, spot.spotName)">刪除</button>
+              </td>
+            </tr>
+            <tr v-if="filteredSpots.length === 0">
+              <!-- 因為我們新增了 Merchant ID，現在表格總共有 7 個欄位，所以這裡 colspan (跨欄) 要改成 7，讓這行字能置中佔滿整列 -->
+              <td colspan="7" style="text-align: center">目前沒有資料</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -67,6 +90,11 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+
+// 明確定義元件名稱
+defineOptions({
+  name: 'SpotList'
+})
 
 const router = useRouter()
 const spots = ref([])
@@ -90,8 +118,14 @@ const sanitizeMerchantId = () => {
 const loadSpots = async () => {
   try {
     // 呼叫後端 API (對應 RentalSpotController 的 list 方法)
-    // 修改：加上 /api 前綴，觸發 Vite 代理
-    const res = await axios.get('/api/spot/list')
+    // [修正] 改用 RESTful 風格路徑，對應 RentalSpotController 的 @GetMapping("/api/spots")
+    // TODO: 若資料量大，建議將 searchKeyword, searchMerchantId 等參數傳給後端進行過濾，而非前端過濾
+    const res = await axios.get('/api/spots', {
+      // params: {
+      //   keyword: searchKeyword.value,
+      //   status: searchStatus.value
+      // }
+    })
     spots.value = res.data
   } catch (err) {
     console.error('讀取失敗:', err)
@@ -130,12 +164,19 @@ const filteredSpots = computed(() => {
 
 // 跳轉到新增頁面
 const goToAdd = () => {
-  router.push('/admin/spot/add') // 請確認您的 router 設定中，此路徑對應到 SpotForm.vue
+  router.push({ name: 'spot-add' }) // 改用具名路由，對應 router/index.js 的 name: 'spot-add'
+}
+
+// [新增] 跳轉到詳細頁面
+const goToView = (id) => {
+  // 改用具名路由，對應 router/index.js 的 name: 'spot-view'
+  router.push({ name: 'spot-view', params: { id } })
 }
 
 // 跳轉到編輯頁面
 const goToEdit = (id) => {
-  router.push(`/admin/spot/edit/${id}`) // 請確認 router 設定包含動態參數，如 path: '/admin/spot/edit/:id'
+  // 改用具名路由，對應 router/index.js 的 name: 'spot-edit'
+  router.push({ name: 'spot-edit', params: { id } })
 }
 
 // 刪除功能
@@ -144,14 +185,9 @@ const deleteSpot = async (id, name) => {
   if (!confirm(`確定要刪除據點「${name}」(ID: ${id}) 嗎？\n此動作無法復原！`)) return
 
   try {
-    // 呼叫後端 API
-    // 改用 JSON 傳遞 { spotId: id }
-    const params = new URLSearchParams()
-    params.append('spotId', String(id))
-
-    await axios.post('/api/spot/delete', params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    })
+    // [修正] 改用 RESTful 風格：DELETE 方法 + 路徑參數 ID
+    // 對應 RentalSpotController 的 @DeleteMapping("/{id}")
+    await axios.delete(`/api/spots/${id}`)
 
     alert('刪除成功')
     await loadSpots()
@@ -197,6 +233,11 @@ onMounted(() => {
   width: 250px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+/* 補上 search-input 樣式 */
+.search-bar .search-input {
+  width: 200px;
+  margin-right: 10px;
 }
 
 .search-bar .search-input-mid {

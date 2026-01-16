@@ -39,6 +39,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+// 明確定義元件名稱，方便識別與除錯
+defineOptions({
+  name: 'SpotSearch'
+})
+
 const router = useRouter()
 const searchCriteria = ref({
   spotName: '',
@@ -50,7 +55,7 @@ const searchCriteria = ref({
 const handleSearch = () => {
   // 將查詢條件帶入 URL query 參數，跳轉至結果頁
   router.push({
-    path: '/spot/result',
+    path: '/admin/spot/result',
     query: { ...searchCriteria.value },
   })
 }

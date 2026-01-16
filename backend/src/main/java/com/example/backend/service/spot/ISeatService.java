@@ -19,4 +19,6 @@ public interface ISeatService {
     public List<Seat> findByCondition(String seatsName, String seatsType, String seatsStatus, Integer spotId,
             String serialNumber);
 
+    public List<Seat> selectByKeyword(String keyword);
+
 }
