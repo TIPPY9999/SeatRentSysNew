@@ -17,7 +17,7 @@ import java.util.Map;
  * - 遵循 RESTful API 設計風格。
  */
 @RestController
-@RequestMapping("/spots") // [修正] 配合前端 Proxy 移除 /api 前綴的行為，改為監聽 /spots
+@RequestMapping("/spot") // [修正] 配合前端 Proxy 移除 /api 前綴的行為，改為監聽 /spots
 public class RentalSpotController {
 
     private final RentalSpotService rentalSpotService;
@@ -32,7 +32,7 @@ public class RentalSpotController {
      * 查詢所有據點 (GET /api/spots)
      * (原 SpotListController)
      */
-    @GetMapping
+    @GetMapping("/list")
     public List<RentalSpot> getAllSpots() {
         return rentalSpotService.selectAll();
     }
