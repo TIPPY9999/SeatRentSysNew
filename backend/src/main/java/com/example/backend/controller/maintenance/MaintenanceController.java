@@ -3,6 +3,7 @@ package com.example.backend.controller.maintenance;
 import com.example.backend.dto.maintenance.SpotOptionDto;
 import com.example.backend.model.maintenance.MaintenanceInformation;
 import com.example.backend.model.maintenance.MaintenanceStaff;
+import com.example.backend.model.spot.Seat;
 import com.example.backend.service.maintenance.MaintenanceInformationService;
 import com.example.backend.service.maintenance.MaintenanceStaffService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +42,7 @@ public class MaintenanceController {
         return staffService.createStaff(staff);
     }
 
-    // ★ 新增：更新維護人員資料
+    // 新增：更新維護人員資料
     @PutMapping("/staff/{id}")
     public MaintenanceStaff updateStaff(@PathVariable Integer id, @RequestBody MaintenanceStaff staff) {
         // 確保路徑上的 ID 跟物件裡的 ID 一樣，避免改錯人
@@ -151,4 +152,19 @@ public class MaintenanceController {
         String reason = body.get("reason");
         mtifService.cancelTicket(id, reason);
     }
+
+
+    //============ 椅子相關 API ============
+    // 1. 取得所有椅子
+    @GetMapping("/seats")
+    public List<Seat> getAllSeats() {
+        return mtifService.getAllSeats();
+    }
+
+    // 2. 依照 SpotId 篩選椅子 (選了機台後，只顯示該機台的椅子)
+    @GetMapping("/seats/spot/{spotId}")
+    public List<Seat> getSeatsBySpot(@PathVariable Integer spotId) {
+        return mtifService.getSeatsBySpot(spotId);
+    }
+
 }

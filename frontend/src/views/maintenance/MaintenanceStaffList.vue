@@ -33,7 +33,7 @@ const handleDelete = async (row) => {
           <i class="fas fa-user-slash" style="font-size: 36px; color: white;"></i>
         </div>
         <p style="font-size: 16px; margin-bottom: 8px;">即將停用 <b style="color: #f56c6c;">${row.staffName}</b></p>
-        <p style="color: #909399; font-size: 13px;">此操作為軟刪除，可在歷史紀錄中查看並恢復</p>
+        <p style="color: #909399; font-size: 13px;">刪除的資料可在歷史紀錄中查看並恢復</p>
       </div>
     `,
     icon: null,
@@ -50,16 +50,16 @@ const handleDelete = async (row) => {
   if (result.isConfirmed) {
     try {
       await maintenanceApi.deleteStaff(row.staffId)
+      fetchStaff()
       await Swal.fire({
         icon: 'success',
         title: '停用成功',
         html: `<span><b>${row.staffName}</b> 已移至歷史紀錄</span>`,
-        timer: 1800,
+        timer: 1000,
         timerProgressBar: true,
         showConfirmButton: false,
         showClass: { popup: 'animate__animated animate__bounceIn' },
       })
-      fetchStaff()
     } catch {
       // 錯誤已由 http.js 攔截器處理
     }
@@ -157,7 +157,7 @@ const handleAddNew = () => {
     title: '新增維護人員',
     text: '即將前往新增人員表單',
     icon: 'info',
-    timer: 800,
+    timer: 600,
     timerProgressBar: true,
     showConfirmButton: false,
     showClass: { popup: 'animate__animated animate__fadeInRight animate__faster' },

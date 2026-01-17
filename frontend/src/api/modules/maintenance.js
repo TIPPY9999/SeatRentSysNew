@@ -156,6 +156,23 @@ export const getAllSpots = () => {
   return http.get('/maintenance/spots')
 }
 
+// ============ 椅子 API (供工單表單使用) ============
+
+/**
+ * 取得所有椅子 (供下拉選單使用)
+ */
+export const getAllSeats = () => {
+  return http.get('/maintenance/seats')
+}
+
+/**
+ * 依據點 ID 取得椅子
+ * @param {number} spotId - 據點 ID
+ */
+export const getSeatsBySpot = (spotId) => {
+  return http.get(`/maintenance/seats/spot/${spotId}`)
+}
+
 // 匯出所有 API 作為預設物件 (方便一次 import)
 export default {
   // Staff
@@ -180,4 +197,7 @@ export default {
   cancelTicket,
   // Spot
   getAllSpots,
+  // Seat
+  getAllSeats,
+  getSeatsBySpot,
 }

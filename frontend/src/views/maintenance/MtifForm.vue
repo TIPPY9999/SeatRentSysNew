@@ -16,8 +16,12 @@ const submitting = ref(false)
 const formVisible = ref(false)
 const activeStep = ref(0)
 
+// 維修目標類型：'spot' (機台) 或 'seat' (椅子)
+const targetType = ref('spot')
+
 const form = reactive({
   spotId: null,
+  seatsId: null, // 新增：椅子 ID
   issueType: '',
   issueDesc: '',
   issuePriority: 'NORMAL',
@@ -26,6 +30,7 @@ const form = reactive({
 
 const staffOptions = ref([])
 const spotOptions = ref([])
+const seatOptions = ref([]) // 新增：椅子選項
 
 // 使用共用 composable 的問題類型配置
 const { issueTypeOptions: sharedIssueTypes } = useTicketConfig()
@@ -40,16 +45,21 @@ const priorityConfig = {
 }
 
 // 驗證規則
-const rules = {
-  spotId: [{ required: true, message: '請選擇一個場地', trigger: 'change' }],
+const rules = computed(() => ({
+  spotId: targetType.value === 'spot' 
+    ? [{ required: true, message: '請選擇一個機台', trigger: 'change' }] 
+    : [],
+  seatsId: targetType.value === 'seat' 
+    ? [{ required: true, message: '請選擇一張椅子', trigger: 'change' }] 
+    : [],
   issueType: [{ required: true, message: '請輸入或選擇問題類型', trigger: 'blur' }],
   issuePriority: [{ required: true, message: '請選擇優先級', trigger: 'change' }],
-}
+}))
 
 // 計算表單完成度
 const formProgress = computed(() => {
   let filled = 0
-  if (form.spotId) filled++
+  if (targetType.value === 'spot' ? form.spotId : form.seatsId) filled++
   if (form.issueType) filled++
   if (form.issueDesc) filled++
   if (form.assignedStaffId) filled++
@@ -58,7 +68,7 @@ const formProgress = computed(() => {
 
 // 監聽表單變化，自動更新步驟指示
 watch(
-  () => form.spotId,
+  () => targetType.value === 'spot' ? form.spotId : form.seatsId,
   (val) => {
     if (val && activeStep.value === 0) activeStep.value = 1
   },
@@ -70,22 +80,49 @@ watch(
   },
 )
 
+// 切換維修類型時，清空已選擇的目標
+watch(targetType, (newType) => {
+  if (newType === 'spot') {
+    form.seatsId = null
+  } else {
+    form.spotId = null
+  }
+})
+
+// 載入椅子選項
+const loadSeats = async () => {
+  try {
+    const res = await maintenanceApi.getAllSeats()
+    seatOptions.value = res.data || []
+  } catch {
+    seatOptions.value = []
+  }
+}
+
 onMounted(async () => {
   setTimeout(() => (formVisible.value = true), 100)
 
   loading.value = true
   try {
-    const [spotRes, staffRes] = await Promise.all([
+    const [spotRes, staffRes, seatRes] = await Promise.all([
       maintenanceApi.getAllSpots().catch(() => ({ data: [] })),
       maintenanceApi.getAllStaff().catch(() => ({ data: [] })),
+      maintenanceApi.getAllSeats().catch(() => ({ data: [] })),
     ])
 
     spotOptions.value = Array.isArray(spotRes.data) ? spotRes.data : []
     staffOptions.value = staffRes.data || []
+    seatOptions.value = seatRes.data || []
 
     if (isEdit.value) {
       const res = await maintenanceApi.getTicketById(ticketId)
       Object.assign(form, res.data)
+      // 根據資料判斷維修類型
+      if (res.data.seatsId) {
+        targetType.value = 'seat'
+      } else {
+        targetType.value = 'spot'
+      }
       activeStep.value = 3
     } else {
       if (spotOptions.value.length > 0) form.spotId = spotOptions.value[0].spotId
@@ -159,7 +196,7 @@ const submit = async () => {
             icon: 'success',
             title: '更新成功！',
             html: '<span class="text-success">工單資料已成功更新</span>',
-            timer: 2000,
+            timer: 1200,
             timerProgressBar: true,
             showConfirmButton: false,
             showClass: { popup: 'animate__animated animate__bounceIn' },
@@ -168,14 +205,14 @@ const submit = async () => {
           await maintenanceApi.createTicket(form)
           await Swal.fire({
             icon: 'success',
-            title: '🎉 工單建立成功！',
+            title: '建立成功！',
             html: `
               <div style="text-align: center;">
                 <div style="font-size: 48px; margin-bottom: 12px;">📋</div>
                 <p>新工單已成功建立並進入待處理佇列</p>
               </div>
             `,
-            timer: 2500,
+            timer: 1500,
             timerProgressBar: true,
             showConfirmButton: false,
             showClass: { popup: 'animate__animated animate__tada' },
@@ -297,17 +334,50 @@ const handleCancel = async () => {
               status-icon
               class="ticket-form"
             >
-              <!-- 場地選擇 -->
-              <el-form-item label="場地選擇" prop="spotId" class="form-item-animated">
+              <!-- 維修目標類型切換 -->
+              <el-form-item class="form-item-animated">
                 <template #label>
                   <span class="custom-label">
-                    <i class="fas fa-map-marker-alt label-icon"></i> 維修場地
+                    <i class="fas fa-wrench label-icon"></i> 維修目標
+                    <span class="required-star">*</span>
+                  </span>
+                </template>
+                <div class="target-type-switch">
+                  <div 
+                    class="target-type-option"
+                    :class="{ active: targetType === 'spot' }"
+                    @click="targetType = 'spot'"
+                  >
+                    <i class="fas fa-desktop"></i>
+                    <span>機台</span>
+                  </div>
+                  <div 
+                    class="target-type-option"
+                    :class="{ active: targetType === 'seat' }"
+                    @click="targetType = 'seat'"
+                  >
+                    <i class="fas fa-chair"></i>
+                    <span>椅子</span>
+                  </div>
+                </div>
+              </el-form-item>
+
+              <!-- 機台選擇 (當 targetType === 'spot') -->
+              <el-form-item 
+                v-if="targetType === 'spot'"
+                label="場地選擇" 
+                prop="spotId" 
+                class="form-item-animated"
+              >
+                <template #label>
+                  <span class="custom-label">
+                    <i class="fas fa-desktop label-icon"></i> 選擇機台
                     <span class="required-star">*</span>
                   </span>
                 </template>
                 <el-select
                   v-model="form.spotId"
-                  placeholder="請選擇或搜尋場地..."
+                  placeholder="請選擇或搜尋機台..."
                   class="w-100"
                   filterable
                   :disabled="isEdit"
@@ -329,7 +399,51 @@ const handleCancel = async () => {
                   </el-option>
                 </el-select>
                 <small v-if="spotOptions.length === 0" class="text-warning">
-                  <i class="fas fa-exclamation-triangle mr-1"></i> 無可用場地資料
+                  <i class="fas fa-exclamation-triangle mr-1"></i> 無可用機台資料
+                </small>
+              </el-form-item>
+
+              <!-- 椅子選擇 (當 targetType === 'seat') -->
+              <el-form-item 
+                v-if="targetType === 'seat'"
+                label="椅子選擇" 
+                prop="seatsId" 
+                class="form-item-animated"
+              >
+                <template #label>
+                  <span class="custom-label">
+                    <i class="fas fa-chair label-icon"></i> 選擇椅子
+                    <span class="required-star">*</span>
+                  </span>
+                </template>
+                <el-select
+                  v-model="form.seatsId"
+                  placeholder="請選擇或搜尋椅子..."
+                  class="w-100"
+                  filterable
+                  :disabled="isEdit"
+                  size="large"
+                >
+                  <template #prefix>
+                    <i class="fas fa-search"></i>
+                  </template>
+                  <el-option
+                    v-for="seat in seatOptions"
+                    :key="seat.seatsId"
+                    :label="`${seat.seatsName || seat.seatsId} (${seat.seatsType || '一般'})`"
+                    :value="seat.seatsId"
+                  >
+                    <div class="seat-option">
+                      <span class="seat-icon">🪑</span>
+                      <div class="seat-info">
+                        <span class="seat-name">{{ seat.seatsName || `椅子 #${seat.seatsId}` }}</span>
+                        <span class="seat-type">{{ seat.seatsType || '一般座椅' }} · {{ seat.seatsStatus || '正常' }}</span>
+                      </div>
+                    </div>
+                  </el-option>
+                </el-select>
+                <small v-if="seatOptions.length === 0" class="text-warning">
+                  <i class="fas fa-exclamation-triangle mr-1"></i> 無可用椅子資料
                 </small>
               </el-form-item>
 
@@ -670,6 +784,87 @@ const handleCancel = async () => {
 
 .spot-name {
   color: #606266;
+}
+
+/* 維修目標類型切換 */
+.target-type-switch {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.target-type-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  background: #f5f7fa;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.target-type-option:hover {
+  background: #ecf5ff;
+  transform: translateY(-2px);
+}
+
+.target-type-option.active {
+  background: linear-gradient(135deg, #ecf5ff 0%, #e6f4ff 100%);
+  border-color: #409eff;
+  box-shadow: 0 4px 15px rgba(64, 158, 255, 0.2);
+}
+
+.target-type-option i {
+  font-size: 28px;
+  color: #909399;
+  transition: all 0.3s ease;
+}
+
+.target-type-option.active i {
+  color: #409eff;
+  transform: scale(1.1);
+}
+
+.target-type-option span {
+  font-weight: 600;
+  font-size: 14px;
+  color: #606266;
+}
+
+.target-type-option.active span {
+  color: #409eff;
+}
+
+/* 椅子選項樣式 */
+.seat-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.seat-icon {
+  font-size: 20px;
+}
+
+.seat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.seat-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.seat-type {
+  font-size: 12px;
+  color: #909399;
 }
 
 /* 快速選擇區 - 橫排設計 */

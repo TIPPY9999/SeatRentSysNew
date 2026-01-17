@@ -12,8 +12,12 @@ public class MaintenanceInformation {
     @Column(name = "ticketId")
     private Integer ticketId;
 
-    @Column(name = "spotId", nullable = false)
+    @Column(name = "spotId")
     private Integer spotId;
+
+    //新增對應資料庫 seatsId 欄位
+    @Column(name = "seatsId")
+    private Integer seatsId;
 
     @Column(name = "issueType", nullable = false, length = 200)
     private String issueType;
@@ -54,6 +58,9 @@ public class MaintenanceInformation {
 
     public Integer getSpotId() { return spotId; }
     public void setSpotId(Integer spotId) { this.spotId = spotId; }
+
+    public Integer getSeatsId() { return seatsId; }
+    public void setSeatsId(Integer seatsId) { this.seatsId = seatsId;}
 
     public String getIssueType() { return issueType; }
     public void setIssueType(String issueType) { this.issueType = issueType; }

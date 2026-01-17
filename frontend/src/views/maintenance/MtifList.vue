@@ -110,7 +110,7 @@ const startTicket = async (row) => {
         icon: 'success',
         title: '維修開始！',
         html: '<span class="text-primary">工單狀態已更新為「維修中」</span>',
-        timer: 1500,
+        timer: 1000,
         timerProgressBar: true,
         showConfirmButton: false,
         showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
@@ -152,7 +152,7 @@ const cancelTicket = async (row) => {
       await Swal.fire({
         icon: 'success',
         title: '工單已取消',
-        timer: 1500,
+        timer: 1000,
         timerProgressBar: true,
         showConfirmButton: false,
         showClass: { popup: 'animate__animated animate__bounceIn' },
@@ -192,14 +192,14 @@ const submitResolve = async () => {
     const config = resultConfig[resolveForm.resultType]
     await Swal.fire({
       icon: 'success',
-      title: '🎉 工單結案成功！',
+      title: '結案成功！',
       html: `
         <div style="text-align: center;">
           <div style="font-size: 48px; margin-bottom: 12px;">${config.icon}</div>
           <p>結案結果：<b style="color: ${config.color};">${config.text}</b></p>
         </div>
       `,
-      timer: 2000,
+      timer: 1200,
       timerProgressBar: true,
       showConfirmButton: false,
       showClass: { popup: 'animate__animated animate__tada' },
@@ -425,11 +425,18 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column prop="spotId" label="場地" width="90" align="center">
+                <el-table-column label="維修目標" width="130" align="center">
                   <template #default="{ row }">
-                    <el-tag type="info" effect="light" size="small" round>
-                      {{ row.spotId }}
-                    </el-tag>
+                    <!-- 椅子維修 -->
+                    <div v-if="row.seatsId" class="target-cell seat-target">
+                      <i class="fas fa-chair"></i>
+                      <span>椅子 #{{ row.seatsId }}</span>
+                    </div>
+                    <!-- 機台維修 -->
+                    <div v-else class="target-cell spot-target">
+                      <i class="fas fa-desktop"></i>
+                      <span>機台 #{{ row.spotId }}</span>
+                    </div>
                   </template>
                 </el-table-column>
 
@@ -894,6 +901,40 @@ onMounted(() => {
 
 .id-tag {
   font-weight: 600;
+}
+
+/* 維修目標欄位樣式 */
+.target-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.target-cell i {
+  font-size: 14px;
+}
+
+.seat-target {
+  background: linear-gradient(135deg, #f0f9eb 0%, #e1f3d8 100%);
+  color: #67c23a;
+}
+
+.seat-target:hover {
+  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
+}
+
+.spot-target {
+  background: linear-gradient(135deg, #ecf5ff 0%, #d9ecff 100%);
+  color: #409eff;
+}
+
+.spot-target:hover {
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
 .type-cell {

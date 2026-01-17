@@ -96,7 +96,7 @@ const handleRestore = async (row) => {
         icon: 'success',
         title: '恢復成功！',
         html: `<span class="text-success"><b>${row.staffName}</b> 已恢復在職狀態</span>`,
-        timer: 1800,
+        timer: 1000,
         timerProgressBar: true,
         showConfirmButton: false,
         showClass: { popup: 'animate__animated animate__tada' },

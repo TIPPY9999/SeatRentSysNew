@@ -1,6 +1,6 @@
 CREATE TABLE [dbo].[maintenanceInformation] (
     [ticketId]        INT            IDENTITY (1, 1) NOT NULL,
-    [spotId]          INT            NOT NULL,
+    [spotId]          INT            NULL,
     [issueType]       NVARCHAR (200) NOT NULL,
     [issueDesc]       NVARCHAR (500) NULL,
     [issuePriority]   VARCHAR (100)  DEFAULT ('NORMAL') NOT NULL,
@@ -11,17 +11,25 @@ CREATE TABLE [dbo].[maintenanceInformation] (
     [resolvedAt]      DATETIME2 (7)  NULL,
     [resolveNote]     NVARCHAR (500) NULL,
     [resultType]      NVARCHAR (50)  NULL,
+    [seatsId]         INT            NULL,
     PRIMARY KEY CLUSTERED ([ticketId] ASC),
+    CONSTRAINT [FK_maintenanceInformation_seats] FOREIGN KEY ([seatsId]) REFERENCES [dbo].[seats] ([seatsId]),
     CONSTRAINT [fkMaintAssignedStaffId] FOREIGN KEY ([assignedStaffId]) REFERENCES [dbo].[maintenanceStaff] ([staffId])
 );
 
-ALTER TABLE maintenanceInformation
-ADD CONSTRAINT fkMaintAssignedStaffId -- 維護工單 assignedStaffId 對應 maintenanceStaff.staffId
-    FOREIGN KEY (assignedStaffId)
-    REFERENCES maintenanceStaff(staffId);
 
 
-ALTER TABLE maintenanceInformation  
-ADD CONSTRAINT fkMaintSpotId          -- 維護工單spotId 對應 rentingSpot.spotId
-    FOREIGN KEY (spotId)
-    REFERENCES renting_Spot(spotId);
+=================================
+
+CREATE TABLE [dbo].[maintenanceStaff] (
+    [staffId]      INT            IDENTITY (1, 1) NOT NULL,
+    [staffName]    NVARCHAR (50)  NOT NULL,
+    [staffCompany] NVARCHAR (100) NULL,
+    [staffPhone]   VARCHAR (20)   NULL,
+    [staffEmail]   VARCHAR (100)  NULL,
+    [staffNote]    NVARCHAR (200) NULL,
+    [createdAt]    DATETIME2 (7)  DEFAULT (sysdatetime()) NOT NULL,
+    [isActive]     BIT            CONSTRAINT [DF_maintenanceStaff_isActive] DEFAULT ((1)) NOT NULL,
+    PRIMARY KEY CLUSTERED ([staffId] ASC)
+);
+

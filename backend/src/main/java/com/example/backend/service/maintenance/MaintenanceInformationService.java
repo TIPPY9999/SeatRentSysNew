@@ -7,6 +7,8 @@ import com.example.backend.model.spot.RentalSpot;
 import com.example.backend.repository.maintenance.MaintenanceInformationRepository;
 import com.example.backend.repository.maintenance.MaintenanceStaffRepository;
 import com.example.backend.repository.spot.RentalSpotRepository;
+import com.example.backend.repository.spot.SeatRepository; 
+import com.example.backend.model.spot.Seat;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,35 +22,65 @@ import java.util.List;
 @Transactional
 public class MaintenanceInformationService {
 
+    //工單狀態常數
     public static final String STATUS_REPORTED          = "REPORTED";
     public static final String STATUS_ASSIGNED          = "ASSIGNED";
     public static final String STATUS_UNDER_MAINTENANCE = "UNDER_MAINTENANCE";
     public static final String STATUS_RESOLVED          = "RESOLVED";
     public static final String STATUS_CANCELLED         = "CANCELLED";
 
-    // 優先權常數
+    // 優先權常數 
     public static final String PRIORITY_LOW    = "LOW";
     public static final String PRIORITY_NORMAL = "NORMAL";
     public static final String PRIORITY_HIGH   = "HIGH";
     public static final String PRIORITY_URGENT = "URGENT";
 
+    //維修結果常數
     public static final String RESULT_FIXED       = "FIXED";
     public static final String RESULT_NOT_FIXED   = "NOT_FIXED";
     public static final String RESULT_NO_ISSUE    = "NO_ISSUE";
     public static final String RESULT_NOT_FIXABLE = "NOT_FIXABLE";
     public static final String RESULT_OTHER       = "OTHER";
 
+    //場地狀態常數
+    public static final String SPOT_STATUS_OPERATIONAL = "營運中";
+    public static final String SPOT_STATUS_MAINTENANCE = "維護中";
+        public static final String SPOT_STATUS_SUSPENDED   = "暫停營運";
+        public static final String SPOT_STATUS_CLOSED      = "已關閉";
+
+    //椅子狀態常數
+    public static final String SEAT_STATUS_NORMAL      = "正常"; 
+    public static final String SEAT_STATUS_REPAIRING   = "維修中"; // 正在修
+    public static final String SEAT_STATUS_MAINTENANCE = "維護中"; // 定期保養
+    public static final String SEAT_STATUS_SCRAPPED    = "已報廢"; // 壞掉丟棄
+
+    
+    
+    
     private final MaintenanceInformationRepository mtifRepo;
     private final MaintenanceStaffRepository staffRepo;
 
     //新增租借點 Repository，用來驗證 spotId 是否存在
     private final RentalSpotRepository rentalSpotRepo;
+    private final SeatRepository seatRepo;
 
     public MaintenanceInformationService(MaintenanceInformationRepository mtifRepo,
-                                         MaintenanceStaffRepository staffRepo,RentalSpotRepository rentalSpotRepo) {
+                                         MaintenanceStaffRepository staffRepo,RentalSpotRepository rentalSpotRepo,SeatRepository seatRepo) {
         this.mtifRepo = mtifRepo;
         this.staffRepo = staffRepo;
         this.rentalSpotRepo = rentalSpotRepo;
+        this.seatRepo = seatRepo;
+    }
+
+    //1.取得所有椅子
+    public List<Seat> getAllSeats(){
+        return seatRepo.findAll();
+        
+    }
+
+    //2.取得指定場地的椅子
+    public List<Seat> getSeatsBySpot(Integer spotId){
+        return seatRepo.findBySpotId(spotId);
     }
 
     private boolean isBlank(String s) {
@@ -75,7 +107,7 @@ public class MaintenanceInformationService {
                         spot.getSpotAddress(),
                         spot.getSpotStatus()
                 ))
-                .filter(s ->"營運中".equals(s.getSpotStatus()))
+                .filter(s ->SPOT_STATUS_OPERATIONAL.equals(s.getSpotStatus()))
                 .sorted((a, b) -> Integer.compare(a.getSpotId(), b.getSpotId()))
                 .toList();
     }
@@ -83,13 +115,13 @@ public class MaintenanceInformationService {
     // ============ 建立 / 更新 / 刪除 ============
 
     public MaintenanceInformation createTicket(MaintenanceInformation mtif) {
-        // ★ 1. 強制清空 ID，防止前端意外傳入 ID 導致 JPA 變成 Update
+        // 1. 強制清空 ID，防止前端意外傳入 ID 導致 JPA 變成 Update
         mtif.setTicketId(null);
         
         validateForCreate(mtif);
         validateAssignedStaff(mtif.getAssignedStaffId());
 
-        // ★ 2. 資料淨化 (Trim)
+        //  2. 資料淨化 (Trim)
         mtif.setIssueType(mtif.getIssueType().trim());
         
         if (!isBlank(mtif.getIssueDesc())) {
@@ -98,7 +130,7 @@ public class MaintenanceInformationService {
             mtif.setIssueDesc(null); // 空白轉 null
         }
 
-        // ★ 3. 處理優先權 (預設值 + 驗證 + Trim)
+        //  3. 處理優先權 (預設值 + 驗證 + Trim)
         if (isBlank(mtif.getIssuePriority())) {
             mtif.setIssuePriority(PRIORITY_NORMAL);
         } else {
@@ -132,7 +164,7 @@ public class MaintenanceInformationService {
 
         MaintenanceInformation existing = getRequiredTicket(mtif.getTicketId());
 
-        // ★ 4. 狀態鎖定：已結案/已取消/維修中 不允許修改基本資料
+        //  4. 狀態鎖定：已結案/已取消/維修中 不允許修改基本資料
         String currentStatus = existing.getIssueStatus();
         if (STATUS_RESOLVED.equals(currentStatus) || STATUS_CANCELLED.equals(currentStatus)) {
             throw new IllegalStateException("工單已結案或取消，不允許修改內容");
@@ -162,6 +194,7 @@ public class MaintenanceInformationService {
         return mtifRepo.save(existing);
     }
 
+    //
     public void deleteTicket(int ticketId) {
         if (!mtifRepo.existsById(ticketId)) {
             throw new IllegalArgumentException("找不到指定的維修工單，ticketId = " + ticketId);
@@ -169,6 +202,7 @@ public class MaintenanceInformationService {
         mtifRepo.deleteById(ticketId);
     }
 
+    // 取消工單
     public void cancelTicket(int ticketId, String cancelReason) {
         MaintenanceInformation mtif = getRequiredTicket(ticketId);
         String status = mtif.getIssueStatus();
@@ -189,6 +223,7 @@ public class MaintenanceInformationService {
             String oldNote = mtif.getResolveNote();
             mtif.setResolveNote(isBlank(oldNote) ? "[取消原因] " + cancelReason : oldNote + "；[取消原因] " + cancelReason);
         }
+        
 
         mtifRepo.save(mtif);
     }
@@ -211,7 +246,7 @@ public class MaintenanceInformationService {
         return mtifRepo.findBySpotIdOrderByReportedAtDescTicketIdAsc(spotId);
     }
 
-    // ★ 5. 修改：使用排序過的 findAll
+    //  5. 修改：使用排序過的 findAll
     @Transactional(readOnly = true)
     public List<MaintenanceInformation> getAllTickets() {
         return mtifRepo.findAllByOrderByReportedAtDescTicketIdAsc();
@@ -255,6 +290,13 @@ public class MaintenanceInformationService {
         mtifRepo.save(mtif);
     }
 
+    /**
+     * 開始維修
+     * 1. 檢查狀態與指派
+     * 2. 更新工單狀態為 UNDER_MAINTENANCE
+     * 3. [新增] 同步更新 RentalSpot 和 Seat的狀態
+     */
+
     public void startTicket(int ticketId) {
         MaintenanceInformation mtif = getRequiredTicket(ticketId);
         String status = mtif.getIssueStatus();
@@ -267,42 +309,141 @@ public class MaintenanceInformationService {
             throw new IllegalStateException("尚未指派維修人員，無法開始維修");
         }
 
+        // 1. 更新工單狀態
+
         if (mtif.getStartAt() == null) {
             mtif.setStartAt(LocalDateTime.now());
         }
         mtif.setIssueStatus(STATUS_UNDER_MAINTENANCE);
 
-        mtifRepo.save(mtif);
+        // 2.  鎖定資源狀態 (分開判斷)
+        // 如果有機台，更新機台狀態
+        if (mtif.getSpotId() != null) {
+            RentalSpot spot = rentalSpotRepo.findById(mtif.getSpotId())
+                    .orElseThrow(() -> new IllegalArgumentException("找不到指定的租借點 " + mtif.getSpotId()));
+            spot.setSpotStatus(SPOT_STATUS_MAINTENANCE);
+            rentalSpotRepo.save(spot);
+        }
+
+        // 如果有椅子，更新椅子狀態
+        if (mtif.getSeatsId() != null) {
+            // 注意：這裡假設您的 Entity getter 是 getSeatsId()，若為 getSeatId() 請自行調整
+            Seat seat = this.seatRepo.findById(mtif.getSeatsId())
+                    .orElseThrow(() -> new IllegalArgumentException("找不到指定的椅子 " + mtif.getSeatsId()));
+
+            seat.setSeatsStatus(SEAT_STATUS_REPAIRING); // 將椅子狀態設為維修中
+            this.seatRepo.save(seat);
+      
+            }
+        mtifRepo.save(mtif); // 更新工單狀態
     }
 
+
+    /**
+     * 結案
+     * 1. 檢查狀態 (需為維修中)
+     * 2. 更新工單狀態為 RESOLVED
+     * 3. 檢查該場地是否還有「其他未結案」的工單
+     * 4. 若有：維持「維護中」(不變)
+     * 5. 若無：更新場地狀態為「營運中」
+     */
+
+    /**
+     * 結案
+     * 1. 檢查狀態 (需為維修中)
+     * 2. 更新工單狀態為 RESOLVED
+     * 3. 檢查資源 (機台/椅子) 是否還有其他未結案工單
+     * 4. 若無其他工單，才釋放資源回「營運中/正常」
+     */
+    /**
+     * 結案 (嚴謹版)
+     * 1. 檢查狀態 (需為維修中)
+     * 2. 更新工單狀態為 RESOLVED
+     * 3. 檢查資源 (機台/椅子) 是否還有其他未結案工單
+     * 4. 若無其他工單，才釋放資源回「營運中/正常」
+     */
     public void resolveTicket(int ticketId, String resultType, String resolveNote) {
-        if (isBlank(resultType)) throw new IllegalArgumentException("維修結果 resultType 是必填欄位");
+        if (isBlank(resultType)) throw new IllegalArgumentException("維修結果是必填欄位");
         if (!isValidResultType(resultType)) throw new IllegalArgumentException("錯誤的結果類型：" + resultType);
 
         MaintenanceInformation mtif = getRequiredTicket(ticketId);
 
+        // 狀態檢查
         if (!STATUS_UNDER_MAINTENANCE.equals(mtif.getIssueStatus())) {
             throw new IllegalStateException("只有維修中的工單可以結案");
         }
 
+        // 1. 更新工單狀態
         mtif.setResolvedAt(LocalDateTime.now());
         mtif.setResultType(resultType);
         mtif.setResolveNote(resolveNote);
         mtif.setIssueStatus(STATUS_RESOLVED);
+        mtifRepo.save(mtif); // 先存檔，確保這張單已標記完成。
 
-        mtifRepo.save(mtif);
+        // 定義哪些狀態算是「佔用中/未完成」
+        List<String> activeStatuses = Arrays.asList(STATUS_REPORTED, STATUS_ASSIGNED, STATUS_UNDER_MAINTENANCE);
+
+        // 2. 釋放資源邏輯
+
+        // (A) 處理機台釋放
+        if (mtif.getSpotId() != null) {
+            List<MaintenanceInformation> spotTickets = getTicketsBySpotId(mtif.getSpotId());
+            boolean hasOtherActiveTickets = spotTickets.stream()
+                    .filter(t -> !t.getTicketId().equals(ticketId)) // 排除自己
+                    .anyMatch(t -> activeStatuses.contains(t.getIssueStatus())); // 檢查有無其他未完成
+
+            if (!hasOtherActiveTickets) {
+                RentalSpot spot = rentalSpotRepo.findById(mtif.getSpotId())
+                        .orElseThrow(() -> new IllegalArgumentException("找不到指定租借點 " + mtif.getSpotId()));
+                spot.setSpotStatus(SPOT_STATUS_OPERATIONAL); // 恢復營運
+                rentalSpotRepo.save(spot);
+            }
+        }
+
+        // (B) [修改] 處理椅子釋放 (嚴謹模式)
+        if (mtif.getSeatsId() != null) {
+            // 1. 使用剛剛在 Repository 新增的方法，查這張椅子的所有工單
+            List<MaintenanceInformation> seatTickets = mtifRepo.findBySeatsIdOrderByReportedAtDescTicketIdAsc(mtif.getSeatsId());
+            
+            // 2. 檢查是否還有其他「未完成」的工單 (排除自己)
+            boolean hasOtherActiveTickets = seatTickets.stream()
+                    .filter(t -> !t.getTicketId().equals(ticketId)) 
+                    .anyMatch(t -> activeStatuses.contains(t.getIssueStatus()));
+
+            // 3. 只有在「沒有」其他未完成工單時，才把椅子變回正常
+            if (!hasOtherActiveTickets) {
+                Seat seat = this.seatRepo.findById(mtif.getSeatsId())
+                        .orElseThrow(() -> new IllegalArgumentException("找不到指定的椅子 " + mtif.getSeatsId()));
+                
+                seat.setSeatsStatus(SEAT_STATUS_NORMAL); // 恢復為正常
+                this.seatRepo.save(seat);
+            }
+        }
     }
+    
 
     // ============ 驗證 ============
 
     private void validateForCreate(MaintenanceInformation mtif) {
         if (mtif == null) throw new IllegalArgumentException("維修工單不能為空白");
-        if (mtif.getSpotId() == null) throw new IllegalArgumentException("spotId 為必填欄位");
-        if (mtif.getSpotId() <= 0) throw new IllegalArgumentException("spotId 必須是正數");
+
+        boolean hasSpot = (mtif.getSpotId() != null && mtif.getSpotId() > 0);
+        boolean hasSeat = (mtif.getSeatsId() != null && mtif.getSeatsId() > 0);
+
+        if (!hasSpot && !hasSeat) {
+            throw new IllegalArgumentException("工單必須指定「維修場地(Spot)」或「維修椅子(Seat)」其中之一");
+        }
+        
         if (isBlank(mtif.getIssueType())) throw new IllegalArgumentException("issueType 為必填欄位");
 
-        if(!rentalSpotRepo.existsById(mtif.getSpotId())){
-            throw new IllegalArgumentException("找不到指定的租借點" + mtif.getSpotId());
+        // 檢查 ID 是否存在
+        if (hasSpot && !rentalSpotRepo.existsById(mtif.getSpotId())) {
+            throw new IllegalArgumentException("找不到指定的租借點 " + mtif.getSpotId());
+        }
+        
+        // [新增] 檢查椅子是否存在
+        if (hasSeat && !this.seatRepo.existsById(mtif.getSeatsId())) {
+            throw new IllegalArgumentException("找不到指定的椅子 " + mtif.getSeatsId());
         }
     }
 
@@ -319,7 +460,7 @@ public class MaintenanceInformationService {
                      .contains(resultType);
     }
 
-    // ★ 6. 新增優先權驗證
+    //  6. 新增優先權驗證
     private boolean isValidPriority(String priority) {
         if (isBlank(priority)) return false;
         return Arrays.asList(PRIORITY_LOW, PRIORITY_NORMAL, PRIORITY_HIGH, PRIORITY_URGENT)

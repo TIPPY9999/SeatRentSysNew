@@ -1,5 +1,5 @@
 <template>
-  <el-row :gutter="20" class="charts-container" v-if="hasData">
+  <el-row :gutter="20" class="charts-container" v-show="hasData">
     <!-- 狀態分佈圖 -->
     <el-col :md="8" :sm="24">
       <el-card shadow="hover" class="chart-card">
@@ -212,6 +212,8 @@ const createTypeChartOptions = (sortedTypes) => ({
 const renderCharts = () => {
   if (!hasData.value) return
 
+  if (!statusChartRef.value || !priorityChartRef.value || !typeChartRef.value) return
+
   const { statusCount, priorityCount, sortedTypes } = chartData.value
 
   const statusOptions = createStatusChartOptions(statusCount)
@@ -259,7 +261,9 @@ const destroyCharts = () => {
 watch(
   () => props.tickets,
   () => {
-    nextTick(() => renderCharts())
+    setTimeout(() => {
+      nextTick(() => renderCharts())
+    }, 100)
   },
   { deep: true },
 )
