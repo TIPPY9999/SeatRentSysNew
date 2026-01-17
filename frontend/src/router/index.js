@@ -214,6 +214,23 @@ const routes = [
         name: 'mtif-form',
         component: () => import('@/views/maintenance/MtifForm.vue'),
       },
+
+      // --- Schedule (排程) ---
+      {
+        path: 'maintenance/schedule',
+        name: 'schedule-list',
+        component: () => import('@/views/maintenance/ScheduleList.vue'),
+      },
+      {
+        path: 'maintenance/schedule/create',
+        name: 'schedule-create',
+        component: () => import('@/views/maintenance/ScheduleForm.vue'),
+      },
+      {
+        path: 'maintenance/schedule/edit/:id',
+        name: 'schedule-edit',
+        component: () => import('@/views/maintenance/ScheduleForm.vue'),
+      },
     ],
   },
 

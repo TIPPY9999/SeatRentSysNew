@@ -26,4 +26,18 @@ public interface MaintenanceInformationRepository extends JpaRepository<Maintena
 List<MaintenanceInformation> findByAssignedStaffIdAndIssueStatusIn(Integer assignedStaffId, List<String> issueStatuses);
 
 boolean existsByAssignedStaffIdAndIssueStatusIn(Integer assignedStaffId, List<String> statuses);
+
+    // ========== 防爆單檢查 (排程自動開單用) ==========
+    
+    /**
+     * 檢查某機台是否有未結案工單 (SPOT)
+     */
+    boolean existsBySpotIdAndSeatsIdIsNullAndIssueStatusIn(Integer spotId, List<String> statuses);
+
+    /**
+     * 檢查某椅子是否有未結案工單 (SEAT)
+     */
+    boolean existsBySeatsIdAndIssueStatusIn(Integer seatsId, List<String> statuses);
+
+    
 }

@@ -185,6 +185,63 @@ export const getSeatsBySpot = (spotId) => {
   return http.get(`/maintenance/seats/spot/${spotId}`)
 }
 
+// ============ 排程 (Schedule) API ============
+
+/**
+ * 取得所有排程
+ */
+export const getAllSchedules = () => {
+  return http.get('/maintenance/schedule')
+}
+
+/**
+ * 取得單一排程
+ * @param {number} id - 排程 ID
+ */
+export const getScheduleById = (id) => {
+  return http.get(`/maintenance/schedule/${id}`)
+}
+
+/**
+ * 取得啟用中的排程
+ */
+export const getActiveSchedules = () => {
+  return http.get('/maintenance/schedule/active')
+}
+
+/**
+ * 建立排程
+ * @param {Object} schedule - 排程資料
+ */
+export const createSchedule = (schedule) => {
+  return http.post('/maintenance/schedule', schedule)
+}
+
+/**
+ * 更新排程
+ * @param {number} id - 排程 ID
+ * @param {Object} schedule - 排程資料
+ */
+export const updateSchedule = (id, schedule) => {
+  return http.put(`/maintenance/schedule/${id}`, schedule)
+}
+
+/**
+ * 刪除排程
+ * @param {number} id - 排程 ID
+ */
+export const deleteSchedule = (id) => {
+  return http.delete(`/maintenance/schedule/${id}`)
+}
+
+/**
+ * 切換排程啟用狀態
+ * @param {number} id - 排程 ID
+ */
+export const toggleSchedule = (id) => {
+  return http.patch(`/maintenance/schedule/${id}/toggle`)
+}
+
 // 匯出所有 API 作為預設物件 (方便一次 import)
 export default {
   // Staff
@@ -213,4 +270,12 @@ export default {
   // Seat
   getAllSeats,
   getSeatsBySpot,
+  // Schedule
+  getAllSchedules,
+  getScheduleById,
+  getActiveSchedules,
+  createSchedule,
+  updateSchedule,
+  deleteSchedule,
+  toggleSchedule,
 }

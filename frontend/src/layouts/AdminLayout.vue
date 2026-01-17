@@ -229,6 +229,17 @@ const logout = async () => {
                 <p>維修工單管理</p>
               </RouterLink>
             </li>
+
+            <li class="nav-item">
+              <RouterLink
+                to="/admin/maintenance/schedule"
+                class="nav-link"
+                :class="{ active: isActiveGroup('/admin/maintenance/schedule') }"
+              >
+                <i class="nav-icon fas fa-calendar-check"></i>
+                <p>定期排程管理</p>
+              </RouterLink>
+            </li>
           </ul>
         </nav>
       </div>
