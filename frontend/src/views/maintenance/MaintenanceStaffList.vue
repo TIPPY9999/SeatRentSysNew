@@ -4,6 +4,7 @@ import maintenanceApi from '@/api/modules/maintenance'
 import Swal from 'sweetalert2'
 import { useRouter } from 'vue-router'
 import { usePagination } from '@/composables/maintenance/usePagination'
+import { InfoFilled, Right, Delete, Check } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const staffList = ref([])
@@ -11,6 +12,20 @@ const searchText = ref('')
 const loading = ref(true)
 const pageVisible = ref(false)
 const sortConfig = ref({ prop: 'staffId', order: 'ascending' })
+
+// ====== 轉移工單 Dialog 狀態 ======
+const showTransferDialog = ref(false)
+const transferForm = ref({
+  deleteStaffId: null,
+  deleteStaffName: '',
+  targetStaffId: null,
+})
+const transferLoading = ref(false)
+
+// 計算可選的接手人員 (排除要刪除的人)
+const availableTargetStaff = computed(() => {
+  return staffList.value.filter((s) => s.staffId !== transferForm.value.deleteStaffId)
+})
 
 const fetchStaff = async () => {
   try {
@@ -24,6 +39,7 @@ const fetchStaff = async () => {
   }
 }
 
+// ====== 刪除人員（含防呆轉移邏輯）======
 const handleDelete = async (row) => {
   const result = await Swal.fire({
     title: '確定要停用此人員嗎？',
@@ -60,9 +76,79 @@ const handleDelete = async (row) => {
         showConfirmButton: false,
         showClass: { popup: 'animate__animated animate__bounceIn' },
       })
-    } catch {
-      // 錯誤已由 http.js 攔截器處理
+    } catch (error) {
+      // 檢查是否有未完成工單（根據後端錯誤訊息）
+      const errorMsg = error?.response?.data?.message || error?.message || ''
+      if (
+        errorMsg.includes('未完成') ||
+        errorMsg.includes('工單') ||
+        error?.response?.status === 400
+      ) {
+        // 開啟轉移 Dialog
+        transferForm.value = {
+          deleteStaffId: row.staffId,
+          deleteStaffName: row.staffName,
+          targetStaffId: null,
+        }
+        showTransferDialog.value = true
+      }
+      // 其他錯誤已由 http.js 攔截器處理
     }
+  }
+}
+
+// ====== 執行轉移並刪除 ======
+const handleTransferAndDelete = async () => {
+  if (!transferForm.value.targetStaffId) {
+    await Swal.fire({
+      icon: 'warning',
+      title: '請選擇接手人員',
+      text: '必須指定一位接手人員來接收未完成的工單',
+      confirmButtonColor: '#409eff',
+    })
+    return
+  }
+
+  transferLoading.value = true
+  try {
+    await maintenanceApi.transferAndDelete(
+      transferForm.value.targetStaffId,
+      transferForm.value.deleteStaffId,
+    )
+
+    showTransferDialog.value = false
+    fetchStaff()
+
+    const targetStaff = staffList.value.find((s) => s.staffId === transferForm.value.targetStaffId)
+
+    await Swal.fire({
+      icon: 'success',
+      title: '轉移成功！',
+      html: `
+        <div style="text-align: center;">
+          <p>工單已轉移給 <b style="color: #67c23a;">${targetStaff?.staffName || '接手人員'}</b></p>
+          <p style="color: #909399; font-size: 13px;"><b>${transferForm.value.deleteStaffName}</b> 已停用</p>
+        </div>
+      `,
+      timer: 2000,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      showClass: { popup: 'animate__animated animate__bounceIn' },
+    })
+  } catch {
+    // 錯誤已由 http.js 攔截器處理
+  } finally {
+    transferLoading.value = false
+  }
+}
+
+// 關閉 Dialog
+const closeTransferDialog = () => {
+  showTransferDialog.value = false
+  transferForm.value = {
+    deleteStaffId: null,
+    deleteStaffName: '',
+    targetStaffId: null,
   }
 }
 
@@ -436,6 +522,84 @@ onMounted(() => {
         </transition>
       </div>
     </section>
+
+    <!-- ========== 轉移工單並刪除 Dialog ========== -->
+    <el-dialog
+      v-model="showTransferDialog"
+      title="轉移工單並刪除人員"
+      width="500px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="!transferLoading"
+      @close="closeTransferDialog"
+    >
+      <div class="transfer-dialog-content">
+        <el-alert type="warning" :closable="false" show-icon class="mb-4">
+          <template #title>
+            <strong>{{ transferForm.deleteStaffName }}</strong> 有未完成的工單
+          </template>
+          <template #default> 請選擇要將工單轉移給哪位人員後，才能刪除此人員。 </template>
+        </el-alert>
+
+        <el-form label-position="top">
+          <el-form-item label="選擇接手人員" required>
+            <el-select
+              v-model="transferForm.targetStaffId"
+              placeholder="請選擇接手人員"
+              filterable
+              style="width: 100%"
+              :disabled="transferLoading"
+            >
+              <el-option
+                v-for="staff in availableTargetStaff"
+                :key="staff.staffId"
+                :label="`${staff.staffName} (${staff.specialization || '未設定專長'})`"
+                :value="staff.staffId"
+              >
+                <div class="transfer-option">
+                  <span class="name">{{ staff.staffName }}</span>
+                  <el-tag size="small" type="info">{{
+                    staff.specialization || '未設定專長'
+                  }}</el-tag>
+                </div>
+              </el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+
+        <div class="transfer-preview" v-if="transferForm.targetStaffId">
+          <el-divider content-position="left">
+            <el-icon><InfoFilled /></el-icon> 操作預覽
+          </el-divider>
+          <div class="preview-content">
+            <p>
+              <el-icon color="#E6A23C"><Right /></el-icon>
+              <strong>{{ transferForm.deleteStaffName }}</strong> 的所有未完成工單 將轉移給
+              <strong>{{
+                availableTargetStaff.find((s) => s.staffId === transferForm.targetStaffId)
+                  ?.staffName
+              }}</strong>
+            </p>
+            <p>
+              <el-icon color="#F56C6C"><Delete /></el-icon>
+              然後刪除人員 <strong>{{ transferForm.deleteStaffName }}</strong>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="closeTransferDialog" :disabled="transferLoading"> 取消 </el-button>
+        <el-button
+          type="danger"
+          :loading="transferLoading"
+          :disabled="!transferForm.targetStaffId"
+          @click="handleTransferAndDelete"
+        >
+          <el-icon v-if="!transferLoading"><Check /></el-icon>
+          確認轉移並刪除
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -834,5 +998,54 @@ onMounted(() => {
 }
 .mt-3 {
   margin-top: 1rem;
+}
+
+/* ========== 轉移工單 Dialog 樣式 ========== */
+.transfer-dialog-content {
+  padding: 0 10px;
+}
+
+.transfer-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.transfer-option .name {
+  font-weight: 500;
+}
+
+.transfer-preview {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8eef3 100%);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 10px;
+}
+
+.transfer-preview .preview-content {
+  font-size: 14px;
+}
+
+.transfer-preview .preview-content p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+  color: #606266;
+}
+
+.transfer-preview .preview-content p strong {
+  color: #303133;
+}
+
+:deep(.el-dialog__header) {
+  border-bottom: 1px solid #ebeef5;
+  padding-bottom: 15px;
+}
+
+:deep(.el-dialog__footer) {
+  border-top: 1px solid #ebeef5;
+  padding-top: 15px;
 }
 </style>

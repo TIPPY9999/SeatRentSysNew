@@ -20,4 +20,10 @@ public interface MaintenanceInformationRepository extends JpaRepository<Maintena
 
     //讓我們可以查某張椅子的所有工單
     List<MaintenanceInformation> findBySeatsIdOrderByReportedAtDescTicketIdAsc(Integer seatsId);
+
+    //用於轉移工單
+    // 在 interface 裡面新增這行
+List<MaintenanceInformation> findByAssignedStaffIdAndIssueStatusIn(Integer assignedStaffId, List<String> issueStatuses);
+
+boolean existsByAssignedStaffIdAndIssueStatusIn(Integer assignedStaffId, List<String> statuses);
 }

@@ -153,6 +153,14 @@ public class MaintenanceController {
         mtifService.cancelTicket(id, reason);
     }
 
+    //轉移工單並刪除人員
+    @PostMapping("/staff/transfer-and-delete")
+    public void transferAndDelete(@RequestBody Map<String, Integer> body) {
+        Integer targetStaffId = body.get("targetStaffId");
+        Integer deleteStaffId = body.get("deleteStaffId");
+        staffService.transferAndDelete(targetStaffId, deleteStaffId);
+    }
+
 
     //============ 椅子相關 API ============
     // 1. 取得所有椅子

@@ -53,6 +53,18 @@ export const deleteStaff = (id) => {
   return http.delete(`/maintenance/staff/${id}`)
 }
 
+/**
+ * 轉移工單並刪除人員
+ * @param {number} targetStaffId - 接手人員 ID
+ * @param {number} deleteStaffId - 要停用的人員 ID
+ */
+export const transferAndDelete = (targetStaffId, deleteStaffId) => {
+  return http.post('/maintenance/staff/transfer-and-delete', {
+    targetStaffId,
+    deleteStaffId,
+  })
+}
+
 // ============ 工單 (Ticket) API ============
 
 /**
@@ -182,6 +194,7 @@ export default {
   createStaff,
   updateStaff,
   deleteStaff,
+  transferAndDelete,
   // Ticket
   getAllTickets,
   getActiveTickets,
