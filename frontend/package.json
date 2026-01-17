@@ -18,13 +18,10 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
-<<<<<<< HEAD
     "@fawmi/vue-google-maps": "^0.9.79",
     "@googlemaps/extended-component-library": "^0.6.14",
-=======
     "@tsparticles/slim": "^3.9.1",
     "@tsparticles/vue3": "^3.0.1",
->>>>>>> member2
     "apexcharts": "^5.3.6",
     "axios": "^1.13.2",
     "element-plus": "^2.13.1",
