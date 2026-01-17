@@ -8,12 +8,21 @@ import Swal from 'sweetalert2'
  * ==========================================
  */
 import LoginView from '@/views/member/LoginView.vue' // 登入頁
-import AdminLayout from '@/views/member/AdminLayout.vue' // 後臺主框架 (包含側邊欄與 Header)
+import AdminLayout from '@/layouts/AdminLayout.vue' // 後臺主框架 (包含側邊欄與 Header)
 import AdminHomeView from '@/views/member/AdminHomeView.vue' // 後臺首頁(儀表板)
+
 import MemberListView from '@/views/member/MemberListView.vue'
 import MemberEditView from '@/views/member/MemberEditView.vue'
 import MemberCreateView from '@/views/member/MemberCreateView.vue'
+
 import UserRentView from '@/views/rec/RecRentUserPage.vue'
+
+import AdminListView from '@/views/member/AdminListView.vue'
+import AdminCreateView from '@/views/member/AdminCreateView.vue'
+import AdminEditView from '@/views/member/AdminEditView.vue'
+
+import MemberLayout from '@/layouts/MemberLayout.vue'
+import MemberProfileView from '@/views/member/MemberProfileView.vue'
 
 /**
  * ==========================================
@@ -26,23 +35,36 @@ const DiscountList = () => import('@/views/merchantAndCoupon/DiscountList.vue')
 
 // 定義路由表
 const routes = [
-  // --- MEM登入頁面：獨立路徑，不套用 Admin 佈局框架 ---
+  // --- 登入頁面：獨立路徑，不套用 Admin 佈局框架 ---
   {
     path: '/login',
     component: LoginView,
-    children: [
-      // --- 使用者租借頁 (已移至下方獨立路由，此處保留空結構以免報錯) ---
-    ],
+    children: [],
   },
+
+  // 使用者租借頁
   {
     path: '/rent',
     name: 'user-rent',
     component: UserRentView,
   },
 
-  /** * ==========================================
+  // 會員區（若你們有用到 MemberLayout）
+  {
+    path: '/member',
+    component: MemberLayout,
+    children: [
+      {
+        path: 'profile',
+        component: MemberProfileView,
+      },
+    ],
+  },
+
+  /**
+   * ==========================================
    * 3. 管理後臺嵌套路由 (Nested Routes)
-   * 所有的 children 子路徑都會渲染在 AdminLayout 內的 <RouterView /> 位置
+   * 所有的 children 子路徑都會渲染在 AdminLayout 內的 <RouterView />
    * 網址前綴統一為 /admin
    * ==========================================
    */
@@ -50,69 +72,62 @@ const routes = [
     path: '/admin',
     component: AdminLayout,
     children: [
-      // 💡 管理後臺首頁 (儀表板)
       {
         path: '',
         name: 'admin-home',
         component: AdminHomeView,
       },
 
-      // ==========================================
-      // [整合] 據點管理模組 (Spot) - 來自組員 spot 分支
-      // ==========================================
+      // --- Spot ---
       {
-        path: 'spot/list', // 網址: /admin/spot/list
+        path: 'spot/list',
         name: 'spot-list',
         component: () => import('@/views/spot/SpotList.vue'),
       },
       {
-        path: 'spot/add', // 網址: /admin/spot/add
+        path: 'spot/add',
         name: 'spot-add',
         component: () => import('@/views/spot/SpotForm.vue'),
       },
       {
-        path: 'spot/edit/:id', // 網址: /admin/spot/edit/1
+        path: 'spot/edit/:id',
         name: 'spot-edit',
         component: () => import('@/views/spot/SpotForm.vue'),
       },
 
-      // ==========================================
-      // [整合] 座位管理模組 (Seat) - 來自組員 TXT 檔案
-      // ==========================================
+      // --- Seat ---
       {
-        path: 'seat/list', // 網址: /admin/seat/list
+        path: 'seat/list',
         name: 'seat-list',
         component: () => import('@/views/spot/SeatList.vue'),
       },
       {
-        path: 'seat/insert', // 網址: /admin/seat/insert
+        path: 'seat/insert',
         name: 'seat-insert',
         component: () => import('@/views/spot/SeatInsert.vue'),
       },
       {
-        path: 'seat/edit/:id', // 網址: /admin/seat/edit/5
+        path: 'seat/edit/:id',
         name: 'seat-edit',
         component: () => import('@/views/spot/SeatUpdate.vue'),
       },
       {
-        path: 'seat/view/:id', // 網址: /admin/seat/view/5 (詳細資料)
+        path: 'seat/view/:id',
         name: 'seat-view',
         component: () => import('@/views/spot/SeatOne.vue'),
       },
       {
-        path: 'seat/search', // 網址: /admin/seat/search (條件查詢頁)
+        path: 'seat/search',
         name: 'seat-search',
         component: () => import('@/views/spot/SeatSearch.vue'),
       },
       {
-        path: 'seat/result', // 網址: /admin/seat/result (查詢結果頁)
+        path: 'seat/result',
         name: 'seat-result',
         component: () => import('@/views/spot/SeatResult.vue'),
       },
 
-      // ==========================================
-      // [既有功能] 商家與優惠券管理
-      // ==========================================
+      // --- Merchant & Coupon ---
       {
         path: 'merchants',
         name: 'merchants',
@@ -122,12 +137,10 @@ const routes = [
         path: 'discounts',
         name: 'discounts',
         component: DiscountList,
-        alias: 'coupons', // 設定別名，訪問 /admin/coupons 也會通
+        alias: 'coupons',
       },
 
-      // ==========================================
-      // [既有功能] 會員管理模組
-      // ==========================================
+      // --- Member ---
       {
         path: 'members',
         name: 'member-list',
@@ -143,112 +156,108 @@ const routes = [
         name: 'member-create',
         component: MemberCreateView,
       },
-      // 管理員列表 (暫時指向首頁，未來可建立獨立頁面)
+
+      // --- Admins ---
       {
         path: 'admins',
         name: 'admin-list',
-        component: AdminHomeView,
+        component: AdminListView,
+      },
+      {
+        path: 'admins/create',
+        name: 'admin-create',
+        component: AdminCreateView,
+      },
+      {
+        path: 'admins/edit/:id',
+        name: 'admin-edit',
+        component: AdminEditView,
       },
 
-      // ==========================================
-      // [既有功能] 租借訂單管理 (Rec)
-      // ==========================================
+      // --- Rec ---
       {
         path: 'rec-rent',
         name: 'rec-rent',
         component: () => import('@/views/rec/RecRentMgnPage.vue'),
       },
 
-      // ==========================================
-      // [既有功能] 維修管理模組 (Maintenance)
-      // ==========================================
+      // --- Maintenance ---
       {
-        path: 'staff-list', // 維修人員列表
+        path: 'staff-list',
         name: 'staff-list',
         component: () => import('@/views/maintenance/MaintenanceStaffList.vue'),
       },
       {
-        path: 'staff-form/:id?', // 維修人員表單 (id? 代表可選，用於新增或編輯)
+        path: 'staff-form/:id?',
         name: 'staff-form',
         component: () => import('@/views/maintenance/MaintenanceStaffForm.vue'),
       },
       {
-        path: 'staff-history', // 維修人員履歷
+        path: 'staff-history',
         name: 'staff-history',
         component: () => import('@/views/maintenance/MaintenanceStaffHistory.vue'),
       },
       {
-        path: 'mtif-list', // 維修項目列表 (一般模式)
+        path: 'mtif-list',
         name: 'mtif-list',
         component: () => import('@/views/maintenance/MtifList.vue'),
         props: { historyMode: false },
       },
       {
-        path: 'mtif-history', // 維修項目列表 (歷史紀錄模式)
+        path: 'mtif-history',
         name: 'mtif-history',
         component: () => import('@/views/maintenance/MtifList.vue'),
         props: { historyMode: true },
       },
       {
-        path: 'mtif-form/:id?', // 維修項目表單
+        path: 'mtif-form/:id?',
         name: 'mtif-form',
         component: () => import('@/views/maintenance/MtifForm.vue'),
       },
     ],
   },
 
-  // ==========================================
-  // 4. 路由守衛與轉址 (Redirects)
-  // ==========================================
-
   // 根路徑：預設導向登入頁
-  {
-    path: '/',
-    redirect: '/login',
-  },
+  { path: '/', redirect: '/login' },
 
-  // 404 處理：捕捉所有未定義路由，強制導回登入頁
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/login',
-  },
+  // 404：導回登入頁
+  { path: '/:pathMatch(.*)*', redirect: '/login' },
 ]
 
-/**
- * 初始化 Vue Router 實體
- * 使用 HTML5 History 模式 (無 # 字號)
- */
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 })
+
 /**
- * ==============
- * 路由守衛(並補上SweetAlert2)
- * 目的：檢查使用者是否已登入，未登入則導向登入頁
- * ==============
+ * ==========================================
+ * 全域路由守衛：後台登入驗證（統一 localStorage）
+ * ==========================================
  */
 router.beforeEach((to, from, next) => {
-  //1檢查token在不在
-  const isAuthenticated = sessionStorage.getItem('token')
-
-  //2判斷規則
-  if (to.path.startsWith('/admin') && !isAuthenticated) {
-    //3攔截未登入使用者導向登入頁
-    Swal.fire({
-      icon: 'warning',
-      title: '請先登入',
-      text: '您沒有權限訪問此頁面，請重新登入。',
-      confirmButtonText: '去登入',
-      allowOutsideClick: false, // 強制使用者一定要按按鈕
-    }).then(() => {
-      // 按下確認後導向登入頁
-      next('/login')
-    })
-  } else {
-    //放行
+  // 只保護後台
+  if (!to.path.startsWith('/admin')) {
     next()
+    return
   }
+
+  const token = localStorage.getItem('token')
+  const admin = localStorage.getItem('admin')
+
+  if (token && admin) {
+    next()
+    return
+  }
+
+  Swal.fire({
+    icon: 'warning',
+    title: '請先登入',
+    text: '您沒有權限訪問此頁面，請重新登入。',
+    confirmButtonText: '去登入',
+    allowOutsideClick: false,
+  }).then(() => {
+    next('/login')
+  })
 })
 
 export default router

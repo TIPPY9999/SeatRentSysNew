@@ -87,10 +87,19 @@ public class MemberController {
         return "會員修改成功";
     }
 
-    // 刪除（對應 DeleteMember）
+    // 刪除
     @GetMapping("/delete")
     public String delete(@RequestParam Integer memId) {
         memberService.deleteById(memId);
         return "會員刪除成功（memId=" + memId + "）";
+    }
+
+    // 模糊查詢
+    @GetMapping("/search")
+    public Object search(@RequestParam String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return "請輸入搜尋關鍵字";
+        }
+        return memberService.search(keyword);
     }
 }
