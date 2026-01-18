@@ -6,7 +6,8 @@ import com.example.backend.repository.maintenance.MaintenanceInformationReposito
 import com.example.backend.repository.maintenance.MaintenanceStaffRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.backend.repository.maintenance.MaintenanceInformationRepository;
+import com.example.backend.dto.maintenance.MaintenanceStaffResponseDto; 
+import java.util.stream.Collectors;
 
 
 import java.util.Arrays;
@@ -62,64 +63,49 @@ public class MaintenanceStaffService {
         return s == null || s.isBlank();
     }
 
-    public MaintenanceStaff createStaff(MaintenanceStaff staff) {
+   // 3. 新增維護人員
+    public MaintenanceStaffResponseDto createStaff(MaintenanceStaff staff) {
         validateForCreate(staff);
 
-        staff.setStaffName(staff.getStaffName().trim());
-        if (!isBlank(staff.getStaffEmail())) {
-            staff.setStaffEmail(staff.getStaffEmail().trim());
-        } else {
-            staff.setStaffEmail(null); // 避免存空白字串
-        }
+    MaintenanceStaff entity = new MaintenanceStaff();
+    entity.setStaffName(staff.getStaffName().trim());
+    entity.setStaffCompany(isBlank(staff.getStaffCompany()) ? null : staff.getStaffCompany().trim());
+    entity.setStaffEmail(isBlank(staff.getStaffEmail()) ? null : staff.getStaffEmail().trim());
+    entity.setStaffPhone(isBlank(staff.getStaffPhone()) ? null : staff.getStaffPhone().trim());
+    entity.setStaffNote(isBlank(staff.getStaffNote()) ? null : staff.getStaffNote().trim());
 
-        if (staff.getIsActive() == null) {
-            staff.setIsActive(true);
-        }
-
-        return staffRepo.save(staff);
+    // 讓 DB default 處理也可以；若前端有傳就尊重
+    if (staff.getIsActive() != null) {
+        entity.setIsActive(staff.getIsActive());
     }
 
-    public MaintenanceStaff updateStaff(MaintenanceStaff staff) {
-        validateForUpdate(staff);
+    MaintenanceStaff saved = staffRepo.save(entity);
+    return maintenanceStaffResponseDto(saved);
+}
 
-        MaintenanceStaff existing = getRequiredStaff(staff.getStaffId());
+    // 更新維護人員資料
+    public MaintenanceStaffResponseDto updateStaff(Integer id, MaintenanceStaff staff) {
+        if (id == null) throw new IllegalArgumentException("ID 不能為 null");
 
-        // 1. Name 必填，直接 trim
-        existing.setStaffName(staff.getStaffName().trim());
-        
-        // 2. 其他選填欄位：如果前端傳空字串，代表要「清空」，所以要 set(null)
-        if (!isBlank(staff.getStaffCompany())) {
-            existing.setStaffCompany(staff.getStaffCompany().trim());
-        } else {
-            existing.setStaffCompany(null);
-        }
+    // 以路徑 id 為準，避免前端 body 沒帶 staffId 或帶錯
+    staff.setStaffId(id);
+    validateForUpdate(staff);
 
-        if (!isBlank(staff.getStaffPhone())) {
-            existing.setStaffPhone(staff.getStaffPhone().trim());
-        } else {
-            existing.setStaffPhone(null);
-        }
+    MaintenanceStaff existing = getRequiredStaff(id);
 
-        if (!isBlank(staff.getStaffNote())) {
-            existing.setStaffNote(staff.getStaffNote().trim());
-        } else {
-            existing.setStaffNote(null);
-        }
+    existing.setStaffName(staff.getStaffName().trim());
+    existing.setStaffCompany(isBlank(staff.getStaffCompany()) ? null : staff.getStaffCompany().trim());
+    existing.setStaffPhone(isBlank(staff.getStaffPhone()) ? null : staff.getStaffPhone().trim());
+    existing.setStaffNote(isBlank(staff.getStaffNote()) ? null : staff.getStaffNote().trim());
+    existing.setStaffEmail(isBlank(staff.getStaffEmail()) ? null : staff.getStaffEmail().trim());
 
-        // 3. Email 特殊處理 (Trim + 空字串轉 null + 唯一性在 validate 已檢查)
-        if (!isBlank(staff.getStaffEmail())) {
-            existing.setStaffEmail(staff.getStaffEmail().trim());
-        } else {
-            existing.setStaffEmail(null);
-        }
-        
-        // UI 有開放改 isActive 可以在這裡 set
-        if (staff.getIsActive() != null) {
-            existing.setIsActive(staff.getIsActive());
-        }
-
-        return staffRepo.save(existing);
+    if (staff.getIsActive() != null) {
+        existing.setIsActive(staff.getIsActive());
     }
+
+    MaintenanceStaff saved = staffRepo.save(existing);
+    return maintenanceStaffResponseDto(saved);
+}
 
     public void deleteStaff(int staffId) {
         MaintenanceStaff existing = getRequiredStaff(staffId);
@@ -141,9 +127,13 @@ public class MaintenanceStaffService {
         staffRepo.save(existing);
     }
 
-    @Transactional(readOnly = true)
-    public MaintenanceStaff getStaffById(int staffId) {
-        return staffRepo.findById(staffId).orElse(null);
+   // 2. 取得單一維護人員
+    public MaintenanceStaffResponseDto getStaffById(Integer id) {
+        // 從 DB 找人，找不到就回傳 null
+        MaintenanceStaff staff = staffRepo.findById(id).orElse(null);
+        
+        // 轉型後回傳
+        return maintenanceStaffResponseDto(staff);
     }
 
     @Transactional(readOnly = true)
@@ -152,9 +142,15 @@ public class MaintenanceStaffService {
                 .orElseThrow(() -> new IllegalArgumentException("找不到指定的維護人員，staffId = " + staffId));
     }
 
-    @Transactional(readOnly = true)
-    public List<MaintenanceStaff> getAllStaff() {
-        return staffRepo.findByIsActiveTrueOrderByStaffIdAsc();
+    // 1. 取得所有維護人員
+    public List<MaintenanceStaffResponseDto> getAllStaff() {
+        // 從 DB 拿出所有資料
+        List<MaintenanceStaff> staffList = staffRepo.findAll();
+
+        // 用剛剛寫的小幫手 (mapToDto) 把每一筆資料轉型
+        return staffList.stream()
+                .map(this::maintenanceStaffResponseDto) 
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -195,5 +191,23 @@ public class MaintenanceStaffService {
                 throw new IllegalArgumentException("此 Email 已被其他維護人員使用");
             }
         }
+    }
+
+
+    private MaintenanceStaffResponseDto maintenanceStaffResponseDto(MaintenanceStaff staff){
+        if(staff == null) return null;
+
+        return new MaintenanceStaffResponseDto(
+            staff.getStaffId(),
+            staff.getStaffName(),
+            staff.getStaffCompany(),
+            staff.getStaffEmail(),
+            staff.getStaffPhone(),
+            staff.getStaffNote(),
+            staff.getIsActive(),
+            staff.getCreatedAt()
+
+       
+        );
     }
 }

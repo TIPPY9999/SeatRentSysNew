@@ -8,6 +8,7 @@ import com.example.backend.service.maintenance.MaintenanceInformationService;
 import com.example.backend.service.maintenance.MaintenanceStaffService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import com.example.backend.dto.maintenance.MaintenanceStaffResponseDto;
 
 import java.util.List;
 import java.util.Map;
@@ -30,30 +31,40 @@ public class MaintenanceController {
 
     // ================== 維護人員 (Staff) ==================
 
-    // 取得所有維護人員 (前端下拉選單用)
+    // 取得所有維護人員
     @GetMapping("/staff")
-    public List<MaintenanceStaff> getAllStaff() {
-        return staffService.getAllStaff();
+public List<MaintenanceStaffResponseDto> getAllStaff() {
+    return staffService.getAllStaff();
+}
+    // 取得單一維護人員詳情
+    @GetMapping("/staff/{id}")
+    public MaintenanceStaffResponseDto getStaffById(@PathVariable Integer id) {
+        return staffService.getStaffById(id);
     }
 
-    // ★ 新增：建立維護人員
+    //新增維護人員
     @PostMapping("/staff")
-    public MaintenanceStaff createStaff(@RequestBody MaintenanceStaff staff) {
+    public MaintenanceStaffResponseDto createStaff(@RequestBody MaintenanceStaff staff) {
         return staffService.createStaff(staff);
     }
 
-    // 新增：更新維護人員資料
+    //更新維護人員
     @PutMapping("/staff/{id}")
-    public MaintenanceStaff updateStaff(@PathVariable Integer id, @RequestBody MaintenanceStaff staff) {
-        // 確保路徑上的 ID 跟物件裡的 ID 一樣，避免改錯人
-        staff.setStaffId(id);
-        return staffService.updateStaff(staff);
+    public MaintenanceStaffResponseDto updateStaff(@PathVariable Integer id,
+                                                @RequestBody MaintenanceStaff staff) {
+        return staffService.updateStaff(id, staff);
     }
 
-    // ★ 新增：刪除維護人員 (軟刪除)
+    //刪除維護人員 (實際上是停用)
     @DeleteMapping("/staff/{id}")
     public void deleteStaff(@PathVariable Integer id) {
         staffService.deleteStaff(id);
+    }
+
+    // 查詢已停用的維護人員 (歷史紀錄用)
+    @GetMapping("/staff/inactive")
+    public List<MaintenanceStaff> getInactiveStaff() {
+        return staffService.getInactiveStaff();
     }
 
     // ================== 工單查詢 (Read) ==================
@@ -105,20 +116,7 @@ public class MaintenanceController {
         mtif.setTicketId(id);
         return mtifService.updateTicket(mtif);
     }
-
-
-    // 1. 依 ID 查詢單一維護人員 (編輯表單用)
-    @GetMapping("/staff/{id}")
-    public MaintenanceStaff getStaffById(@PathVariable Integer id) {
-        return staffService.getRequiredStaff(id);
-    }
-
-    // 2. 查詢已停用的維護人員 (歷史紀錄用)
-    @GetMapping("/staff/inactive")
-    public List<MaintenanceStaff> getInactiveStaff() {
-        return staffService.getInactiveStaff();
-    }
-
+ 
     // ================== 流程控制 (State Changes) ==================
 
     // 8. 指派人員

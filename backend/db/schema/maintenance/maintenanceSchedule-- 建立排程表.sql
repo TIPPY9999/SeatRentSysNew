@@ -49,7 +49,7 @@ ALTER TABLE [dbo].[maintenanceSchedule]
 ADD CONSTRAINT [CK_schedule_priority] 
 CHECK ([issuePriority] IN ('LOW', 'NORMAL', 'HIGH', 'URGENT'));
 
--- 4. ★ 複雜邏輯檢查：確保頻率與參數一致 (防呆)
+-- 4. 邏輯檢查：確保頻率與參數一致 (防呆)
 -- DAILY: 不需要 dayOfWeek 和 dayOfMonth
 -- WEEKLY: 必須有 dayOfWeek (1-7)
 -- MONTHLY: 必須有 dayOfMonth (1-31)
