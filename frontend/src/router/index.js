@@ -225,6 +225,14 @@ const routes = [
         name: 'staff-form',
         component: () => import('@/views/maintenance/MaintenanceStaffForm.vue'),
       },
+
+      // 維修人員歷史紀錄
+      {
+        path: 'staff-history',
+        name: 'staff-history',
+        component: () => import('@/views/maintenance/MaintenanceStaffHistory.vue'),
+      },
+
       {
         path: 'mtif-list',
         name: 'mtif-list',
