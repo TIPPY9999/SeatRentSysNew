@@ -11,12 +11,15 @@ public interface MaintenanceStaffRepository extends JpaRepository<MaintenanceSta
     // 檢查 email 是否存在 (忽略大小寫) - 用於 create
     boolean existsByStaffEmailIgnoreCase(String staffEmail);
 
-    // ★ 新增：查詢 email (忽略大小寫) - 用於 update 檢查
+    // 查詢 email (忽略大小寫) - 用於 update 檢查
     MaintenanceStaff findByStaffEmailIgnoreCase(String staffEmail);
 
     MaintenanceStaff findByStaffEmail(String staffEmail);
 
     List<MaintenanceStaff> findByStaffCompany(String staffCompany);
+
+    // 修復：根據啟用狀態查詢人員
+    List<MaintenanceStaff> findByIsActive(Boolean isActive);
 
     List<MaintenanceStaff> findByIsActiveTrueOrderByStaffIdAsc();
 

@@ -4,13 +4,15 @@ import { useRoute, useRouter } from 'vue-router'
 import maintenanceApi from '@/api/modules/maintenance'
 import Swal from 'sweetalert2'
 import { useTicketConfig } from '@/composables/maintenance/useTicketConfig'
+import TicketTimeline from '@/components/maintenance/TicketTimeline.vue'
 
 const route = useRoute()
 const router = useRouter()
-const ticketId = Number(route.params.id)
-const isEdit = computed(() => !isNaN(ticketId) && ticketId > 0)
+const ticketId = computed(() => Number(route.params.id))
+const isEdit = computed(() => !isNaN(ticketId.value) && ticketId.value > 0)
 
 const formRef = ref(null)
+const timelineRef = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
 const formVisible = ref(false)
@@ -32,6 +34,12 @@ const staffOptions = ref([])
 const spotOptions = ref([])
 const seatOptions = ref([]) // 新增：椅子選項
 
+// ★ Bug3 修復：記錄編輯時原始的 assignedStaffId，用於判斷是否有變更
+const originalAssignedStaffId = ref(null)
+
+// ★ Bug3 修復：定義可編輯的狀態
+const EDITABLE_STATUSES = ['REPORTED', 'ASSIGNED']
+
 // 使用共用 composable 的問題類型配置
 const { issueTypeOptions: sharedIssueTypes } = useTicketConfig()
 const issueTypeOptions = sharedIssueTypes
@@ -46,12 +54,14 @@ const priorityConfig = {
 
 // 驗證規則
 const rules = computed(() => ({
-  spotId: targetType.value === 'spot' 
-    ? [{ required: true, message: '請選擇一個機台', trigger: 'change' }] 
-    : [],
-  seatsId: targetType.value === 'seat' 
-    ? [{ required: true, message: '請選擇一張椅子', trigger: 'change' }] 
-    : [],
+  spotId:
+    targetType.value === 'spot'
+      ? [{ required: true, message: '請選擇一個機台', trigger: 'change' }]
+      : [],
+  seatsId:
+    targetType.value === 'seat'
+      ? [{ required: true, message: '請選擇一張椅子', trigger: 'change' }]
+      : [],
   issueType: [{ required: true, message: '請輸入或選擇問題類型', trigger: 'blur' }],
   issuePriority: [{ required: true, message: '請選擇優先級', trigger: 'change' }],
 }))
@@ -68,7 +78,7 @@ const formProgress = computed(() => {
 
 // 監聽表單變化，自動更新步驟指示
 watch(
-  () => targetType.value === 'spot' ? form.spotId : form.seatsId,
+  () => (targetType.value === 'spot' ? form.spotId : form.seatsId),
   (val) => {
     if (val && activeStep.value === 0) activeStep.value = 1
   },
@@ -89,46 +99,81 @@ watch(targetType, (newType) => {
   }
 })
 
-// 載入椅子選項
-const loadSeats = async () => {
-  try {
-    const res = await maintenanceApi.getAllSeats()
-    seatOptions.value = res.data || []
-  } catch {
-    seatOptions.value = []
-  }
-}
-
 onMounted(async () => {
   setTimeout(() => (formVisible.value = true), 100)
 
   loading.value = true
   try {
-    const [spotRes, staffRes, seatRes] = await Promise.all([
-      maintenanceApi.getAllSpots().catch(() => ({ data: [] })),
-      maintenanceApi.getAllStaff().catch(() => ({ data: [] })),
-      maintenanceApi.getAllSeats().catch(() => ({ data: [] })),
-    ])
-
-    spotOptions.value = Array.isArray(spotRes.data) ? spotRes.data : []
-    staffOptions.value = staffRes.data || []
-    seatOptions.value = seatRes.data || []
-
+    // ★ Bug3 修復：先讀取工單資料，檢查狀態是否可編輯
     if (isEdit.value) {
-      const res = await maintenanceApi.getTicketById(ticketId)
-      Object.assign(form, res.data)
+      const ticketRes = await maintenanceApi.getTicketById(ticketId.value)
+      const ticketData = ticketRes.data
+
+      // ★ 問題A修復：使用正確的欄位名稱 issueStatus
+      if (!EDITABLE_STATUSES.includes(ticketData.issueStatus)) {
+        await Swal.fire({
+          icon: 'warning', // ★ (2B) 改為 warning，不是系統錯誤
+          title: '無法編輯',
+          html: `
+            <p style="color: #909399;">此工單狀態為「<b>${ticketData.issueStatus}</b>」，不允許編輯</p>
+            <p style="color: #f56c6c; font-size: 13px; margin-top: 10px;">可編輯狀態：REPORTED, ASSIGNED</p>
+          `,
+          confirmButtonText: '返回列表',
+        })
+        router.push({ name: 'mtif-list' })
+        return
+      }
+
+      // ★ Bug3 修復：記錄原始 assignedStaffId
+      originalAssignedStaffId.value = ticketData.assignedStaffId
+
+      // 載入其他資料
+      const [spotRes, staffRes, seatRes] = await Promise.all([
+        maintenanceApi.getAllSpots().catch(() => ({ data: [] })),
+        maintenanceApi.getAllStaff().catch(() => ({ data: [] })), // 編輯時用 getAllStaff
+        maintenanceApi.getAllSeats().catch(() => ({ data: [] })),
+      ])
+
+      spotOptions.value = Array.isArray(spotRes.data) ? spotRes.data : []
+      staffOptions.value = staffRes.data || []
+      seatOptions.value = seatRes.data || []
+
+      // ★ 如果原始人員已停用，要保留並顯示為 disabled
+      if (ticketData.assignedStaffId) {
+        const assignedStaff = staffOptions.value.find(s => s.staffId === ticketData.assignedStaffId)
+        if (assignedStaff && !assignedStaff.isActive) {
+          assignedStaff.staffName = assignedStaff.staffName + ' (已停用)'
+          assignedStaff.disabled = true
+        }
+      }
+
+      // 賦值表單
+      Object.assign(form, ticketData)
       // 根據資料判斷維修類型
-      if (res.data.seatsId) {
+      if (ticketData.seatsId) {
         targetType.value = 'seat'
       } else {
         targetType.value = 'spot'
       }
       activeStep.value = 3
     } else {
+      // ★ Bug2 修復：建立時只載入啟用人員
+      const [spotRes, staffRes, seatRes] = await Promise.all([
+        maintenanceApi.getAllSpots().catch(() => ({ data: [] })),
+        maintenanceApi.getActiveStaff().catch(() => ({ data: [] })), // ★ 改用 getActiveStaff
+        maintenanceApi.getAllSeats().catch(() => ({ data: [] })),
+      ])
+
+      spotOptions.value = Array.isArray(spotRes.data) ? spotRes.data : []
+      staffOptions.value = staffRes.data || []
+      seatOptions.value = seatRes.data || []
+
       if (spotOptions.value.length > 0) form.spotId = spotOptions.value[0].spotId
     }
-  } catch {
-    router.push('/admin/mtif-list')
+  } catch (error) {
+    console.error('Failed to load form data:', error)
+    Swal.fire('錯誤', '載入失敗，請稍後再試', 'error')
+    router.push({ name: 'mtif-list' })
   } finally {
     loading.value = false
   }
@@ -143,8 +188,10 @@ const submit = async () => {
 
   await formRef.value.validate(async (valid) => {
     if (valid) {
-      // 確認彈窗
+      // 1. 取得選中的人員名稱 (為了顯示確認窗)
       const selectedStaff = staffOptions.value.find((s) => s.staffId === form.assignedStaffId)
+
+      // 2. 顯示確認視窗
       const confirmResult = await Swal.fire({
         title: isEdit.value ? '確認更新工單？' : '確認建立工單？',
         html: `
@@ -157,7 +204,7 @@ const submit = async () => {
               <div style="padding: 12px; background: ${priorityConfig[form.issuePriority].bgColor}; border-radius: 10px; border-left: 4px solid ${priorityConfig[form.issuePriority].color};">
                 <p style="margin: 0 0 8px; color: #909399; font-size: 12px;">優先級</p>
                 <p style="margin: 0; font-size: 16px; font-weight: 600; color: ${priorityConfig[form.issuePriority].color};">
-                  ${priorityConfig[form.issuePriority].icon} ${priorityConfig[form.issuePriority].text}
+                   ${priorityConfig[form.issuePriority].icon} ${priorityConfig[form.issuePriority].text}
                 </p>
               </div>
               ${
@@ -181,57 +228,80 @@ const submit = async () => {
         cancelButtonColor: '#909399',
         confirmButtonText: '<i class="fas fa-paper-plane mr-1"></i> 確認送出',
         cancelButtonText: '再檢查一下',
-        showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
-        hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' },
       })
 
       if (!confirmResult.isConfirmed) return
 
       submitting.value = true
       try {
+        // ★ 關鍵修正：資料清洗（完整版）
+        // 建立一個乾淨的物件，只包含後端需要的欄位
+        const submitData = {
+          spotId: form.spotId,
+          seatsId: form.seatsId,
+          issueType: form.issueType,
+          issueDesc: form.issueDesc,
+          issuePriority: form.issuePriority,
+          assignedStaffId: form.assignedStaffId
+        }
+        
+        // 根據維修類型清除不需要的欄位
+        if (targetType.value === 'spot') {
+          submitData.seatsId = null
+        } else if (targetType.value === 'seat') {
+          submitData.spotId = null
+        }
+
         if (isEdit.value) {
-          await maintenanceApi.updateTicket(ticketId, form)
-          await maintenanceApi.assignStaff(ticketId, form.assignedStaffId)
+          // === [更新模式] ===
+          await maintenanceApi.updateTicket(ticketId.value, submitData)
+
+          // ★ Bug3 修復：只有當 assignedStaffId 有變更時，才呼叫 assignStaff API
+          if (form.assignedStaffId && form.assignedStaffId !== originalAssignedStaffId.value) {
+            try {
+              await maintenanceApi.assignStaff(ticketId.value, { staffId: form.assignedStaffId })
+            } catch (assignError) {
+              console.error('Assign staff failed:', assignError)
+              // 不阻斷整個流程，只提醒
+              await Swal.fire({
+                icon: 'warning',
+                title: '工單已更新',
+                text: '但人員指派失敗，請再次檢查',
+                timer: 2000
+              })
+            }
+          }
+
           await Swal.fire({
             icon: 'success',
             title: '更新成功！',
-            html: '<span class="text-success">工單資料已成功更新</span>',
+            text: '工單資料已更新',
             timer: 1200,
-            timerProgressBar: true,
             showConfirmButton: false,
-            showClass: { popup: 'animate__animated animate__bounceIn' },
           })
         } else {
-          await maintenanceApi.createTicket(form)
+          // === [新增模式] ===
+          await maintenanceApi.createTicket(submitData)
+
           await Swal.fire({
             icon: 'success',
             title: '建立成功！',
-            html: `
-              <div style="text-align: center;">
-                <div style="font-size: 48px; margin-bottom: 12px;">📋</div>
-                <p>新工單已成功建立並進入待處理佇列</p>
-              </div>
-            `,
+            text: '新工單已建立',
             timer: 1500,
-            timerProgressBar: true,
             showConfirmButton: false,
-            showClass: { popup: 'animate__animated animate__tada' },
           })
         }
-        router.push('/admin/mtif-list')
-      } catch {
-        // 錯誤已由 http.js 攔截器處理
+
+        // ★ 關鍵修正 2：無論新增或修改，統一跳回列表頁
+        router.push({ name: 'mtif-list' })
+      } catch (error) {
+        console.error('Submit failed:', error)
+        // ★ Bug3 修復：顯示後端回傳的錯誤訊息
+        const errorMsg = error?.response?.data?.message || '操作失敗，請稍後再試'
+        Swal.fire('錯誤', errorMsg, 'error')
       } finally {
         submitting.value = false
       }
-    } else {
-      Swal.fire({
-        icon: 'warning',
-        title: '表單驗證失敗',
-        text: '請確認所有必填欄位都已正確填寫',
-        confirmButtonText: '我知道了',
-        showClass: { popup: 'animate__animated animate__shakeX' },
-      })
     }
   })
 }
@@ -343,7 +413,7 @@ const handleCancel = async () => {
                   </span>
                 </template>
                 <div class="target-type-switch">
-                  <div 
+                  <div
                     class="target-type-option"
                     :class="{ active: targetType === 'spot' }"
                     @click="targetType = 'spot'"
@@ -351,7 +421,7 @@ const handleCancel = async () => {
                     <i class="fas fa-desktop"></i>
                     <span>機台</span>
                   </div>
-                  <div 
+                  <div
                     class="target-type-option"
                     :class="{ active: targetType === 'seat' }"
                     @click="targetType = 'seat'"
@@ -363,10 +433,10 @@ const handleCancel = async () => {
               </el-form-item>
 
               <!-- 機台選擇 (當 targetType === 'spot') -->
-              <el-form-item 
+              <el-form-item
                 v-if="targetType === 'spot'"
-                label="場地選擇" 
-                prop="spotId" 
+                label="場地選擇"
+                prop="spotId"
                 class="form-item-animated"
               >
                 <template #label>
@@ -389,12 +459,16 @@ const handleCancel = async () => {
                   <el-option
                     v-for="s in spotOptions"
                     :key="s.spotId"
-                    :label="`${s.spotCode || s.spotId} - ${s.spotName}`"
+                    :label="`${s.spotCode || s.spotId} - ${s.spotName} (${s.spotStatus})`"
                     :value="s.spotId"
+                    :disabled="s.spotStatus !== '營運中'"
                   >
                     <div class="spot-option">
                       <span class="spot-code">{{ s.spotCode || s.spotId }}</span>
                       <span class="spot-name">{{ s.spotName }}</span>
+                      <span class="spot-status" :style="{ color: s.spotStatus === '營運中' ? '#67c23a' : '#909399' }">
+                        ({{ s.spotStatus }})
+                      </span>
                     </div>
                   </el-option>
                 </el-select>
@@ -404,10 +478,10 @@ const handleCancel = async () => {
               </el-form-item>
 
               <!-- 椅子選擇 (當 targetType === 'seat') -->
-              <el-form-item 
+              <el-form-item
                 v-if="targetType === 'seat'"
-                label="椅子選擇" 
-                prop="seatsId" 
+                label="椅子選擇"
+                prop="seatsId"
                 class="form-item-animated"
               >
                 <template #label>
@@ -436,8 +510,13 @@ const handleCancel = async () => {
                     <div class="seat-option">
                       <span class="seat-icon">🪑</span>
                       <div class="seat-info">
-                        <span class="seat-name">{{ seat.seatsName || `椅子 #${seat.seatsId}` }}</span>
-                        <span class="seat-type">{{ seat.seatsType || '一般座椅' }} · {{ seat.seatsStatus || '正常' }}</span>
+                        <span class="seat-name">{{
+                          seat.seatsName || `椅子 #${seat.seatsId}`
+                        }}</span>
+                        <span class="seat-type"
+                          >{{ seat.seatsType || '一般座椅' }} ·
+                          {{ seat.seatsStatus || '正常' }}</span
+                        >
                       </div>
                     </div>
                   </el-option>
@@ -583,6 +662,17 @@ const handleCancel = async () => {
         </transition>
       </div>
     </section>
+  </div>
+  <!-- 維修歷程紀錄 -->
+  <div class="page-container">
+    <el-card v-if="ticketId" class="mt-4" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <span>維修歷程紀錄</span>
+        </div>
+      </template>
+      <TicketTimeline ref="timelineRef" :ticketId="ticketId" />
+    </el-card>
   </div>
 </template>
 

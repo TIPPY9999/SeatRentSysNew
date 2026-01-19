@@ -80,6 +80,40 @@ export const issueTypeOptions = [
   { value: '保養', icon: '🔧' },
 ]
 
+// ==================== 結案結果配置 ====================
+export const resultConfig = {
+  NO_ISSUE: { 
+    text: '未發現問題', 
+    icon: '✔️', 
+    color: '#909399',
+    desc: '檢查後未發現異常'
+  },
+  FIXED: { 
+    text: '已修復', 
+    icon: '✅', 
+    color: '#67c23a',
+    desc: '問題已成功修復'
+  },
+  REPLACED: { 
+    text: '已更換', 
+    icon: '🔄', 
+    color: '#409eff',
+    desc: '已更換損壞零件'
+  },
+  NOT_FIXABLE: { 
+    text: '無法修復', 
+    icon: '❌', 
+    color: '#f56c6c',
+    desc: '問題無法修復，需更換設備'
+  },
+  OTHER: { 
+    text: '其他', 
+    icon: '📋', 
+    color: '#e6a23c',
+    desc: '其他情況'
+  },
+}
+
 // ==================== 工具函數 ====================
 
 /**
@@ -136,11 +170,31 @@ export const getStatusIcon = (status) => {
   return statusConfig[status]?.icon || '❓'
 }
 
+/**
+ * 取得結案結果文字
+ * @param {string} resultType - 結案結果代碼
+ * @returns {string} 結果文字 (找不到則回傳原始代碼)
+ */
+export const getResultText = (resultType) => {
+  if (!resultType) return '-'
+  return resultConfig[resultType]?.text || resultType
+}
+
+/**
+ * 取得結案結果圖示
+ * @param {string} resultType - 結案結果代碼
+ * @returns {string} emoji 圖示
+ */
+export const getResultIcon = (resultType) => {
+  return resultConfig[resultType]?.icon || '❓'
+}
+
 // ==================== Composable Hook ====================
 export function useTicketConfig() {
   return {
     priorityConfig,
     statusConfig,
+    resultConfig,
     issueTypeOptions,
     getPriorityTag,
     getStatusTag,
@@ -148,6 +202,8 @@ export function useTicketConfig() {
     getStatusText,
     getPriorityIcon,
     getStatusIcon,
+    getResultText,
+    getResultIcon,
   }
 }
 

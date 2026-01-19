@@ -54,6 +54,11 @@ export function usePagination(sourceList, options = {}) {
     }
   })
 
+  // ★ 修復：當 pageSize 變更時，強制回到第一頁
+  watch(pageSize, () => {
+    currentPage.value = 1
+  })
+
   // 跳轉到指定頁
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages.value) {

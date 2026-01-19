@@ -9,6 +9,9 @@ import com.example.backend.repository.maintenance.MaintenanceStaffRepository;
 import com.example.backend.repository.spot.RentalSpotRepository;
 import com.example.backend.repository.spot.SeatRepository; 
 import com.example.backend.model.spot.Seat;
+import com.example.backend.model.maintenance.MaintenanceLog;
+import com.example.backend.repository.maintenance.MaintenanceLogRepository;
+import com.example.backend.dto.maintenance.MaintenanceLogResponseDto;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,13 +66,18 @@ public class MaintenanceInformationService {
     //新增租借點 Repository，用來驗證 spotId 是否存在
     private final RentalSpotRepository rentalSpotRepo;
     private final SeatRepository seatRepo;
+    private final MaintenanceLogRepository logRepo;
 
     public MaintenanceInformationService(MaintenanceInformationRepository mtifRepo,
-                                         MaintenanceStaffRepository staffRepo,RentalSpotRepository rentalSpotRepo,SeatRepository seatRepo) {
+                                         MaintenanceStaffRepository staffRepo,
+                                         RentalSpotRepository rentalSpotRepo,
+                                         SeatRepository seatRepo,
+                                         MaintenanceLogRepository logRepo) {
         this.mtifRepo = mtifRepo;
         this.staffRepo = staffRepo;
         this.rentalSpotRepo = rentalSpotRepo;
         this.seatRepo = seatRepo;
+        this.logRepo = logRepo;
     }
 
     //1.取得所有椅子
@@ -97,6 +105,7 @@ public class MaintenanceInformationService {
 
     }
 
+    // ★ 問題B修復：移除 filter，返回所有 spot（前端負責禁用非營運中）
     public List<SpotOptionDto> getSpotOptions(){
         return rentalSpotRepo.findAll()
                 .stream()
@@ -107,7 +116,7 @@ public class MaintenanceInformationService {
                         spot.getSpotAddress(),
                         spot.getSpotStatus()
                 ))
-                .filter(s ->SPOT_STATUS_OPERATIONAL.equals(s.getSpotStatus()))
+                // .filter(s ->SPOT_STATUS_OPERATIONAL.equals(s.getSpotStatus())) // 移除此行
                 .sorted((a, b) -> Integer.compare(a.getSpotId(), b.getSpotId()))
                 .toList();
     }
@@ -154,7 +163,15 @@ public class MaintenanceInformationService {
         mtif.setResultType(null);
         mtif.setResolveNote(null);
 
-        return mtifRepo.save(mtif);
+        MaintenanceInformation saved = mtifRepo.save(mtif);
+        
+        // ★ 記錄工單建立歷程
+        String operator = "系統管理員"; // 實際應從 Spring Security 取得當前使用者
+        String comment = String.format("建立工單 | 類型: %s | 優先權: %s", 
+                                       saved.getIssueType(), saved.getIssuePriority());
+        saveLog(saved, operator, "CREATED", comment);
+        
+        return saved;
     }
 
     public MaintenanceInformation updateTicket(MaintenanceInformation mtif) {
@@ -226,6 +243,10 @@ public class MaintenanceInformationService {
         
 
         mtifRepo.save(mtif);
+        
+        // ★ 記錄取消歷程
+        saveLog(mtif, "系統管理員", "CANCELLED", "取消原因: " + 
+                (isBlank(cancelReason) ? "未提供" : cancelReason));
     }
 
     // ============ 查詢 ============
@@ -288,6 +309,13 @@ public class MaintenanceInformationService {
         }
 
         mtifRepo.save(mtif);
+        
+        // ★ 記錄指派歷程
+        if (staffId != null) {
+            MaintenanceStaff staff = staffRepo.findById(staffId).orElse(null);
+            String staffName = (staff != null) ? staff.getStaffName() : "未知";
+            saveLog(mtif, "系統管理員", "ASSIGNED", "指派給維修人員: " + staffName);
+        }
     }
 
     /**
@@ -336,6 +364,11 @@ public class MaintenanceInformationService {
       
             }
         mtifRepo.save(mtif); // 更新工單狀態
+        
+        // ★ 記錄開始維修歷程
+        MaintenanceStaff staff = staffRepo.findById(mtif.getAssignedStaffId()).orElse(null);
+        String staffName = (staff != null) ? staff.getStaffName() : "未知";
+        saveLog(mtif, staffName, "STARTED", "開始進行維修作業");
     }
 
 
@@ -379,6 +412,13 @@ public class MaintenanceInformationService {
         mtif.setResolveNote(resolveNote);
         mtif.setIssueStatus(STATUS_RESOLVED);
         mtifRepo.save(mtif); // 先存檔，確保這張單已標記完成。
+        
+        // ★ 記錄結案歷程
+        MaintenanceStaff staff = staffRepo.findById(mtif.getAssignedStaffId()).orElse(null);
+        String staffName = (staff != null) ? staff.getStaffName() : "未知";
+        String comment = String.format("維修完成 | 結果: %s | 備註: %s", 
+                                       resultType, resolveNote != null ? resolveNote : "無");
+        saveLog(mtif, staffName, "RESOLVED", comment);
 
         // 定義哪些狀態算是「佔用中/未完成」
         List<String> activeStatuses = Arrays.asList(STATUS_REPORTED, STATUS_ASSIGNED, STATUS_UNDER_MAINTENANCE);
@@ -465,6 +505,51 @@ public class MaintenanceInformationService {
         if (isBlank(priority)) return false;
         return Arrays.asList(PRIORITY_LOW, PRIORITY_NORMAL, PRIORITY_HIGH, PRIORITY_URGENT)
                      .contains(priority);
+    }
+
+    /**
+     * 統一記錄工單歷程
+     * @param ticket   工單物件
+     * @param operator 操作者 (員工姓名或帳號)
+     * @param action   動作代號 (CREATED, ASSIGNED, STARTED, RESOLVED, CANCELLED, URGENT)
+     * @param comment  備註說明 (可為 null)
+     */
+    private void saveLog(MaintenanceInformation ticket, String operator, String action, String comment) {
+        if (ticket == null || isBlank(operator) || isBlank(action)) {
+            return; // 防禦性檢查，避免記錄空白資料
+        }
+        
+        MaintenanceLog log = new MaintenanceLog(ticket, operator.trim(), action.trim(), comment);
+        logRepo.save(log);
+    }
+
+    /**
+     * 取得指定工單的完整歷程記錄 (按時間倒序)
+     * @param ticketId 工單 ID
+     * @return DTO List (已格式化時間、去除敏感資訊)
+     */
+    @Transactional(readOnly = true)
+    public List<MaintenanceLogResponseDto> getTicketLogs(Integer ticketId) {
+        if (ticketId == null) {
+            throw new IllegalArgumentException("ticketId 不可為空");
+        }
+        
+        // 確認工單存在
+        if (!mtifRepo.existsById(ticketId)) {
+            throw new IllegalArgumentException("找不到指定的工單，ticketId = " + ticketId);
+        }
+        
+        List<MaintenanceLog> logs = logRepo.findByTicketTicketIdOrderByCreatedAtDesc(ticketId);
+        
+        return logs.stream()
+                   .map(log -> new MaintenanceLogResponseDto(
+                       log.getLogId(),
+                       log.getOperator(),
+                       log.getAction(),
+                       log.getComment(),
+                       log.getCreatedAt()
+                   ))
+                   .toList();
     }
 
     

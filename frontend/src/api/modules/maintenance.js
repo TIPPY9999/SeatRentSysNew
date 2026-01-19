@@ -14,6 +14,13 @@ export const getAllStaff = () => {
 }
 
 /**
+ * ★ Bug2 修復：取得啟用中的維護人員（建立工單用）
+ */
+export const getActiveStaff = () => {
+  return http.get('/maintenance/staff/active')
+}
+
+/**
  * 取得單一維護人員
  * @param {number} id - 人員 ID
  */
@@ -94,6 +101,14 @@ export const getHistoryTickets = () => {
  */
 export const getTicketById = (id) => {
   return http.get(`/maintenance/tickets/${id}`)
+}
+
+/**
+ * ★ C) 新增：取得工單歷程記錄
+ * @param {number} id - 工單 ID
+ */
+export const getTicketLogs = (id) => {
+  return http.get(`/maintenance/tickets/${id}/logs`)
 }
 
 /**
@@ -246,6 +261,7 @@ export const toggleSchedule = (id) => {
 export default {
   // Staff
   getAllStaff,
+  getActiveStaff, // ★ 修復：加入 getActiveStaff
   getStaffById,
   getInactiveStaff,
   createStaff,
@@ -257,6 +273,7 @@ export default {
   getActiveTickets,
   getHistoryTickets,
   getTicketById,
+  getTicketLogs, // ★ (1A) 修復：加入 getTicketLogs
   getTicketsBySpot,
   createTicket,
   updateTicket,

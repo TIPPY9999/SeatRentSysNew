@@ -5,6 +5,7 @@ import Swal from 'sweetalert2'
 import { useTicketConfig } from '@/composables/maintenance/useTicketConfig'
 import { usePagination } from '@/composables/maintenance/usePagination'
 import TicketCharts from '@/components/maintenance/TicketCharts.vue'
+import TicketTimeline from '@/components/maintenance/TicketTimeline.vue'
 
 const props = defineProps({ historyMode: Boolean })
 const tickets = ref([])
@@ -12,12 +13,46 @@ const filters = reactive({ keyword: '', priority: '', status: '' })
 const loading = ref(false)
 const pageVisible = ref(false)
 
+// 控制 LOG 彈窗的變數
+const logDialogVisible = ref(false)
+const currentLogTicketId = ref(0)
+
+const openLogDialog = (id) => {
+  currentLogTicketId.value = id
+  logDialogVisible.value = true
+}
+
+// ★ (2A) 新增：判斷工單是否可編輯
+const EDITABLE_STATUSES = ['REPORTED', 'ASSIGNED']
+const canEdit = (row) => EDITABLE_STATUSES.includes(row.issueStatus)
+
+// 提示不可編輯原因
+const getEditTooltip = (row) => {
+  if (canEdit(row)) {
+    return '編輯工單'
+  }
+  const statusName = getStatusText(row.issueStatus)
+  return `狀態為「${statusName}」不可編輯（僅 REPORTED/ASSIGNED 可編輯）`
+}
+
 // 控制結案彈窗
 const showResolveDialog = ref(false)
 const resolveForm = reactive({ ticketId: 0, resultType: 'FIXED', resolveNote: '' })
 
 // 使用共用 composables
-const { priorityConfig, statusConfig, getPriorityTag, getStatusTag } = useTicketConfig()
+const { 
+  priorityConfig, 
+  statusConfig, 
+  resultConfig,
+  getPriorityTag, 
+  getStatusTag, 
+  getPriorityText, 
+  getStatusText, 
+  getPriorityIcon, 
+  getStatusIcon,
+  getResultText,
+  getResultIcon
+} = useTicketConfig()
 
 // 向後相容：保留原有變數名稱 (供模板使用)
 const priorityText = Object.fromEntries(Object.entries(priorityConfig).map(([k, v]) => [k, v.text]))
@@ -174,13 +209,6 @@ const openResolveDialog = (id) => {
 
 // 送出結案
 const submitResolve = async () => {
-  const resultConfig = {
-    FIXED: { icon: '✅', text: '維修成功', color: '#67c23a' },
-    NOT_FIXABLE: { icon: '❌', text: '無法修復', color: '#f56c6c' },
-    NO_ISSUE: { icon: '✔️', text: '無問題', color: '#909399' },
-    OTHER: { icon: '📋', text: '其他', color: '#e6a23c' },
-  }
-
   try {
     await maintenanceApi.resolveTicket(
       resolveForm.ticketId,
@@ -228,12 +256,29 @@ const viewTicketDetail = (row) => {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div style="padding: 14px; background: #ecf5ff; border-radius: 10px; text-align: center;">
               <p style="margin: 0 0 4px; color: #909399; font-size: 12px;">優先級</p>
-              <p style="margin: 0; font-size: 20px;">${priorityIcon[row.issuePriority]} ${priorityText[row.issuePriority]}</p>
+              <p style="margin: 0; font-size: 20px;">${getPriorityIcon(row.issuePriority)} ${getPriorityText(row.issuePriority)}</p>
             </div>
             <div style="padding: 14px; background: #f0f9eb; border-radius: 10px; text-align: center;">
               <p style="margin: 0 0 4px; color: #909399; font-size: 12px;">狀態</p>
-              <p style="margin: 0; font-size: 20px;">${statusIcon[row.issueStatus]} ${statusText[row.issueStatus]}</p>
+              <p style="margin: 0; font-size: 20px;">${getStatusIcon(row.issueStatus)} ${getStatusText(row.issueStatus)}</p>
             </div>
+          </div>
+          
+          <!-- ★ B) 新增：LOG 指示區 -->
+          <div style="margin-top: 8px; padding: 14px; background: linear-gradient(135deg, #fff5e6 0%, #ffe8cc 100%); border-radius: 10px; border-left: 4px solid #e6a23c;">
+            <p style="margin: 0 0 8px; color: #606266; font-size: 13px; display: flex; align-items: center;">
+              <span style="font-size: 18px; margin-right: 6px;">📜</span>
+              <strong>歷程記錄</strong>
+            </p>
+            <p style="margin: 0 0 10px; color: #909399; font-size: 12px;">查看工單的完整生命週期與操作紀錄</p>
+            <button 
+              id="btn-open-log" 
+              style="width: 100%; padding: 10px; background: #e6a23c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s;"
+              onmouseover="this.style.background='#d9940d'"
+              onmouseout="this.style.background='#e6a23c'"
+            >
+              <i class="fas fa-history" style="margin-right: 6px;"></i>查看歷程
+            </button>
           </div>
         </div>
       </div>
@@ -243,6 +288,16 @@ const viewTicketDetail = (row) => {
     showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
     hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' },
     width: 480,
+    // ★ B) 綁定按鈕事件
+    didOpen: () => {
+      const btn = document.getElementById('btn-open-log')
+      if (btn) {
+        btn.addEventListener('click', () => {
+          Swal.close()
+          openLogDialog(row.ticketId)
+        })
+      }
+    },
   })
 }
 
@@ -473,6 +528,20 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
+                <el-table-column label="維修人員" width="120" align="center">
+                  <template #default="{ row }">
+                    <div v-if="row.assignedStaff">
+                      <el-tag effect="plain" type="info" round size="small">
+                        <i class="fas fa-user-check mr-1"></i>
+                        {{ row.assignedStaff.staffName }}
+                      </el-tag>
+                    </div>
+                    <div v-else>
+                      <span style="color: #909399; font-size: 12px">- 未指派 -</span>
+                    </div>
+                  </template>
+                </el-table-column>
+
                 <el-table-column prop="issueStatus" label="狀態" width="130" align="center">
                   <template #default="{ row }">
                     <el-tag :type="getStatusTag(row.issueStatus)" effect="light" class="status-tag">
@@ -481,13 +550,7 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column
-                  v-if="!historyMode"
-                  label="操作"
-                  width="200"
-                  align="center"
-                  fixed="right"
-                >
+                <el-table-column label="操作" width="240" align="center" fixed="right">
                   <template #default="{ row }">
                     <div class="action-buttons">
                       <el-tooltip content="查看詳情" placement="top">
@@ -502,10 +565,24 @@ onMounted(() => {
                         </el-button>
                       </el-tooltip>
 
-                      <el-tooltip content="編輯工單" placement="top">
+                      <el-tooltip content="查看歷程" placement="top">
+                        <el-button
+                          type="warning"
+                          size="small"
+                          circle
+                          @click="openLogDialog(row.ticketId)"
+                          class="action-btn-item"
+                        >
+                          <i class="fas fa-history"></i>
+                        </el-button>
+                      </el-tooltip>
+
+                      <!-- ★ (2A) 修復：編輯按鈕加入 disabled 和動態 tooltip -->
+                      <el-tooltip v-if="!historyMode" :content="getEditTooltip(row)" placement="top">
                         <el-button
                           size="small"
                           circle
+                          :disabled="!canEdit(row)"
                           @click="$router.push(`/admin/mtif-form/${row.ticketId}`)"
                           class="action-btn-item"
                         >
@@ -514,7 +591,7 @@ onMounted(() => {
                       </el-tooltip>
 
                       <el-tooltip
-                        v-if="row.issueStatus === 'ASSIGNED'"
+                        v-if="!historyMode && row.issueStatus === 'ASSIGNED'"
                         content="開始維修"
                         placement="top"
                       >
@@ -530,7 +607,7 @@ onMounted(() => {
                       </el-tooltip>
 
                       <el-tooltip
-                        v-if="row.issueStatus === 'UNDER_MAINTENANCE'"
+                        v-if="!historyMode && row.issueStatus === 'UNDER_MAINTENANCE'"
                         content="結案"
                         placement="top"
                       >
@@ -546,7 +623,7 @@ onMounted(() => {
                       </el-tooltip>
 
                       <el-tooltip
-                        v-if="!['RESOLVED', 'CANCELLED'].includes(row.issueStatus)"
+                        v-if="!historyMode && !['RESOLVED', 'CANCELLED'].includes(row.issueStatus)"
                         content="取消工單"
                         placement="top"
                       >
@@ -580,7 +657,8 @@ onMounted(() => {
                 </template>
               </el-table>
 
-              <div class="pagination-wrapper" v-if="showPagination">
+              <!-- ★ 問題C修復：v-if 改為 v-show，避免 pageSize 變大時元件被銷毀 -->
+              <div class="pagination-wrapper" v-show="paginationTotal > 0">
                 <el-pagination
                   v-model:current-page="currentPage"
                   v-model:page-size="pageSize"
@@ -604,6 +682,20 @@ onMounted(() => {
       </div>
     </section>
 
+    <!-- ★ A) 新增：Log Dialog（查看工單歷程） -->
+    <el-dialog
+      v-model="logDialogVisible"
+      :title="`工單 #${currentLogTicketId}｜歷程`"
+      width="760px"
+      destroy-on-close
+    >
+      <TicketTimeline
+        v-if="currentLogTicketId"
+        :ticketId="currentLogTicketId"
+      />
+    </el-dialog>
+
+    <!-- 原有的 Resolve Dialog -->
     <el-dialog
       v-model="showResolveDialog"
       title=""
@@ -623,12 +715,7 @@ onMounted(() => {
         <el-form-item label="維修結果">
           <div class="result-cards">
             <div
-              v-for="(config, key) in {
-                FIXED: { icon: '✅', text: '維修成功', color: '#67c23a' },
-                NOT_FIXABLE: { icon: '❌', text: '無法修復', color: '#f56c6c' },
-                NO_ISSUE: { icon: '✔️', text: '無問題', color: '#909399' },
-                OTHER: { icon: '📋', text: '其他', color: '#e6a23c' },
-              }"
+              v-for="(config, key) in resultConfig"
               :key="key"
               class="result-card"
               :class="{ active: resolveForm.resultType === key }"
@@ -901,6 +988,14 @@ onMounted(() => {
 
 .id-tag {
   font-weight: 600;
+}
+
+/* ID 淡化顯示 */
+.id-tag-subtle {
+  font-size: 12px;
+  color: #c0c4cc;
+  font-weight: 400;
+  font-family: 'Courier New', monospace;
 }
 
 /* 維修目標欄位樣式 */

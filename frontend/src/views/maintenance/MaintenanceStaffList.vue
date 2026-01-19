@@ -154,8 +154,11 @@ const closeTransferDialog = () => {
 
 const filteredList = computed(() => {
   const key = searchText.value.trim().toLowerCase()
-  if (!key) return staffList.value
-  return staffList.value.filter(
+  // ★ 修正：只顯示啟用中的人員 (isActive = true)
+  const activeStaff = staffList.value.filter(s => s.isActive === true)
+  
+  if (!key) return activeStaff
+  return activeStaff.filter(
     (s) =>
       (s.staffName || '').toLowerCase().includes(key) ||
       (s.staffCompany || '').toLowerCase().includes(key) ||
@@ -183,8 +186,34 @@ const formatDate = (row, column, cellValue) => {
   return new Date(cellValue).toLocaleDateString('zh-TW')
 }
 
-// 快速檢視人員詳情
-const viewDetail = (row) => {
+// 快速檢視人員詳情（增強版）
+const viewDetail = async (row) => {
+  // ★ 取得統計資料
+  let currentTasks = 0
+  let completedTasks = 0
+  let loadingStats = true
+  
+  try {
+    const res = await maintenanceApi.getAllTickets()
+    const allTickets = res.data || []
+    
+    // 當前進行中的工單
+    currentTasks = allTickets.filter(t => 
+      t.assignedStaffId === row.staffId && 
+      t.issueStatus === 'UNDER_MAINTENANCE'
+    ).length
+    
+    // 已完成的工單
+    completedTasks = allTickets.filter(t => 
+      t.assignedStaffId === row.staffId && 
+      t.issueStatus === 'RESOLVED'
+    ).length
+    
+    loadingStats = false
+  } catch {
+    loadingStats = false
+  }
+  
   Swal.fire({
     title: `<div style="display: flex; align-items: center; gap: 12px;">
       <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; font-weight: bold;">
@@ -195,6 +224,18 @@ const viewDetail = (row) => {
     html: `
       <div style="text-align: left; margin-top: 20px;">
         <div style="display: grid; gap: 12px;">
+          <!-- ★ 統計卡片 -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
+            <div style="padding: 16px; background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%); border-radius: 10px; text-align: center; color: white;">
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;">當前任務</p>
+              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${currentTasks}</p>
+            </div>
+            <div style="padding: 16px; background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); border-radius: 10px; text-align: center; color: white;">
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;">已完成</p>
+              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${completedTasks}</p>
+            </div>
+          </div>
+          
           <div style="padding: 14px; background: linear-gradient(135deg, #f0f9eb 0%, #e1f3d8 100%); border-radius: 10px; border-left: 4px solid #67c23a;">
             <p style="margin: 0; font-size: 12px; color: #909399;">所屬公司</p>
             <p style="margin: 4px 0 0; font-size: 15px; color: #303133; font-weight: 500;">
@@ -230,7 +271,7 @@ const viewDetail = (row) => {
     confirmButtonColor: '#409eff',
     showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
     hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' },
-    width: 480,
+    width: 520,
   }).then((result) => {
     if (result.isConfirmed) {
       router.push(`/admin/staff-form/${row.staffId}`)

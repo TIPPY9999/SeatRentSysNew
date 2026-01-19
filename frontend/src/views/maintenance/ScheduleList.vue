@@ -98,13 +98,54 @@ watch(searchText, () => resetPagination())
 const handleCreate = () => router.push('/admin/maintenance/schedule/create')
 const handleEdit = (row) => router.push(`/admin/maintenance/schedule/edit/${row.scheduleId}`)
 
-const handleToggle = async (row) => {
+// ★ Bug1 修復：改為 before-change 模式，確認成功才切換
+const handleToggleConfirm = async (row) => {
   const action = row.isActive ? '停用' : '啟用'
+  
+  const result = await Swal.fire({
+    title: `確定要${action}此排程嗎？`,
+    html: `
+      <div style="text-align: center;">
+        <p>排程：<b style="color: ${row.isActive ? '#f56c6c' : '#67c23a'}">${row.title}</b></p>
+        <p style="color: #909399; font-size: 13px;">${row.isActive ? '停用後將不會自動執行' : '啟用後將恢復自動執行'}</p>
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: row.isActive ? '#f56c6c' : '#67c23a',
+    confirmButtonText: `確認${action}`,
+    cancelButtonText: '取消',
+  })
+
+  if (!result.isConfirmed) {
+    return false // 返回 false，switch 不會切換
+  }
+
   try {
     await maintenanceApi.toggleSchedule(row.scheduleId)
-    Swal.fire({ icon: 'success', title: `已${action}`, timer: 1000, showConfirmButton: false })
-  } catch {
-    row.isActive = !row.isActive
+    
+    // ★ 成功後重新載入資料
+    await fetchSchedules()
+    
+    // ★ 如果是停用，提示已移到停用清單
+    if (row.isActive) {
+      await Swal.fire({
+        icon: 'success',
+        title: `已${action}`,
+        html: '<p style="color: #909399; font-size: 13px;">排程已移至「已停用」清單</p>',
+        timer: 1500,
+        showConfirmButton: false
+      })
+    } else {
+      await Swal.fire({ icon: 'success', title: `已${action}`, timer: 1000, showConfirmButton: false })
+    }
+    
+    return true // 返回 true，讓 switch 切換
+  } catch (error) {
+    console.error('Toggle failed:', error)
+    const errorMsg = error?.response?.data?.message || `${action}失敗，請稍後再試`
+    Swal.fire('錯誤', errorMsg, 'error')
+    return false // 失敗不切換
   }
 }
 
@@ -326,6 +367,16 @@ onMounted(fetchSchedules)
                         </template>
                       </el-table-column>
 
+                      <el-table-column label="負責人員" width="100" align="center">
+                        <template #default="{ row }">
+                          <el-tag v-if="row.assignedStaffId" type="success" size="small" effect="plain">
+                            <i class="fas fa-user mr-1"></i>
+                            {{ row.assignedStaffName || `#${row.assignedStaffId}` }}
+                          </el-tag>
+                          <span v-else style="color: #909399; font-size: 12px;">未指派</span>
+                        </template>
+                      </el-table-column>
+
                       <el-table-column label="下次執行" width="150">
                         <template #default="{ row }">
                           <div class="next-exec-cell">
@@ -345,10 +396,10 @@ onMounted(fetchSchedules)
                       <el-table-column label="狀態" width="80" align="center">
                         <template #default="{ row }">
                           <el-switch
-                            v-model="row.isActive"
+                            :model-value="row.isActive"
                             active-color="#67c23a"
                             inactive-color="#dcdfe6"
-                            @change="handleToggle(row)"
+                            :before-change="() => handleToggleConfirm(row)"
                           />
                         </template>
                       </el-table-column>

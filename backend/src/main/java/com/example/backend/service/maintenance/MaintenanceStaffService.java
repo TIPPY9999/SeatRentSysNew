@@ -107,6 +107,14 @@ public class MaintenanceStaffService {
     return maintenanceStaffResponseDto(saved);
 }
 
+    // ★ Bug2 修復：新增取得啟用人員的方法
+    public List<MaintenanceStaffResponseDto> getActiveStaff() {
+        List<MaintenanceStaff> activeStaff = staffRepo.findByIsActive(true);
+        return activeStaff.stream()
+                .map(this::maintenanceStaffResponseDto)
+                .collect(Collectors.toList());
+    }
+
     public void deleteStaff(int staffId) {
         MaintenanceStaff existing = getRequiredStaff(staffId);
         if (Boolean.FALSE.equals(existing.getIsActive())) {

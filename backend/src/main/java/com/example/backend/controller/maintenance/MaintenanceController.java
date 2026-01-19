@@ -1,6 +1,7 @@
 package com.example.backend.controller.maintenance;
 
 import com.example.backend.dto.maintenance.SpotOptionDto;
+import com.example.backend.dto.maintenance.MaintenanceLogResponseDto;
 import com.example.backend.model.maintenance.MaintenanceInformation;
 import com.example.backend.model.maintenance.MaintenanceStaff;
 import com.example.backend.model.spot.Seat;
@@ -36,6 +37,13 @@ public class MaintenanceController {
 public List<MaintenanceStaffResponseDto> getAllStaff() {
     return staffService.getAllStaff();
 }
+
+    // 修復：新增取得啟用人員 API
+    @GetMapping("/staff/active")
+    public List<MaintenanceStaffResponseDto> getActiveStaff() {
+        return staffService.getActiveStaff();
+    }
+
     // 取得單一維護人員詳情
     @GetMapping("/staff/{id}")
     public MaintenanceStaffResponseDto getStaffById(@PathVariable Integer id) {
@@ -171,6 +179,20 @@ public List<MaintenanceStaffResponseDto> getAllStaff() {
     @GetMapping("/seats/spot/{spotId}")
     public List<Seat> getSeatsBySpot(@PathVariable Integer spotId) {
         return mtifService.getSeatsBySpot(spotId);
+    }
+
+    // ================== 工單歷程 (Timeline / Audit Log) ==================
+
+    /**
+     * 取得指定工單的完整歷程記錄
+     * GET /api/maintenance/tickets/{id}/logs
+     * 
+     * @param id 工單 ID
+     * @return 歷程記錄列表 (按時間倒序)
+     */
+    @GetMapping("/tickets/{id}/logs")
+    public List<MaintenanceLogResponseDto> getTicketLogs(@PathVariable Integer id) {
+        return mtifService.getTicketLogs(id);
     }
 
 }
