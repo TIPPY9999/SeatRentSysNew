@@ -1,12 +1,15 @@
 package com.example.backend.controller.maintenance;
 
 import com.example.backend.dto.maintenance.SpotOptionDto;
+import com.example.backend.dto.maintenance.MaintenanceLogResponseDto;
 import com.example.backend.model.maintenance.MaintenanceInformation;
 import com.example.backend.model.maintenance.MaintenanceStaff;
+import com.example.backend.model.spot.Seat;
 import com.example.backend.service.maintenance.MaintenanceInformationService;
 import com.example.backend.service.maintenance.MaintenanceStaffService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import com.example.backend.dto.maintenance.MaintenanceStaffResponseDto;
 
 import java.util.List;
 import java.util.Map;
@@ -29,30 +32,47 @@ public class MaintenanceController {
 
     // ================== 維護人員 (Staff) ==================
 
-    // 取得所有維護人員 (前端下拉選單用)
+    // 取得所有維護人員
     @GetMapping("/staff")
-    public List<MaintenanceStaff> getAllStaff() {
-        return staffService.getAllStaff();
+public List<MaintenanceStaffResponseDto> getAllStaff() {
+    return staffService.getAllStaff();
+}
+
+    // 修復：新增取得啟用人員 API
+    @GetMapping("/staff/active")
+    public List<MaintenanceStaffResponseDto> getActiveStaff() {
+        return staffService.getActiveStaff();
     }
 
-    // ★ 新增：建立維護人員
+    // 取得單一維護人員詳情
+    @GetMapping("/staff/{id}")
+    public MaintenanceStaffResponseDto getStaffById(@PathVariable Integer id) {
+        return staffService.getStaffById(id);
+    }
+
+    //新增維護人員
     @PostMapping("/staff")
-    public MaintenanceStaff createStaff(@RequestBody MaintenanceStaff staff) {
+    public MaintenanceStaffResponseDto createStaff(@RequestBody MaintenanceStaff staff) {
         return staffService.createStaff(staff);
     }
 
-    // ★ 新增：更新維護人員資料
+    //更新維護人員
     @PutMapping("/staff/{id}")
-    public MaintenanceStaff updateStaff(@PathVariable Integer id, @RequestBody MaintenanceStaff staff) {
-        // 確保路徑上的 ID 跟物件裡的 ID 一樣，避免改錯人
-        staff.setStaffId(id);
-        return staffService.updateStaff(staff);
+    public MaintenanceStaffResponseDto updateStaff(@PathVariable Integer id,
+                                                @RequestBody MaintenanceStaff staff) {
+        return staffService.updateStaff(id, staff);
     }
 
-    // ★ 新增：刪除維護人員 (軟刪除)
+    //刪除維護人員 (實際上是停用)
     @DeleteMapping("/staff/{id}")
     public void deleteStaff(@PathVariable Integer id) {
         staffService.deleteStaff(id);
+    }
+
+    // 查詢已停用的維護人員 (歷史紀錄用)
+    @GetMapping("/staff/inactive")
+    public List<MaintenanceStaff> getInactiveStaff() {
+        return staffService.getInactiveStaff();
     }
 
     // ================== 工單查詢 (Read) ==================
@@ -104,20 +124,7 @@ public class MaintenanceController {
         mtif.setTicketId(id);
         return mtifService.updateTicket(mtif);
     }
-
-
-    // 1. 依 ID 查詢單一維護人員 (編輯表單用)
-    @GetMapping("/staff/{id}")
-    public MaintenanceStaff getStaffById(@PathVariable Integer id) {
-        return staffService.getRequiredStaff(id);
-    }
-
-    // 2. 查詢已停用的維護人員 (歷史紀錄用)
-    @GetMapping("/staff/inactive")
-    public List<MaintenanceStaff> getInactiveStaff() {
-        return staffService.getInactiveStaff();
-    }
-
+ 
     // ================== 流程控制 (State Changes) ==================
 
     // 8. 指派人員
@@ -151,4 +158,41 @@ public class MaintenanceController {
         String reason = body.get("reason");
         mtifService.cancelTicket(id, reason);
     }
+
+    //轉移工單並刪除人員
+    @PostMapping("/staff/transfer-and-delete")
+    public void transferAndDelete(@RequestBody Map<String, Integer> body) {
+        Integer targetStaffId = body.get("targetStaffId");
+        Integer deleteStaffId = body.get("deleteStaffId");
+        staffService.transferAndDelete(targetStaffId, deleteStaffId);
+    }
+
+
+    //============ 椅子相關 API ============
+    // 1. 取得所有椅子
+    @GetMapping("/seats")
+    public List<Seat> getAllSeats() {
+        return mtifService.getAllSeats();
+    }
+
+    // 2. 依照 SpotId 篩選椅子 (選了機台後，只顯示該機台的椅子)
+    @GetMapping("/seats/spot/{spotId}")
+    public List<Seat> getSeatsBySpot(@PathVariable Integer spotId) {
+        return mtifService.getSeatsBySpot(spotId);
+    }
+
+    // ================== 工單歷程 (Timeline / Audit Log) ==================
+
+    /**
+     * 取得指定工單的完整歷程記錄
+     * GET /api/maintenance/tickets/{id}/logs
+     * 
+     * @param id 工單 ID
+     * @return 歷程記錄列表 (按時間倒序)
+     */
+    @GetMapping("/tickets/{id}/logs")
+    public List<MaintenanceLogResponseDto> getTicketLogs(@PathVariable Integer id) {
+        return mtifService.getTicketLogs(id);
+    }
+
 }

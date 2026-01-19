@@ -15,6 +15,29 @@ public interface MaintenanceInformationRepository extends JpaRepository<Maintena
     // 用於 In List 查詢 (Active / History)
     List<MaintenanceInformation> findByIssueStatusInOrderByReportedAtDescTicketIdAsc(List<String> issueStatusList);
 
-    // ★ 新增：查詢全部並排序 (解決 getAllTickets 沒排序的問題)
+    // 查詢全部並排序 (解決 getAllTickets 沒排序的問題)
     List<MaintenanceInformation> findAllByOrderByReportedAtDescTicketIdAsc();
+
+    //讓我們可以查某張椅子的所有工單
+    List<MaintenanceInformation> findBySeatsIdOrderByReportedAtDescTicketIdAsc(Integer seatsId);
+
+    //用於轉移工單
+    // 在 interface 裡面新增這行
+List<MaintenanceInformation> findByAssignedStaffIdAndIssueStatusIn(Integer assignedStaffId, List<String> issueStatuses);
+
+boolean existsByAssignedStaffIdAndIssueStatusIn(Integer assignedStaffId, List<String> statuses);
+
+    // ========== 防爆單檢查 (排程自動開單用) ==========
+    
+    /**
+     * 檢查某機台是否有未結案工單 (SPOT)
+     */
+    boolean existsBySpotIdAndSeatsIdIsNullAndIssueStatusIn(Integer spotId, List<String> statuses);
+
+    /**
+     * 檢查某椅子是否有未結案工單 (SEAT)
+     */
+    boolean existsBySeatsIdAndIssueStatusIn(Integer seatsId, List<String> statuses);
+
+    
 }

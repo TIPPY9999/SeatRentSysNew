@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.lang.NonNull;
 
 import jakarta.annotation.PostConstruct;
 
@@ -58,7 +59,7 @@ public class WebConfig implements WebMvcConfigurer {
         // 使用計算好的絕對路徑 location，比寫死 file:./uploads/ 更安全
         if (location != null) {
             registry.addResourceHandler("/images/**")
-                    .addResourceLocations(location);
+                    .addResourceLocations(location, "file:./uploads/");
         }
     }
 

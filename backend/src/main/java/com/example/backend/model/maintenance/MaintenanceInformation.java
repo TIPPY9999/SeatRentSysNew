@@ -1,7 +1,11 @@
 package com.example.backend.model.maintenance;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 @Entity
 @Table(name = "maintenanceInformation")
@@ -12,8 +16,12 @@ public class MaintenanceInformation {
     @Column(name = "ticketId")
     private Integer ticketId;
 
-    @Column(name = "spotId", nullable = false)
+    @Column(name = "spotId")
     private Integer spotId;
+
+    //新增對應資料庫 seatsId 欄位
+    @Column(name = "seatsId")
+    private Integer seatsId;
 
     @Column(name = "issueType", nullable = false, length = 200)
     private String issueType;
@@ -29,6 +37,17 @@ public class MaintenanceInformation {
 
     @Column(name = "assignedStaffId")
     private Integer assignedStaffId;
+
+    // ★ 修正：insertable=false, updatable=false 代表這欄位只負責「讀資料」，寫入還是靠上面的 assignedStaffId
+    // ★ 修正：加上 @JsonIgnoreProperties 防止 JSON 序列化時無限迴圈
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "assignedStaffId", insertable = false, updatable = false)
+    @NotFound(action = NotFoundAction.IGNORE)
+    @JsonIgnoreProperties({"maintenanceInformations", "hibernateLazyInitializer", "handler"})
+    private MaintenanceStaff assignedStaff;
+
+
+
 
     // DB DEFAULT SYSDATETIME()：建議由 DB 產生
     @Column(name = "reportedAt", insertable = false, updatable = false)
@@ -54,6 +73,9 @@ public class MaintenanceInformation {
 
     public Integer getSpotId() { return spotId; }
     public void setSpotId(Integer spotId) { this.spotId = spotId; }
+
+    public Integer getSeatsId() { return seatsId; }
+    public void setSeatsId(Integer seatsId) { this.seatsId = seatsId;}
 
     public String getIssueType() { return issueType; }
     public void setIssueType(String issueType) { this.issueType = issueType; }
@@ -84,4 +106,14 @@ public class MaintenanceInformation {
 
     public String getResultType() { return resultType; }
     public void setResultType(String resultType) { this.resultType = resultType; }
+
+
+    // Getter & Setter
+    public MaintenanceStaff getAssignedStaff() {
+        return assignedStaff;
+    }
+
+    public void setAssignedStaff(MaintenanceStaff assignedStaff) {
+        this.assignedStaff = assignedStaff;
+    }
 }

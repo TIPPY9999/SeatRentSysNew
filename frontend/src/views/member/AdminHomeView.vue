@@ -24,7 +24,7 @@ const router = useRouter()
             <p>管理與新增會員資料</p>
           </div>
 
-          <div class="card" @click="router.push('/admin')">
+          <div class="card" @click="router.push('/admin/admins')">
             <h3>管理員管理</h3>
             <p>管理後台人員帳號</p>
           </div>
@@ -62,6 +62,14 @@ const router = useRouter()
           <div class="card" @click="router.push('/admin/coupons')">
             <h3>優惠券管理</h3>
             <p>管理優惠券與活動</p>
+          </div>
+          <div class="card" @click="router.push('/admin/payment')">
+            <h3>金流管理</h3>
+            <p>管理金流相關設定</p>
+          </div>
+           <div class="card" @click="router.push('/admin/snake-game')">
+            <h3>小遊戲</h3>
+            <p>貪吃蛇</p>
           </div>
         </div>
       </div>

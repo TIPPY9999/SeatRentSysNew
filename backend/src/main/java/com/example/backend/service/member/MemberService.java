@@ -42,6 +42,7 @@ public class MemberService {
     // 新增（InsertMember）
     public void insert(Member member) {
         validatePassword(member.getMemPassword());
+        member.setMemStatus(1);
         try {
             memberRepository.save(member);
         } catch (DataIntegrityViolationException e) {
@@ -64,5 +65,10 @@ public class MemberService {
     // 刪除（DeleteMember）
     public void deleteById(Integer memId) {
         memberRepository.deleteById(memId);
+    }
+
+    // 模糊查詢
+    public List<Member> search(String keyword) {
+        return memberRepository.findByKeyword(keyword);
     }
 }

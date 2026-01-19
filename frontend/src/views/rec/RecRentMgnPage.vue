@@ -1,14 +1,12 @@
 <script setup>
 import { ref, reactive } from "vue";
 import axios from "axios";
-import RecRentSearch from "../../components/rec/RecRentSearch.vue";
-import RecRentAdd from "../../components/rec/RecRentAdd.vue";
-import RecRentEdit from "../../components/rec/RecRentEdit.vue"; // 1. 引入 Edit 組件
-import RecRentUserOrder from "../../components/rec/RecRentUserOrder.vue";
-import RecRentUserComplete from "../../components/rec/RecRentUserComplete.vue";
+import RecRentSearch from "@/components/rec/RecRentSearch.vue";
+import RecRentAdd from "@/components/rec/RecRentAdd.vue";
+import RecRentEdit from "@/components/rec/RecRentEdit.vue"; // 1. 引入 Edit 組件
 
 // --- 1. 狀態定義 ---
-const activeView = ref("list"); // 'list', 'add', 'edit', 'order', 'complete'
+const activeView = ref("list"); // 'list', 'add', 'edit'
 const editingRent = ref(null); // Holds the data for the rent being edited
 const searchComponent = ref(null); // Ref to access the search component instance
 const API_URL = "http://localhost:8080/api/rec-rents";
@@ -86,16 +84,6 @@ const backToList = () => {
   editingRent.value = null; // Clear any editing data
   activeView.value = "list";
 };
-// 使用者下訂單列表completeOrder
-const makeOrder = () => {
-  editingRent.value = null; // Clear any editing data
-  activeView.value = "order";
-};
-// 使用者歸還列表
-const completeOrder = () => {
-  editingRent.value = null; // Clear any editing data
-  activeView.value = "complete";
-};
 </script>
 
 <template>
@@ -111,18 +99,6 @@ const completeOrder = () => {
       :class="{ active: activeView === 'add' }"
       :disabled="activeView === 'add'"
     >新增訂單</button>
-
-    <button
-      @click="makeOrder"
-      :class="{ active: activeView === 'order' }"
-      :disabled="activeView === 'order'"
-    >使用者訂單</button>
-
-    <button
-      @click="completeOrder"
-      :class="{ active: activeView === 'complete' }"
-      :disabled="activeView === 'complete'"
-    >使用者歸還</button>
 
   </div>
 
@@ -145,14 +121,6 @@ const completeOrder = () => {
           @save-rent="handleSaveRent"
           @cancel="backToList"
         />
-      </div>
-
-      <div v-if="activeView === 'order'" class="view-section">
-        <rec-rent-user-order />
-      </div>
-
-      <div v-if="activeView === 'complete'" class="view-section">
-        <rec-rent-user-complete />
       </div>
 
       <div v-if="activeView === 'list'" class="view-section">

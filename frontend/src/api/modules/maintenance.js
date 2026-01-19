@@ -14,6 +14,13 @@ export const getAllStaff = () => {
 }
 
 /**
+ * ★ Bug2 修復：取得啟用中的維護人員（建立工單用）
+ */
+export const getActiveStaff = () => {
+  return http.get('/maintenance/staff/active')
+}
+
+/**
  * 取得單一維護人員
  * @param {number} id - 人員 ID
  */
@@ -53,6 +60,18 @@ export const deleteStaff = (id) => {
   return http.delete(`/maintenance/staff/${id}`)
 }
 
+/**
+ * 轉移工單並刪除人員
+ * @param {number} targetStaffId - 接手人員 ID
+ * @param {number} deleteStaffId - 要停用的人員 ID
+ */
+export const transferAndDelete = (targetStaffId, deleteStaffId) => {
+  return http.post('/maintenance/staff/transfer-and-delete', {
+    targetStaffId,
+    deleteStaffId,
+  })
+}
+
 // ============ 工單 (Ticket) API ============
 
 /**
@@ -82,6 +101,14 @@ export const getHistoryTickets = () => {
  */
 export const getTicketById = (id) => {
   return http.get(`/maintenance/tickets/${id}`)
+}
+
+/**
+ * ★ C) 新增：取得工單歷程記錄
+ * @param {number} id - 工單 ID
+ */
+export const getTicketLogs = (id) => {
+  return http.get(`/maintenance/tickets/${id}/logs`)
 }
 
 /**
@@ -156,20 +183,97 @@ export const getAllSpots = () => {
   return http.get('/maintenance/spots')
 }
 
+// ============ 椅子 API (供工單表單使用) ============
+
+/**
+ * 取得所有椅子 (供下拉選單使用)
+ */
+export const getAllSeats = () => {
+  return http.get('/maintenance/seats')
+}
+
+/**
+ * 依據點 ID 取得椅子
+ * @param {number} spotId - 據點 ID
+ */
+export const getSeatsBySpot = (spotId) => {
+  return http.get(`/maintenance/seats/spot/${spotId}`)
+}
+
+// ============ 排程 (Schedule) API ============
+
+/**
+ * 取得所有排程
+ */
+export const getAllSchedules = () => {
+  return http.get('/maintenance/schedule')
+}
+
+/**
+ * 取得單一排程
+ * @param {number} id - 排程 ID
+ */
+export const getScheduleById = (id) => {
+  return http.get(`/maintenance/schedule/${id}`)
+}
+
+/**
+ * 取得啟用中的排程
+ */
+export const getActiveSchedules = () => {
+  return http.get('/maintenance/schedule/active')
+}
+
+/**
+ * 建立排程
+ * @param {Object} schedule - 排程資料
+ */
+export const createSchedule = (schedule) => {
+  return http.post('/maintenance/schedule', schedule)
+}
+
+/**
+ * 更新排程
+ * @param {number} id - 排程 ID
+ * @param {Object} schedule - 排程資料
+ */
+export const updateSchedule = (id, schedule) => {
+  return http.put(`/maintenance/schedule/${id}`, schedule)
+}
+
+/**
+ * 刪除排程
+ * @param {number} id - 排程 ID
+ */
+export const deleteSchedule = (id) => {
+  return http.delete(`/maintenance/schedule/${id}`)
+}
+
+/**
+ * 切換排程啟用狀態
+ * @param {number} id - 排程 ID
+ */
+export const toggleSchedule = (id) => {
+  return http.patch(`/maintenance/schedule/${id}/toggle`)
+}
+
 // 匯出所有 API 作為預設物件 (方便一次 import)
 export default {
   // Staff
   getAllStaff,
+  getActiveStaff, // ★ 修復：加入 getActiveStaff
   getStaffById,
   getInactiveStaff,
   createStaff,
   updateStaff,
   deleteStaff,
+  transferAndDelete,
   // Ticket
   getAllTickets,
   getActiveTickets,
   getHistoryTickets,
   getTicketById,
+  getTicketLogs, // ★ (1A) 修復：加入 getTicketLogs
   getTicketsBySpot,
   createTicket,
   updateTicket,
@@ -180,4 +284,15 @@ export default {
   cancelTicket,
   // Spot
   getAllSpots,
+  // Seat
+  getAllSeats,
+  getSeatsBySpot,
+  // Schedule
+  getAllSchedules,
+  getScheduleById,
+  getActiveSchedules,
+  createSchedule,
+  updateSchedule,
+  deleteSchedule,
+  toggleSchedule,
 }

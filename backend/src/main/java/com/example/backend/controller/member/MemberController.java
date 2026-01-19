@@ -87,10 +87,30 @@ public class MemberController {
         return "會員修改成功";
     }
 
-    // 刪除（對應 DeleteMember）
+    // 刪除
     @GetMapping("/delete")
     public String delete(@RequestParam Integer memId) {
         memberService.deleteById(memId);
         return "會員刪除成功（memId=" + memId + "）";
+    }
+
+    // 模糊查詢
+    @GetMapping("/search")
+    public Object search(@RequestParam String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return "請輸入搜尋關鍵字";
+        }
+        return memberService.search(keyword);
+    }
+
+    // 會員註冊
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody Member member) {
+        try {
+            memberService.insert(member);
+            return ResponseEntity.ok("註冊成功");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }
