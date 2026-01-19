@@ -1,10 +1,9 @@
-
 <script setup>
 import { ref, onMounted } from "vue";
 // 不知為啥不能使用
 // import { GmpxApiLoader, GmpxPlacePicker } from "@googlemaps/extended-component-library";
-import '@googlemaps/extended-component-library/api_loader.js';//上方套件的替代
-import '@googlemaps/extended-component-library/place_picker.js';//上方套件的替代
+import "@googlemaps/extended-component-library/api_loader.js"; //上方套件的替代
+import "@googlemaps/extended-component-library/place_picker.js"; //上方套件的替代
 import axios from "axios";
 
 // 1. ---版面狀態---
@@ -18,8 +17,6 @@ const toggleSidebar = () => {
 };
 
 // 2. ---組態設定---
-// 請將你的 API 金鑰存放在 .env 檔案中，然後使用 import.meta.env.VITE_GOOGLE_MAPS_API_KEY 來讀取
-const apiKey = "AIzaSyCu6YRYdgvvOg2aLI6K5L3R0GtnyyfRe_M"; // 記得替換成你自己的金鑰或使用環境變數
 // 地圖中心點，預設為台灣
 const center = ref({ lat: 23.973875, lng: 120.982025 });
 // 後端 API 的 URL
@@ -40,7 +37,27 @@ const infoWindow = ref({
 /**
  * 當使用者在搜尋框中選擇一個地點後觸發
  * @param {CustomEvent} event - gmpx-place-picker 發出的 gmp-placechange 事件
+ * 初始化地圖中心點，優先使用使用者當前位置
  */
+const initializeMapCenter = () => {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        // 成功獲取位置，更新地圖中心
+        center.value = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+      },
+      (error) => {
+        console.warn(`無法獲取地理位置: ${error.message}。將使用預設中心點。`);
+        // 失敗時，會自動使用已定義的預設中心點
+      }
+    );
+  } else {
+    console.warn("此瀏覽器不支援地理位置功能。將使用預設中心點。");
+  }
+};
 const onPlaceChanged = (event) => {
   const place = event.detail.place;
   if (place && place.geometry && place.geometry.location) {
@@ -51,9 +68,7 @@ const onPlaceChanged = (event) => {
   }
 };
 
-/**
- * 從後端取得所有 SPOT 點的資料
- */
+// 從後端取得所有 SPOT 點的資料
 const fetchSpots = async () => {
   try {
     const response = await axios.get(backendApiUrl);
@@ -68,15 +83,12 @@ const fetchSpots = async () => {
       },
     }));
   } catch (err) {
-    console.error("無法獲取 SPOT 點資料:", err);
-    error.value = "無法載入 SPOT 點資料，請稍後再試。";
+    console.error("無法獲取租借站點資料:", err);
+    error.value = "無法載入租借站點資料，請稍後再試。";
   }
 };
 
-/**
- * 當使用者點擊地圖上的標記時觸發
- * @param {object} spot - 被點擊的 SPOT 物件
- */
+//當使用者點擊地圖上的標記時觸發//@param {object} spot - 被點擊的 SPOT 物件
 const openInfoWindow = (spot) => {
   infoWindow.value = {
     position: spot.position,
@@ -85,33 +97,29 @@ const openInfoWindow = (spot) => {
   };
 };
 
-/**
- * 當 InfoWindow 被使用者關閉時觸發
- */
+//當 InfoWindow 被使用者關閉時觸發
+
 const closeInfoWindow = () => {
   infoWindow.value.opened = false;
 };
 
-/**
- * 處理租借按鈕點擊事件
- * @param {number} spotId - SPOT 的 ID
- */
+//處理租借按鈕點擊事件//@param {number} spotId - SPOT 的 ID
 const handleRent = (spotId) => {
   console.log(`準備租借 Spot ID: ${spotId}`);
   alert(`您點擊了租借 Spot ID: ${spotId}`);
 };
 
-/**
- * 處理歸還按鈕點擊事件
- * @param {number} spotId - SPOT 的 ID
- */
+//處理歸還按鈕點擊事件//@param {number} spotId - SPOT 的 ID
 const handleReturn = (spotId) => {
   console.log(`準備歸還 Spot ID: ${spotId}`);
   alert(`您點擊了歸還 Spot ID: ${spotId}`);
 };
 
-// 在組件掛載完成後，自動獲取 SPOT 點資料
-onMounted(fetchSpots);
+// 在組件掛載完成後，初始化地圖中心並獲取 SPOT 點資料
+onMounted(() => {
+  initializeMapCenter();
+  fetchSpots();
+});
 </script>
 
 <template>
@@ -119,15 +127,18 @@ onMounted(fetchSpots);
     <!-- 左側邊欄 -->
     <aside class="sidebar">
       <!-- 常駐會員資訊區塊 -->
-      <div class="member-profile">
-        <span class="icon-wrapper">
-          <el-icon><Avatar /></el-icon>
-        </span>
-        <span class="member-name">會員登入</span>
-      </div>
 
       <!-- 可收合的功能選單 -->
+      <span class="member-id" hidden>會員ID:{{}}</span>
       <ul class="menu-list">
+        <li class="menu-item">
+          <router-link to="/login" class="member-info" >
+            <span class="icon-wrapper">
+              <el-icon><Avatar /></el-icon>
+            </span>
+            <span class="menu-text" style="padding:18px">會員登入</span>
+          </router-link>
+        </li>
         <li class="menu-item">
           <span class="icon-wrapper">
             <el-icon><Search /></el-icon>
@@ -184,8 +195,7 @@ onMounted(fetchSpots);
     <!-- 右側地圖容器 -->
     <main class="map-container">
       <div v-if="error" class="error-message">{{ error }}</div>
-           <!-- GMAP 搜尋 (官方元件) -->
-      <gmpx-api-loader :key="apiKey"></gmpx-api-loader>
+      <!-- GMAP 搜尋 (官方元件) -->
       <div class="place-picker-container">
         <gmpx-place-picker
           placeholder="請輸入地址或地點"
