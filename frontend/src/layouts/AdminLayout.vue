@@ -2,23 +2,28 @@
 /**
  * AdminLayout.vue：AdminLTE 3 後台版型
  * [修正] 移除 lang="ts" 與型別標註，轉換為純 JS 寫法
+ * [新增] 整合 SweetAlert2 登出確認
  */
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, RouterLink, RouterView } from 'vue-router'
+// 1. 引入 SweetAlert2
+import Swal from 'sweetalert2'
+import { useAdminAuthStore } from '@/stores/adminAuth'
+
+const adminAuthStore = useAdminAuthStore()
 
 const router = useRouter()
 const route = useRoute()
 
 // AdminLTE 3 必備的 Body Class
-const bodyClasses = ['hold-transition', 'sidebar-mini', 'layout-fixed']
+const bodyClasses = ['hold-transition', 'layout-fixed']
 
 onMounted(() => {
   document.body.classList.add(...bodyClasses)
 
-  // [修正] JS 環境中不需要斷言為 any
-  const win = window
-  if (win.$ && win.$.AdminLTE) {
-    win.$(document).trigger('adminlte.layout.activate')
+  const savedAdmin = localStorage.getItem('admin')
+  if (savedAdmin) {
+    adminAuthStore.setAdmin(JSON.parse(savedAdmin))
   }
 })
 
@@ -35,12 +40,43 @@ const isActiveGroup = (prefix) => {
 }
 
 /**
- * 登出功能
+ * 登出功能 (SweetAlert2 版)
  */
-const logout = () => {
-  if (confirm('確定要登出嗎？')) {
-    router.push('/login')
+const logout = async () => {
+  // 2. 跳出確認視窗
+  const result = await Swal.fire({
+    title: '確定要登出嗎？',
+    text: '登出後將無法存取後台頁面',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33', // 紅色按鈕表示警告
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '登出',
+    cancelButtonText: '取消',
+  })
+
+  // 3. 使用者按了「確定」
+  if (!result.isConfirmed) return
+
+  // ✅ 統一清除 localStorage（跟 main.js / router 守衛一致）
+  localStorage.removeItem('token')
+  localStorage.removeItem('admin')
+
+  // 清除 Pinia 管理員狀態（若有此方法）
+  if (typeof adminAuthStore.clearAdmin === 'function') {
+    adminAuthStore.clearAdmin()
   }
+
+  // 顯示成功訊息並跳轉
+  await Swal.fire({
+    title: '已登出！',
+    text: '登出成功!',
+    icon: 'success',
+    timer: 1500,
+    showConfirmButton: false,
+  })
+
+  router.push('/login')
 }
 </script>
 
@@ -73,6 +109,20 @@ const logout = () => {
       </RouterLink>
 
       <div class="sidebar">
+        <!-- 管理員資訊區塊 -->
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+          <div class="image">
+            <i class="fas fa-user-circle fa-2x text-white"></i>
+          </div>
+          <div class="info">
+            <a href="#" class="d-block text-white">
+              {{ adminAuthStore.admin.name }}
+            </a>
+            <span class="text-white-50 small">
+              {{ adminAuthStore.admin.username }}
+            </span>
+          </div>
+        </div>
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
             <li class="nav-header">據點與座位管理</li>
@@ -114,6 +164,17 @@ const logout = () => {
 
             <li class="nav-item">
               <RouterLink
+                to="/admin/admins"
+                class="nav-link"
+                :class="{ active: isActiveGroup('/admin/admins') }"
+              >
+                <i class="nav-icon fas fa-user-cog"></i>
+                <p>管理員列表</p>
+              </RouterLink>
+            </li>
+
+            <li class="nav-item">
+              <RouterLink
                 to="/admin/merchants"
                 class="nav-link"
                 :class="{ active: isActiveGroup('/admin/merchants') }"
@@ -131,6 +192,24 @@ const logout = () => {
               >
                 <i class="nav-icon fas fa-ticket-alt"></i>
                 <p>優惠券管理</p>
+              </RouterLink>
+            </li>
+            <li class="nav-item">
+              <router-link 
+              to="/admin/redemption-logs" class="nav-link" active-class="active">
+              <i class="nav-icon bi bi-file-earmark-bar-graph"></i>
+                <p>兌換紀錄報表</p>
+              </router-link>
+            </li>
+
+            <li class="nav-item">
+              <RouterLink
+                to="/admin/payment"
+                class="nav-link"
+                :class="{ active: isActiveGroup('/admin/payment') }"
+              >
+                <i class="nav-icon fas fa-credit-card"></i>
+                <p>金流管理</p>
               </RouterLink>
             </li>
 
@@ -180,11 +259,6 @@ const logout = () => {
         </div>
       </section>
     </div>
-
-    <footer class="main-footer">
-      <div class="float-right d-none d-sm-block"><b>Version</b> 1.0.0</div>
-      <strong>SeatRentSys &copy; 2025 All Rights Reserved.</strong>
-    </footer>
   </div>
 </template>
 
@@ -196,5 +270,17 @@ const logout = () => {
 .router-link-active {
   background-color: #007bff !important;
   color: #fff !important;
+}
+.user-panel .info {
+  margin-left: 8px;
+  line-height: 1.2;
+}
+.user-panel {
+  align-items: center;
+}
+.user-panel .image {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
 }
 </style>

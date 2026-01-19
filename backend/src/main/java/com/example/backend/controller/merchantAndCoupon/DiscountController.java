@@ -1,11 +1,18 @@
 package com.example.backend.controller.merchantAndCoupon;
 
+import com.example.backend.model.member.Member;
 import com.example.backend.model.merchantAndCoupon.DiscountBean;
+import com.example.backend.model.merchantAndCoupon.RedemptionLog;
 import com.example.backend.model.merchantAndCoupon.Result;
+import com.example.backend.repository.member.MemberRepository;
+import com.example.backend.repository.merchantAndCoupon.RedemptionLogRepository;
 import com.example.backend.service.merchantAndCoupon.DiscountService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import jakarta.transaction.Transactional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -15,14 +22,21 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.*;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/discounts")
+@CrossOrigin(origins = "http://localhost:5173") // 確保跨域配置正確
 public class DiscountController {
 
     @Autowired
     private DiscountService discountService;
+    @Autowired
+    private MemberRepository memberRepository; // [新增] 注入會員 Repository 用於扣點
+
+    @Autowired
+    private RedemptionLogRepository redemptionLogRepository; // 注入新的 Repo
 
     @Value("${file.upload-path:./uploads/}")
     private String uploadPath;
@@ -50,9 +64,10 @@ public class DiscountController {
                         : Paths.get(originalFilename).getFileName().toString();
 
                 String fileName = UUID.randomUUID().toString() + "_" + safeFilename;
-                
+
                 Path root = Paths.get(uploadPath).toAbsolutePath().normalize();
-                if (!Files.exists(root)) Files.createDirectories(root);
+                if (!Files.exists(root))
+                    Files.createDirectories(root);
 
                 Files.copy(file.getInputStream(), root.resolve(fileName), StandardCopyOption.REPLACE_EXISTING);
                 discount.setCouponImg(fileName);
@@ -82,7 +97,7 @@ public class DiscountController {
             return Result.error("刪除失敗：" + e.getMessage());
         }
     }
-    
+
     @PutMapping("/{id}/status")
     public Result<String> updateStatus(@PathVariable Integer id, @RequestParam String action) {
         boolean success = discountService.updateSingleStatus(id, action);
@@ -90,6 +105,69 @@ public class DiscountController {
             return Result.success(null, "狀態更新成功");
         } else {
             return Result.error("更新失敗：找不到資料、日期資料不全或指令錯誤");
+        }
+    }
+
+    @PostMapping("/redeem")
+    @Transactional // 確保 1.扣點 與 2.寫入紀錄 是一體的，要成功就一起成功
+    public Result<Map<String, Object>> redeemCoupon(@RequestBody Map<String, Object> payload) {
+        try {
+            Integer memberId = Integer.valueOf(payload.get("memberId").toString());
+            Integer couponId = Integer.valueOf(payload.get("couponId").toString());
+            String inputPasscode = payload.get("passcode").toString();
+
+            // 1. 取得優惠券資訊
+            DiscountBean coupon = discountService.getById(couponId);
+            if (coupon == null)
+                return Result.error("優惠券不存在");
+
+            // 2. 驗證核銷碼
+            if (!"1234".equals(inputPasscode))
+                return Result.error("核銷碼錯誤");
+
+            // 3. 檢查會員點數
+            Member member = memberRepository.findById(memberId)
+                    .orElseThrow(() -> new RuntimeException("找不到會員"));
+
+            if (member.getMemPoints() < coupon.getPointsRequired()) {
+                return Result.error("點數不足，無法核銷");
+            }
+
+            // 4. 【核心動作 A】扣除會員點數
+            int newPoints = member.getMemPoints() - coupon.getPointsRequired();
+            member.setMemPoints(newPoints);
+            memberRepository.save(member);
+
+            // 5. 【核心動作 B】寫入兌換紀錄 (RedemptionLog)
+            RedemptionLog log = new RedemptionLog();
+            log.setMemId(memberId);
+            log.setCouponId(couponId);
+            log.setPointsSpent(coupon.getPointsRequired());
+            log.setCouponName(coupon.getCouponName());
+            // redeemTime 會由 SQL Server 的 DEFAULT GETDATE() 自動生成
+
+            redemptionLogRepository.save(log);
+
+            return Result.success(Map.of(
+                    "currentPoints", newPoints,
+                    "couponName", coupon.getCouponName()), "核銷成功！點數已扣除。");
+
+        } catch (Exception e) {
+            return Result.error("核銷失敗：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 後台管理 API：取得所有兌換紀錄
+     * 網址: GET /api/discounts/logs
+     */
+    @GetMapping("/logs")
+    public Result<List<RedemptionLog>> getAllLogs() {
+        try {
+            List<RedemptionLog> logs = discountService.getAllRedemptionLogs();
+            return Result.success(logs, "取得紀錄成功");
+        } catch (Exception e) {
+            return Result.error("取得紀錄失敗: " + e.getMessage());
         }
     }
 }
