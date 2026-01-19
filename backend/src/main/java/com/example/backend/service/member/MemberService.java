@@ -42,6 +42,7 @@ public class MemberService {
     // 新增（InsertMember）
     public void insert(Member member) {
         validatePassword(member.getMemPassword());
+        member.setMemStatus(1);
         try {
             memberRepository.save(member);
         } catch (DataIntegrityViolationException e) {
