@@ -1,11 +1,11 @@
 <script setup>
 import { ref, reactive } from "vue";
 import axios from "axios";
-import RecRentSearch from "../../components/rec/RecRentSearch.vue";
-import RecRentAdd from "../../components/rec/RecRentAdd.vue";
-import RecRentEdit from "../../components/rec/RecRentEdit.vue"; // 1. 引入 Edit 組件
-import RecRentUserOrder from "../../components/rec/RecRentUserOrder.vue";
-import RecRentUserComplete from "../../components/rec/RecRentUserComplete.vue";
+import RecRentSearch from "@/components/rec/RecRentSearch.vue";
+import RecRentAdd from "@/components/rec/RecRentAdd.vue";
+import RecRentEdit from "@/components/rec/RecRentEdit.vue"; // 1. 引入 Edit 組件
+import RecRentUserOrder from "@/components/rec/RecRentUserOrder.vue";
+import RecRentUserComplete from "@/components/rec/RecRentUserComplete.vue";
 
 // --- 1. 狀態定義 ---
 const activeView = ref("list"); // 'list', 'add', 'edit', 'order', 'complete'
