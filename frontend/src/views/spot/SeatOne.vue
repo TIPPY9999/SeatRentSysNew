@@ -64,6 +64,11 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 
+
+// 明確定義元件名稱，方便識別與除錯
+defineOptions({
+  name: 'SeatOne'
+})
 const route = useRoute()
 const seat = ref(null)
 const loading = ref(true)
@@ -72,8 +77,8 @@ onMounted(async () => {
   const seatId = route.params.id
   if (seatId) {
     try {
-      // [修正] 加上 /api
-      const response = await axios.get('/api/seat/one', { params: { seatsId: seatId } })
+      // [修正] 改用 RESTful 風格: GET /api/seats/{id}
+      const response = await axios.get(`/api/seats/${seatId}`)
       seat.value = response.data
     } catch (error) {
       console.error('Error fetching seat:', error)

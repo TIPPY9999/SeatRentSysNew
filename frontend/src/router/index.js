@@ -117,24 +117,33 @@ const routes = [
         component: () => import('@/views/spot/SpotForm.vue'),
       },
       {
+        path: 'spot/view/:id', // 網址: /admin/spot/view/1
+        name: 'spot-view',
+        component: () => import('@/views/spot/SpotOne.vue'),
+      },
+
+      // ==========================================
+      // [整合] 座位管理模組 (Seat) - 來自組員 TXT 檔案
+      // ==========================================
+      {
         path: 'seat/list',
         name: 'seat-list',
-        component: () => import('@/views/spot/SeatList.vue'),
+        component: () => import('@/views/seat/SeatList.vue'),
       },
       {
         path: 'seat/insert',
         name: 'seat-insert',
-        component: () => import('@/views/spot/SeatInsert.vue'),
+        component: () => import('@/views/seat/SeatForm.vue'),
       },
       {
         path: 'seat/edit/:id',
         name: 'seat-edit',
-        component: () => import('@/views/spot/SeatUpdate.vue'),
+        component: () => import('@/views/seat/SeatForm.vue'),
       },
       {
         path: 'seat/view/:id',
         name: 'seat-view',
-        component: () => import('@/views/spot/SeatOne.vue'),
+        component: () => import('@/views/seat/SeatOne.vue'),
       },
 
       // [核心功能] 商家與優惠券管理

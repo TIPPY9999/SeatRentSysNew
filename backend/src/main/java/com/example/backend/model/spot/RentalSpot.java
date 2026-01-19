@@ -3,18 +3,18 @@ package com.example.backend.model.spot;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
 
 @Entity
-@Table(name = "renting_Spot", schema = "dbo") // 加上schema避免找錯資料表
+@Table(name = "renting_Spot")
+@Data
 public class RentalSpot {
 
     @Id
@@ -22,34 +22,46 @@ public class RentalSpot {
     @Column(name = "spotId")
     private Integer spotId;
 
-    @Column(name = "spotCode")
+    @NotBlank(message = "據點代碼不得為空")
+    @Column(name = "spotCode", length = 30, nullable = false)
     private String spotCode;
 
-    @Column(name = "spotName")
+    @NotBlank(message = "據點名稱不得為空")
+    @Column(name = "spotName", length = 100, nullable = false)
     private String spotName;
 
-    @Column(name = "spotAddress")
+    @Column(name = "spotAddress", length = 200)
     private String spotAddress;
 
-    @Column(name = "spotStatus")
+    @NotBlank(message = "據點狀態不得為空")
+    @Column(name = "spotStatus", length = 20, nullable = false)
     private String spotStatus;
 
     @Column(name = "merchantId")
     private Integer merchantId;
 
-    @CreationTimestamp
-    @Column(name = "createdAt", updatable = false) // createdAt 只在建立時設定
-    protected LocalDateTime createdAt;
+    // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
+    @Column(name = "createdAt", updatable = false, insertable = false)
+    private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updatedAt")
-    protected LocalDateTime updatedAt;
+    // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
+    @Column(name = "updatedAt", updatable = false, insertable = false)
+    private LocalDateTime updatedAt;
 
     @Column(name = "latitude", precision = 10, scale = 7) // 10 總位數，7 小數位
     private BigDecimal latitude;
 
     @Column(name = "longitude", precision = 10, scale = 7) // 10 總位數，7 小數位
     private BigDecimal longitude;
+
+    // [修正] 資料庫欄位名稱為 spotDescription，需與 DB 一致
+    // 對應 SQL: spotDescription NVARCHAR(500)
+    @Column(name = "spotDescription", length = 500)
+    private String spotDescription;
+
+    // [修正] 補上長度以符合 DB 定義
+    @Column(name = "spotImage", length = 255)
+    private String spotImage;
 
     public RentalSpot() {
     }
@@ -68,80 +80,6 @@ public class RentalSpot {
         this.spotStatus = spotStatus;
         this.merchantId = merchantId;
         this.latitude = latitude;
-        this.longitude = longitude;
-    }
-
-    public Integer getSpotId() {
-        return spotId;
-    }
-
-    public void setSpotId(Integer spotId) {
-        this.spotId = spotId;
-    }
-
-    public String getSpotCode() {
-        return spotCode;
-    }
-
-    public void setSpotCode(String spotCode) {
-        this.spotCode = spotCode;
-    }
-
-    public String getSpotName() {
-        return spotName;
-    }
-
-    public void setSpotName(String spotName) {
-        this.spotName = spotName;
-    }
-
-    public String getSpotAddress() {
-        return spotAddress;
-    }
-
-    public void setSpotAddress(String spotAddress) {
-        this.spotAddress = spotAddress;
-    }
-
-    public String getSpotStatus() {
-        return spotStatus;
-    }
-
-    public void setSpotStatus(String spotStatus) {
-        this.spotStatus = spotStatus;
-    }
-
-    public Integer getMerchantId() {
-        return merchantId;
-    }
-
-    public void setMerchantId(Integer merchantId) {
-        this.merchantId = merchantId;
-    }
-
-    // 創建時間由系統自動產生，不需set方法
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    // 更新時間由系統自動產生，不需set方法
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public BigDecimal getLatitude() {
-        return latitude;
-    }
-
-    public void setLatitude(BigDecimal latitude) {
-        this.latitude = latitude;
-    }
-
-    public BigDecimal getLongitude() {
-        return longitude;
-    }
-
-    public void setLongitude(BigDecimal longitude) {
         this.longitude = longitude;
     }
 

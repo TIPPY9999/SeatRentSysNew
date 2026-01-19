@@ -10,15 +10,17 @@ public interface ISeatService {
 
     public Seat update(Seat updateBean);
 
-    public Seat selectById(Integer seatId);
+    public Seat selectById(Integer seatsId);
 
-    public List<Seat> selectBySpotId(Integer seatsId);
+    public List<Seat> selectBySpotId(Integer spotId);
 
-    public boolean deleteById(Integer seatId);
+    public boolean deleteById(Integer seatsId);
 
     public List<Seat> selectAll();
 
     public List<Seat> findByCondition(String seatsName, String seatsType, String seatsStatus, Integer spotId,
             String serialNumber);
+
+    public List<Seat> selectByKeyword(String keyword);
 
 }

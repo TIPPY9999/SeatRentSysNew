@@ -1,99 +1,117 @@
 package com.example.backend.service.spot;
 
-import com.example.backend.model.spot.RentalSpot;
-import com.example.backend.repository.spot.RentalSpotRepository;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
 import jakarta.persistence.criteria.Predicate;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.example.backend.model.spot.RentalSpot;
+import com.example.backend.file.FileStorageService;
+import com.example.backend.repository.spot.RentalSpotRepository;
 
 @Service
 @Transactional
 public class RentalSpotService implements IRentalSpotService {
 
-    // [修正：改用建構子注入]
-    // 1. 加上 final：確保這個變數一旦被賦值後就不會被修改，增加系統穩定性。
-    // 2. 移除 @Autowired：不再直接對欄位進行注入，避免測試困難。
     private final RentalSpotRepository rentalSpotRepository;
+    private final FileStorageService fileStorageService;
 
-    // [建構子注入原理]
-    // 當 Spring 建立 RentalSpotService 的時候，看到這個建構子，就會自動去尋找 RentalSpotRepository
-    // 的實例並傳進來。
-    // 這確保了 Service 建立完成時，Repository 一定已經準備好，不會有 NullPointerException 的風險。
-    public RentalSpotService(RentalSpotRepository rentalSpotRepository) {
+    public RentalSpotService(RentalSpotRepository rentalSpotRepository, FileStorageService fileStorageService) {
         this.rentalSpotRepository = rentalSpotRepository;
+        this.fileStorageService = fileStorageService;
+    }
+
+    /**
+     * 新增據點，並在儲存前檢查代碼 (spotCode) 是否重複。
+     * 
+     * @param rentalSpot 要新增的據點物件
+     * @return 儲存後的據點物件
+     * @throws IllegalArgumentException 如果代碼已存在
+     */
+    @Override
+    public RentalSpot insert(RentalSpot rentalSpot) {
+        // 1. 檢查 spotCode 是否為空或空字串
+        if (StringUtils.hasText(rentalSpot.getSpotCode())) {
+
+            // 2. 呼叫 Repository 的 existsBySpotCode 方法進行檢查
+            if (rentalSpotRepository.existsBySpotCode(rentalSpot.getSpotCode())) {
+
+                // 3. 如果代碼已存在，拋出業務邏輯異常
+                throw new IllegalArgumentException("據點代碼 (Spot Code) '" + rentalSpot.getSpotCode() + "' 已存在，請使用不同的代碼。");
+            }
+        }
+
+        // 4. 執行儲存
+        return rentalSpotRepository.save(rentalSpot);
     }
 
     @Override
-    public List<RentalSpot> selectAll() {
-        // findAll(): 這是 JpaRepository 內建的方法。
-        // 它會自動產生 "SELECT * FROM rental_spot" 這樣的 SQL 去資料庫撈全部資料。
-        return rentalSpotRepository.findAll();
-    }
+    public RentalSpot update(RentalSpot rentalSpot) {
 
-    @Override
-    public RentalSpot selectById(Integer spotId) {
-        // findById(): 自動產生 "SELECT * FROM rental_spot WHERE spot_id = ?"。
-        // .orElse(null): 因為 findById 回傳的是 Optional (一個可能為空的容器)，
-        // 如果找不到資料，我們就回傳 null 給呼叫者，避免 NullPointerException。
-        return rentalSpotRepository.findById(spotId).orElse(null);
-    }
-
-    @Override
-    public RentalSpot insert(RentalSpot spot) {
-        // save(): 這是一個聰明的方法。
-        // 如果傳進來的物件沒有 ID (或是 ID 在資料庫不存在)，它就會執行 INSERT SQL。
-        return rentalSpotRepository.save(spot);
-    }
-
-    @Override
-    public RentalSpot update(RentalSpot spot) {
-        // save(): 如果傳進來的物件有 ID 且資料庫有這筆資料，它就會執行 UPDATE SQL。
-        // 所以新增和修改都可以用同一個 save 方法，Spring Data JPA 會幫我們判斷。
-        return rentalSpotRepository.save(spot);
+        // [修正] 確保 Update 操作有 ID，避免變成 Insert
+        if (rentalSpot.getSpotId() == null) {
+            throw new IllegalArgumentException("更新失敗：據點 ID (spotId) 不能為空");
+        }
+        // 更新時通常不檢查代碼重複 (除非允許修改代碼且改到跟別人一樣)，直接儲存
+        return rentalSpotRepository.save(rentalSpot);
     }
 
     @Override
     public boolean deleteById(Integer spotId) {
-        // existsById(): 先檢查這筆 ID 是否存在 (SELECT count(*)...)。
-        if (rentalSpotRepository.existsById(spotId)) {
-            // deleteById(): 存在就執行 DELETE 語句。
-            rentalSpotRepository.deleteById(spotId);
+        if (spotId == null) {
+            return false;
+        }
+        RentalSpot spot = rentalSpotRepository.findById(spotId).orElse(null);
+        if (spot != null) {
+            rentalSpotRepository.delete(spot);
+            // 若該據點有圖片，則一併刪除實體檔案
+            if (StringUtils.hasText(spot.getSpotImage())) {
+                fileStorageService.delete(spot.getSpotImage());
+            }
             return true;
         }
         return false;
     }
 
     @Override
+    public RentalSpot selectById(Integer spotId) {
+        if (spotId == null) {
+            return null;
+        }
+        return rentalSpotRepository.findById(spotId).orElse(null);
+    }
+
+    @Override
+    public List<RentalSpot> selectAll() {
+        return rentalSpotRepository.findAll();
+    }
+
+    @Override
+    public List<RentalSpot> selectByKeyword(String keyword) {
+        return rentalSpotRepository.findByKeyword(keyword);
+    }
+
+    @Override
     public List<RentalSpot> findByCondition(String spotCode, String spotName, String spotStatus, Integer merchantId) {
-        // findAll(Specification): 這是 JPA 的「動態查詢」功能。
-        // 我們不需要手寫 "WHERE 1=1 AND ..." 這種字串拼接 (容易寫錯又怕 SQL Injection)。
-        // 這裡是用 Java 物件的方式來描述查詢條件，Spring 會自動幫我們翻譯成正確的 SQL。
         return rentalSpotRepository.findAll((root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // root: 代表資料表 (RentalSpot)
-            // cb (CriteriaBuilder): 用來建立條件 (如 equal, like)
-
-            if (spotCode != null && !spotCode.isBlank()) {
-                // 相當於 SQL: spotCode LIKE %...%
+            if (StringUtils.hasText(spotCode)) {
                 predicates.add(cb.like(root.get("spotCode"), "%" + spotCode + "%"));
             }
-            if (spotName != null && !spotName.isBlank()) {
+            if (StringUtils.hasText(spotName)) {
                 predicates.add(cb.like(root.get("spotName"), "%" + spotName + "%"));
             }
-            if (spotStatus != null && !spotStatus.isBlank()) {
-                // 相當於 SQL: spotStatus = ...
+            if (StringUtils.hasText(spotStatus)) {
                 predicates.add(cb.equal(root.get("spotStatus"), spotStatus));
             }
             if (merchantId != null) {
                 predicates.add(cb.equal(root.get("merchantId"), merchantId));
             }
-
-            // 將所有條件用 AND 連接起來 (WHERE condition1 AND condition2 ...)
             return cb.and(predicates.toArray(new Predicate[0]));
         });
     }

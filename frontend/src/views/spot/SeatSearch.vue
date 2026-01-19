@@ -61,6 +61,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+// 明確定義元件名稱，方便識別與除錯
+defineOptions({
+  name: 'SeatSearch'
+})
+
 const router = useRouter()
 const searchCriteria = ref({
   seatsName: '',

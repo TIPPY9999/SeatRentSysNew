@@ -1,6 +1,10 @@
 package com.example.backend.config;
 
-import jakarta.annotation.PostConstruct;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
@@ -9,43 +13,39 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.lang.NonNull;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import jakarta.annotation.PostConstruct;
 
-/**
- * WebConfig 整合設定檔
- * 1) 靜態資源映射 (圖片上傳路徑 /images/**)
- * 2) CORS 跨域設定（指定前端 http://localhost:5173）
- * 3) 健康檢查 API
- */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    // ✅ 必須與 application.yml 中的 app.file.upload-path 一致
-    @Value("${app.file.upload-path:}")
+    @Value("${app.file.upload-path:uploads}")
     private String uploadPath;
 
     private String location; // file:/D:/.../images/
 
-    // ==========================================
     // 1) 圖片路徑映射設定
-    // ==========================================
     @PostConstruct
     public void init() throws IOException {
         if (!StringUtils.hasText(uploadPath)) {
-            System.err.println("⚠️ 警告: app.file.upload-path 未設定，圖片功能可能無法使用");
+            System.err.println("警告: app.file.upload-path 未設定，圖片功能可能無法使用");
             return;
         }
 
+        // 取得絕對路徑，避免相對路徑在不同環境下出錯
         Path dir = Paths.get(uploadPath).toAbsolutePath().normalize();
         if (!Files.exists(dir)) {
             Files.createDirectories(dir);
             System.out.println("✅ 已成功建立上傳目錄: " + dir);
         }
+        // 轉成 URI 格式 (例如 file:///D:/project/uploads/)
         location = dir.toUri().toString();
+
+        // 確保路徑以 / 結尾，這是 Spring ResourceHandler 對目錄路徑的要求
+        if (!location.endsWith("/")) {
+            location += "/";
+        }
 
         System.out.println("\n--- [圖片映射檢查] ---");
         System.out.println("本地磁碟路徑: " + dir);
@@ -56,19 +56,19 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 使用計算好的絕對路徑 location，比寫死 file:./uploads/ 更安全
         if (location != null) {
             registry.addResourceHandler("/images/**")
                     .addResourceLocations(location, "file:./uploads/");
         }
     }
 
-    // ==========================================
-    // 2) CORS 跨域設定（✅穩定版）
-    // ==========================================
+    // 2) CORS 跨域設定（穩定版）
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                // ✅ 明確列出前端網址（避免 allowCredentials(true) + "*" 直接炸）
+                // 明確列出前端網址（避免 allowCredentials(true) + "*" 直接炸）
                 .allowedOrigins(
                         "http://localhost:5173",
                         "http://127.0.0.1:5173")
@@ -78,9 +78,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .maxAge(3600);
     }
 
-    // ==========================================
     // 3) 健康檢查控制器
-    // ==========================================
     @RestController
     public static class HealthCheckController {
         @GetMapping("/test")

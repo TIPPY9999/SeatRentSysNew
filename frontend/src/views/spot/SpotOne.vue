@@ -8,7 +8,7 @@
           </div>
           <div class="col-sm-6">
             <ol class="breadcrumb float-sm-right">
-              <li class="breadcrumb-item"><router-link to="/spot/list">Home</router-link></li>
+              <li class="breadcrumb-item"><router-link to="/admin/spot/list">Home</router-link></li>
               <li class="breadcrumb-item active">Spot Detail</li>
             </ol>
           </div>
@@ -64,8 +64,8 @@
             </table>
           </div>
           <div class="card-footer">
-            <router-link to="/spot/list" class="btn btn-secondary">回列表</router-link>
-            <router-link :to="`/spot/edit/${spot.spotId}`" class="btn btn-info float-right">編輯</router-link>
+            <router-link to="/admin/spot/list" class="btn btn-secondary">回列表</router-link>
+            <router-link :to="`/admin/spot/edit/${spot.spotId}`" class="btn btn-info float-right">編輯</router-link>
           </div>
         </div>
       </div>
@@ -78,6 +78,11 @@ import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 
+// 明確定義元件名稱，方便識別與除錯
+defineOptions({
+  name: 'SpotOne'
+});
+
 const route = useRoute();
 const spot = ref(null);
 const loading = ref(true);
@@ -86,7 +91,7 @@ onMounted(async () => {
   const id = route.params.id;
   if (id) {
     try {
-      const response = await axios.get('/spot/one', { params: { spotId: id } });
+      const response = await axios.get(`/api/spots/${id}`);
       spot.value = response.data;
     } catch (error) {
       console.error('Error fetching spot:', error);

@@ -18,4 +18,6 @@ public interface IRentalSpotService {
 
     public List<RentalSpot> findByCondition(String spotCode, String spotName, String spotStatus, Integer merchantId);
 
+    public List<RentalSpot> selectByKeyword(String keyword);
+
 }

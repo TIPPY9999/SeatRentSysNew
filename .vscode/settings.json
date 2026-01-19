@@ -1,7 +1,9 @@
 {
-  "java.compile.nullAnalysis.mode": "automatic",
-  "cSpell.words": [
-    "axios",
-    "Violat"
-  ]
+    "maven.view": "hierarchical",
+    "java.debug.settings.onBuildFailureProceed": true,
+    "java.compile.nullAnalysis.mode": "automatic",
+    "cSpell.words": [
+        "axios",
+        "Violat"
+    ]
 }
