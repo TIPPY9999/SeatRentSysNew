@@ -47,8 +47,7 @@ const routes = [
   // ==========================================
   // [新增] 前台使用者頁面 (不套用後台側邊欄)
   // ==========================================
-  
-      {
+  {
     path: '/mall',
     name: 'coupon-mall',
     component: CouponMall,
@@ -166,6 +165,11 @@ const routes = [
         path: 'rec-rent',
         name: 'rec-rent',
         component: () => import('@/views/rec/RecRentMgnPage.vue'),
+      },
+      {
+        path: 'rent/:action?',
+        name: 'rec-rent-user',
+        component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
 
       // [功能] 維修管理 (Maintenance)
