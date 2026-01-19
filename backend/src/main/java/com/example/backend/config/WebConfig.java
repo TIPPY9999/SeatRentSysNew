@@ -58,7 +58,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         if (location != null) {
             registry.addResourceHandler("/images/**")
-                    .addResourceLocations("file:./uploads/");
+                    .addResourceLocations(location, "file:./uploads/");
         }
     }
 

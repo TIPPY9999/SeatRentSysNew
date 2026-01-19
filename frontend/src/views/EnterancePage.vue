@@ -1,0 +1,204 @@
+<script setup>
+import { ref, onMounted } from "vue";
+import "@googlemaps/extended-component-library/api_loader.js";
+import "@googlemaps/extended-component-library/place_picker.js";
+import axios from "axios";
+import MainLayout from "@/layouts/MainLayout.vue";
+
+// 1. ---組態設定---
+const center = ref({ lat: 23.973875, lng: 120.982025 });
+const backendApiUrl = "http://localhost:8080/spot/list";
+
+// 2. ---狀態定義---
+const spots = ref([]);
+const error = ref(null);
+const infoWindow = ref({
+  position: null,
+  spot: null,
+  opened: false,
+});
+
+// 3. ---核心邏輯---
+const initializeMapCenter = () => {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        center.value = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+      },
+      (error) => {
+        console.warn(`無法獲取地理位置: ${error.message}。將使用預設中心點。`);
+      }
+    );
+  } else {
+    console.warn("此瀏覽器不支援地理位置功能。將使用預設中心點。");
+  }
+};
+
+const onPlaceChanged = (event) => {
+  const place = event.detail.place;
+  if (place && place.geometry && place.geometry.location) {
+    center.value = {
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng(),
+    };
+  }
+};
+
+const fetchSpots = async () => {
+  try {
+    const response = await axios.get(backendApiUrl);
+    spots.value = response.data.map((spot) => ({
+      id: spot.spotId,
+      name: spot.spotName,
+      status: spot.spotStatus,
+      position: {
+        lat: parseFloat(spot.latitude),
+        lng: parseFloat(spot.longitude),
+      },
+    }));
+  } catch (err) {
+    console.error("無法獲取租借站點資料:", err);
+    error.value = "無法載入租借站點資料，請稍後再試。";
+  }
+};
+
+const openInfoWindow = (spot) => {
+  infoWindow.value = {
+    position: spot.position,
+    spot: spot,
+    opened: true,
+  };
+};
+
+const closeInfoWindow = () => {
+  infoWindow.value.opened = false;
+};
+
+onMounted(() => {
+  initializeMapCenter();
+  fetchSpots();
+});
+</script>
+
+<template>
+  <MainLayout>
+    <div class="map-container-wrapper">
+      <div v-if="error" class="error-message">{{ error }}</div>
+      <div class="place-picker-container">
+        <gmpx-place-picker
+          placeholder="請輸入地址或地點"
+          @gmp-placechange="onPlaceChanged"
+        ></gmpx-place-picker>
+      </div>
+
+      <GMapMap
+        v-if="!error"
+        :center="center"
+        :zoom="8"
+        class="map"
+        map-id="d2fc83863651fe9c90d73c8a"
+      >
+        <GMapMarker
+          v-for="spot in spots"
+          :key="spot.id"
+          :position="spot.position"
+          :title="spot.name"
+          :clickable="true"
+          @click="openInfoWindow(spot)"
+        />
+        <GMapInfoWindow
+          :opened="infoWindow.opened"
+          :position="infoWindow.position"
+          :options="{ pixelOffset: { width: 0, height: -35 } }"
+          @closeclick="closeInfoWindow"
+        >
+          <div v-if="infoWindow.spot" class="info-window-content">
+            <h4>{{ infoWindow.spot.name }}</h4>
+            <p><strong>ID:</strong> {{ infoWindow.spot.id }}</p>
+            <p><strong>狀態:</strong> {{ infoWindow.spot.status }}</p>
+            <div class="button-group">
+              <router-link :to="{ name: 'rec-rent-user', params: { action: 'order' } }" class="btn btn-success">
+                租借
+              </router-link>
+              <router-link :to="{ name: 'rec-rent-user', params: { action: 'complete' } }" class="btn btn-primary">
+                歸還
+              </router-link>
+            </div>
+          </div>
+        </GMapInfoWindow>
+      </GMapMap>
+    </div>
+  </MainLayout>
+</template>
+
+<style scoped>
+.map-container-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.map {
+  width: 100%;
+  height: 100%;
+}
+.error-message {
+  color: red;
+  padding: 20px;
+  text-align: center;
+}
+.info-window-content {
+  padding: 5px;
+  min-width: 200px;
+}
+.info-window-content h4,
+.info-window-content p {
+  margin: 5px 0;
+}
+.button-group {
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-around;
+}
+.btn {
+  display: inline-block;
+  font-weight: 400;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  user-select: none;
+  border: 1px solid transparent;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  text-decoration: none; /* Add this to make router-link look like a button */
+}
+.btn-success {
+  color: #fff;
+  background-color: #28a745;
+  border-color: #28a745;
+}
+.btn-primary {
+  color: #fff;
+  background-color: #007bff;
+  border-color: #007bff;
+}
+.place-picker-container {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  z-index: 10;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+gmpx-place-picker {
+  width: 100%;
+}
+</style>
