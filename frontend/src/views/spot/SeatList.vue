@@ -5,15 +5,29 @@
         <div class="header">
           <h2>座位管理列表</h2>
           <!-- 搜尋區塊 -->
+          <!-- [修改] 參考 SpotList.vue 的搜尋介面 -->
           <div class="search-bar">
-            <input v-model="keyword" type="text" class="search-input" placeholder="搜尋名稱、序號或類型..."
-              @keyup.enter="fetchSeats" />
-            <button class="btn-edit" @click="fetchSeats">
-              搜尋
-            </button>
-            <button class="btn-delete" @click="resetSearch" style="background-color: #6c757d;">
-              重置
-            </button>
+            <input
+              type="text"
+              v-model="searchKeyword"
+              placeholder="搜尋名稱、類型或序號"
+              class="search-input"
+            />
+            <input
+              type="number"
+              v-model.number="searchSpotId"
+              placeholder="搜尋據點ID"
+              class="search-input-mid"
+              min="1"
+              step="1"
+              @input="sanitizeSpotId"
+            />
+            <select v-model="searchStatus" class="search-select">
+              <option value="">全部狀態</option>
+              <option value="啟用">啟用</option>
+              <option value="停用">停用</option>
+              <option value="維修中">維修中</option>
+            </select>
           </div>
           <button class="btn-add" @click="goToAdd">新增座位</button>
         </div>
@@ -31,7 +45,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="seat in seats" :key="seat.seatsId">
+            <tr v-for="seat in filteredSeats" :key="seat.seatsId">
               <td>{{ seat.seatsId }}</td>
               <td>{{ seat.seatsName }}</td>
               <td>{{ seat.seatsType }}</td>
@@ -59,7 +73,7 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="seats.length === 0">
+            <tr v-if="filteredSeats.length === 0">
               <td colspan="7" style="text-align: center">
                 {{ loading ? '載入中...' : '查無資料' }}
               </td>
@@ -72,7 +86,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router' // [新增] 引入 useRouter
 import axios from 'axios'
 import Swal from 'sweetalert2' // 假設您有安裝，若無可改用 alert
@@ -84,9 +98,22 @@ defineOptions({
 
 const router = useRouter() // [新增] 初始化 router
 const seats = ref([])
-const keyword = ref('')
 const loading = ref(false)
 
+// [新增] 參考 SpotList.vue 的搜尋狀態
+const searchKeyword = ref('')
+const searchSpotId = ref('')
+const searchStatus = ref('')
+
+// [新增] 參考 SpotList.vue 的數字輸入處理函式，並調整變數名稱
+const sanitizeSpotId = () => {
+  const v = searchSpotId.value
+  if (v === '' || v === null || v === undefined) return
+
+  if (!Number.isFinite(v) || v < 1) {
+    searchSpotId.value = 1
+  }
+}
 
 // [新增] 跳轉到詳細頁 (使用具名路由，更安全)
 const goToView = (id) => {
@@ -107,14 +134,8 @@ const goToAdd = () => {
 const fetchSeats = async () => {
   loading.value = true
   try {
-    // 發送 GET 請求，並帶上 keyword 參數
-    // [修正] 改用 /api/seats/search
-    const res = await axios.get('/api/seats/search', {
-      params: {
-        // [修正] 參數名稱需與後端 SeatRepository 的 @Param("keyword") 一致
-        keyword: keyword.value
-      }
-    })
+    // [修改] 為了實現前端過濾，移除請求參數，一次性獲取所有資料
+    const res = await axios.get('/api/seats/search')
     seats.value = res.data
   } catch (err) {
     console.error('載入失敗:', err)
@@ -124,11 +145,34 @@ const fetchSeats = async () => {
   }
 }
 
-// 重置搜尋
-const resetSearch = () => {
-  keyword.value = ''
-  fetchSeats()
-}
+// [新增] 參考 SpotList.vue 的計算屬性，並根據 Seat 的欄位調整過濾邏輯
+const filteredSeats = computed(() => {
+  let results = seats.value
+
+  // 1. 關鍵字過濾 (對應 Seat 的名稱、類型、序號)
+  if (searchKeyword.value.trim()) {
+    const keyword = searchKeyword.value.toLowerCase().trim()
+    results = results.filter(
+      (seat) =>
+        seat.seatsName?.toLowerCase().includes(keyword) ||
+        seat.seatsType?.toLowerCase().includes(keyword) ||
+        seat.serialNumber?.toLowerCase().includes(keyword)
+    )
+  }
+
+  // 2. 據點 ID 過濾 (對應 Seat 的 spotId)
+  if (searchSpotId.value !== '' && searchSpotId.value !== null) {
+    const sId = Number(searchSpotId.value)
+    results = results.filter((seat) => Number(seat.spotId) === sId)
+  }
+
+  // 3. 狀態過濾 (對應 Seat 的 seatsStatus)
+  if (searchStatus.value) {
+    results = results.filter((seat) => seat.seatsStatus === searchStatus.value)
+  }
+
+  return results
+})
 
 // 刪除座位
 const deleteSeat = async (id) => {
@@ -190,8 +234,20 @@ onMounted(() => {
   border-radius: 4px;
 }
 .search-bar .search-input {
-  width: 250px;
+  width: 200px; /* 調整寬度以容納更多欄位 */
   margin-right: 10px;
+}
+
+/* [新增] 參考 SpotList.vue 的樣式 */
+.search-bar .search-input-mid {
+  width: 150px;
+  margin-left: 10px;
+}
+.search-bar .search-select {
+  padding: 8px;
+  margin-left: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 /* 按鈕樣式 */

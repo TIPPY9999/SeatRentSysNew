@@ -26,7 +26,7 @@
             <!-- 狀態下拉選單 -->
             <select v-model="searchStatus" class="search-select">
               <option value="">全部狀態</option>
-              <option value="啟用">啟用</option>
+              <option value="營運中">啟用</option>
               <option value="停用">停用</option>
             </select>
           </div>
@@ -120,7 +120,7 @@ const loadSpots = async () => {
     // 呼叫後端 API (對應 RentalSpotController 的 list 方法)
     // [修正] 改用 RESTful 風格路徑，對應 RentalSpotController 的 @GetMapping("/api/spots")
     // TODO: 若資料量大，建議將 searchKeyword, searchMerchantId 等參數傳給後端進行過濾，而非前端過濾
-    const res = await axios.get('/api/spots', {
+    const res = await axios.get('/api/spot/list', {
       // params: {
       //   keyword: searchKeyword.value,
       //   status: searchStatus.value
@@ -187,7 +187,7 @@ const deleteSpot = async (id, name) => {
   try {
     // [修正] 改用 RESTful 風格：DELETE 方法 + 路徑參數 ID
     // 對應 RentalSpotController 的 @DeleteMapping("/{id}")
-    await axios.delete(`/api/spots/${id}`)
+    await axios.delete(`/api/spot/${id}`)
 
     alert('刪除成功')
     await loadSpots()
