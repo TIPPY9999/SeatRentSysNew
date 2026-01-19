@@ -1,6 +1,6 @@
 <script setup>
 /**
- * MemberEditView.vue：編輯會員
+ * AdminEditView.vue：編輯管理員
  */
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -9,33 +9,33 @@ import axios from 'axios'
 const router = useRouter()
 const route = useRoute()
 
-const member = ref(null)
+const admin = ref(null)
 const newPassword = ref('')
 const errorMsg = ref('')
 
-const fetchMember = () => {
+const fetchAdmin = () => {
   const id = route.params.id
   axios
-    .get(`http://localhost:8080/members/find?memId=${id}`)
+    .get(`http://localhost:8080/admins/find?admId=${id}`)
     .then((res) => {
-      member.value = res.data
+      admin.value = res.data
     })
     .catch(() => {
-      errorMsg.value = '載入會員資料失敗'
+      errorMsg.value = '載入管理員資料失敗'
     })
 }
 
 const submitEdit = () => {
   const payload = {
-    ...member.value,
-    memPassword: newPassword.value || '',
+    ...admin.value,
+    admPassword: newPassword.value || '',
   }
 
   axios
-    .post('http://localhost:8080/members/update', payload)
+    .post('http://localhost:8080/admins/update', payload)
     .then(() => {
-      alert('會員修改成功')
-      router.push('/admin/members')
+      alert('管理員修改成功')
+      router.push('/admin/admins')
     })
     .catch((err) => {
       console.error(err)
@@ -44,43 +44,48 @@ const submitEdit = () => {
 }
 
 const goBack = () => {
-  router.push('/admin/members')
+  router.push('/admin/admins')
 }
 
 onMounted(() => {
-  fetchMember()
+  fetchAdmin()
 })
 </script>
 
 <template>
   <div class="container">
-    <h2>修改會員資料</h2>
+    <h2>修改管理員資料</h2>
+
     <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
-    <div v-if="!member">資料載入中...</div>
+    <div v-if="!admin">資料載入中...</div>
+
     <form v-else @submit.prevent="submitEdit">
-      <input type="hidden" v-model="member.memId" />
+      <input type="hidden" v-model="admin.admId" />
+
       <label>帳號</label>
-      <input type="text" v-model="member.memUsername" required />
+      <input type="text" v-model="admin.admUsername" required />
+
       <label>密碼</label>
-      <input type="password" v-model="newPassword" placeholder="不修改請留空" />
+      <input
+        type="password"
+        v-model="newPassword"
+        placeholder="不修改請留空"
+      />
+
       <label>姓名</label>
-      <input type="text" v-model="member.memName" required />
+      <input type="text" v-model="admin.admName" required />
+
       <label>信箱</label>
-      <input type="text" v-model="member.memEmail" required />
-      <label>電話</label>
-      <input type="text" v-model="member.memPhone" required />
-      <label>狀態 (1正常 / 0停權)</label>
-      <input type="number" v-model="member.memStatus" />
-      <label>總積分</label>
-      <input type="number" v-model="member.memPoints" />
-      <label>違規次數</label>
-      <input type="number" v-model="member.memViolation" />
-      <label>會員等級</label>
-      <input type="number" v-model="member.memLevel" />
-      <label>發票載具</label>
-      <input type="text" v-model="member.memInvoice" placeholder="未提供" />
+      <input type="email" v-model="admin.admEmail" required />
+
+      <label>角色</label>
+      <select v-model="admin.admRole">
+        <option :value="1">一般管理員</option>
+        <option :value="9">超級管理員</option>
+      </select>
+
       <button type="submit" class="primary-btn">確認修改</button>
-      <a class="back-link" @click.prevent="goBack">回會員列表</a>
+      <a class="back-link" @click.prevent="goBack">回管理員列表</a>
     </form>
   </div>
 </template>
@@ -107,7 +112,8 @@ label {
   display: block;
 }
 
-input {
+input,
+select {
   width: 100%;
   padding: 6px;
   margin-bottom: 8px;

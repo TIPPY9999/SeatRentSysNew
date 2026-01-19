@@ -1,14 +1,17 @@
 <script setup>
-// [修正] 移除了 ref，因為下面沒用到
-import { onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import maintenanceApi from '@/api/modules/maintenance'
+import Swal from 'sweetalert2'
 
 const route = useRoute()
 const router = useRouter()
-
 const staffId = Number(route.params.id)
 const isEdit = computed(() => !isNaN(staffId) && staffId > 0)
+
+const formRef = ref(null)
+const loading = ref(false)
+const submitting = ref(false)
 
 const form = reactive({
   staffName: '',
@@ -16,40 +19,53 @@ const form = reactive({
   staffPhone: '',
   staffEmail: '',
   staffNote: '',
+  isActive: true,
 })
+
+const rules = {
+  staffName: [{ required: true, message: '請輸入姓名', trigger: 'blur' }],
+  staffEmail: [{ type: 'email', message: 'Email 格式不正確', trigger: 'blur' }],
+}
 
 onMounted(async () => {
   if (isEdit.value) {
+    loading.value = true
     try {
-      const res = await axios.get(`http://localhost:8080/api/maintenance/staff/${staffId}`)
-      const d = res.data
-      form.staffName = d.staffName || ''
-      form.staffCompany = d.staffCompany || ''
-      form.staffPhone = d.staffPhone || ''
-      form.staffEmail = d.staffEmail || ''
-      form.staffNote = d.staffNote || ''
+      const res = await maintenanceApi.getStaffById(staffId)
+      Object.assign(form, res.data)
     } catch {
-      // [修正] 移除了 (error)，因為我們只 alert，沒用到 error 變數
-      alert('找不到該人員資料')
+      // 錯誤已由 http.js 攔截器處理
       router.push('/admin/staff-list')
+    } finally {
+      loading.value = false
     }
   }
 })
 
 const submitForm = async () => {
-  try {
-    if (isEdit.value) {
-      await axios.put(`http://localhost:8080/api/maintenance/staff/${staffId}`, form)
-      alert('更新成功')
+  if (!formRef.value) return
+
+  await formRef.value.validate(async (valid) => {
+    if (valid) {
+      submitting.value = true
+      try {
+        if (isEdit.value) {
+          await maintenanceApi.updateStaff(staffId, form)
+          Swal.fire('成功', '資料已更新', 'success')
+        } else {
+          await maintenanceApi.createStaff(form)
+          Swal.fire('成功', '人員新增成功', 'success')
+        }
+        router.push('/admin/staff-list')
+      } catch {
+        // 錯誤已由 http.js 攔截器處理
+      } finally {
+        submitting.value = false
+      }
     } else {
-      await axios.post('http://localhost:8080/api/maintenance/staff', form)
-      alert('新增成功')
+      Swal.fire('提示', '請檢查格式', 'warning')
     }
-    router.push('/admin/staff-list')
-  } catch {
-    // [修正] 移除了 (error)
-    alert('儲存失敗，請檢查網路或後端服務')
-  }
+  })
 }
 </script>
 
@@ -57,85 +73,55 @@ const submitForm = async () => {
   <div>
     <section class="content-header">
       <div class="container-fluid">
-        <h1>{{ isEdit ? '編輯' : '新增' }}維護人員</h1>
+        <h1>{{ isEdit ? '編輯人員' : '新增人員' }}</h1>
       </div>
     </section>
 
     <section class="content">
-      <div class="container-fluid">
-        <div class="row justify-content-center">
-          <div class="col-lg-6">
-            <div class="card card-teal">
-              <div class="card-header">
-                <h3 class="card-title">基本資料</h3>
-              </div>
-
-              <form @submit.prevent="submitForm">
-                <div class="card-body">
-                  <div class="form-group">
-                    <label>姓名 <span class="text-danger">*</span></label>
-                    <input
-                      v-model="form.staffName"
-                      type="text"
-                      class="form-control"
-                      placeholder="請輸入姓名"
-                      required
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label>公司</label>
-                    <input
-                      v-model="form.staffCompany"
-                      type="text"
-                      class="form-control"
-                      placeholder="請輸入公司名稱"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label>電話</label>
-                    <input
-                      v-model="form.staffPhone"
-                      type="text"
-                      class="form-control"
-                      placeholder="請輸入聯絡電話"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label>Email</label>
-                    <input
-                      v-model="form.staffEmail"
-                      type="email"
-                      class="form-control"
-                      placeholder="example@mail.com"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label>備註</label>
-                    <textarea
-                      v-model="form.staffNote"
-                      class="form-control"
-                      rows="3"
-                      placeholder="其他說明..."
-                    ></textarea>
-                  </div>
-                </div>
-
-                <div class="card-footer text-right">
-                  <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save mr-1"></i> 送出
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-secondary ml-2"
-                    @click="router.push('/admin/staff-list')"
-                  >
-                    取消
-                  </button>
-                </div>
-              </form>
+      <div class="container-fluid d-flex justify-content-center">
+        <el-card shadow="always" style="width: 100%; max-width: 600px" v-loading="loading">
+          <template #header>
+            <div class="d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-user-circle mr-1"></i> 基本資料</span>
+              <el-button link type="info" @click="router.push('/admin/staff-list')">取消</el-button>
             </div>
-          </div>
-        </div>
+          </template>
+
+          <el-form ref="formRef" :model="form" :rules="rules" label-width="80px" status-icon>
+            <el-form-item label="姓名" prop="staffName">
+              <el-input v-model="form.staffName" placeholder="請輸入姓名" />
+            </el-form-item>
+            <el-form-item label="公司" prop="staffCompany">
+              <el-input v-model="form.staffCompany" placeholder="請輸入公司名稱" />
+            </el-form-item>
+            <el-form-item label="電話" prop="staffPhone">
+              <el-input v-model="form.staffPhone" placeholder="09xx-xxx-xxx" />
+            </el-form-item>
+            <el-form-item label="Email" prop="staffEmail">
+              <el-input v-model="form.staffEmail" placeholder="example@mail.com" />
+            </el-form-item>
+            <el-form-item label="備註" prop="staffNote">
+              <el-input v-model="form.staffNote" type="textarea" :rows="3" />
+            </el-form-item>
+
+            <el-form-item v-if="isEdit" label="狀態" prop="isActive">
+              <el-switch
+                v-model="form.isActive"
+                active-text="在職"
+                inactive-text="停用"
+                active-color="#13ce66"
+                inactive-color="#ff4949"
+              />
+            </el-form-item>
+
+            <el-form-item>
+              <el-button type="primary" @click="submitForm" :loading="submitting">
+                <i class="fas fa-save mr-1"></i> 儲存
+              </el-button>
+              <el-button @click="router.push('/admin/staff-list')">返回</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
       </div>
     </section>
   </div>
@@ -144,9 +130,5 @@ const submitForm = async () => {
 <style scoped>
 .content-header {
   padding: 15px 0.5rem;
-}
-.card-teal:not(.card-outline) > .card-header {
-  background-color: #20c997;
-  color: #fff;
 }
 </style>

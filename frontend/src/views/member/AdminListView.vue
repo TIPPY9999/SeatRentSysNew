@@ -1,55 +1,51 @@
 <script setup>
 /**
- * MemberListView.vue：會員列表
+ * AdminListView.vue：管理員列表
  */
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
-const members = ref([])
+const admins = ref([])
 const errorMsg = ref('')
 const keyword = ref('')
 
-const fetchMembers = () => {
+const fetchAdmins = () => {
   errorMsg.value = ''
   axios
-    .get('http://localhost:8080/members')
+    .get('http://localhost:8080/admins')
     .then((res) => {
-      members.value = res.data
+      admins.value = res.data
     })
     .catch(() => {
-      errorMsg.value = '取得會員資料失敗'
+      errorMsg.value = '取得管理員資料失敗'
     })
 }
 
-const searchMembers = () => {
-  if (!keyword.value.trim()) {
-    fetchMembers()
-    return
-  }
-
+const searchAdmins = () => {
+  errorMsg.value = ''
   axios
-    .get('http://localhost:8080/members/search', {
+    .get('http://localhost:8080/admins/search', {
       params: { keyword: keyword.value },
     })
     .then((res) => {
-      members.value = res.data
+      admins.value = res.data
     })
     .catch(() => {
       errorMsg.value = '搜尋失敗'
     })
 }
 
-const deleteMember = (memId) => {
-  if (!confirm('確定要刪除這個會員嗎？')) return
+const deleteAdmin = (admId) => {
+  if (!confirm('確定要刪除這個管理員嗎？')) return
   axios
-    .get('http://localhost:8080/members/delete', {
-      params: { memId },
+    .get('http://localhost:8080/admins/delete', {
+      params: { admId },
     })
     .then(() => {
-      alert('會員刪除成功')
-      fetchMembers()
+      alert('管理員刪除成功')
+      fetchAdmins()
     })
     .catch(() => {
       alert('刪除失敗')
@@ -62,34 +58,38 @@ const formatDateTime = (dt) => {
 }
 
 onMounted(() => {
-  fetchMembers()
+  fetchAdmins()
 })
 </script>
 
 <template>
   <div class="member-page">
-    <h2 class="title">會員列表</h2>
+    <h2 class="title">管理員列表</h2>
 
+    <!-- 工具列：搜尋 + 新增 -->
     <div class="toolbar">
-  <!-- 左：搜尋 -->
-  <div class="search-bar">
-    <input
-      v-model="keyword"
-      type="text"
-      placeholder="搜尋帳號 / 姓名 / Email / 電話"
-      @keyup.enter="searchMembers"
-    />
-    <button @click="searchMembers">搜尋</button>
-    <button @click="fetchMembers">顯示全部</button>
-  </div>
+      <!-- 左：搜尋 -->
+      <div class="search-bar">
+        <input
+          v-model="keyword"
+          type="text"
+          placeholder="搜尋帳號 / 姓名 / Email"
+          @keyup.enter="searchAdmins"
+        />
+        <button @click="searchAdmins">搜尋</button>
+        <button @click="fetchAdmins">顯示全部</button>
+      </div>
 
-  <!-- 右：新增會員 -->
-  <div class="create-bar">
-    <button class="btn-create" @click="router.push('/admin/members/create')">
-      ＋ 新增會員
-    </button>
-  </div>
-</div>
+      <!-- 右：新增管理員 -->
+      <div class="create-bar">
+        <button
+          class="btn-create"
+          @click="router.push('/admin/admins/create')"
+        >
+          ＋ 新增管理員
+        </button>
+      </div>
+    </div>
 
     <p v-if="errorMsg" class="error">{{ errorMsg }}</p>
 
@@ -100,45 +100,37 @@ onMounted(() => {
           <th>帳號</th>
           <th>姓名</th>
           <th>Email</th>
-          <th>手機</th>
-          <th>狀態</th>
-          <th>等級</th>
-          <th>總積分</th>
-          <th>違規次數</th>
-          <th>發票載具</th>
+          <th>權限</th>
           <th>建立時間</th>
           <th>更新時間</th>
           <th>編輯</th>
           <th>刪除</th>
         </tr>
       </thead>
+
       <tbody>
-        <tr v-if="members.length === 0">
-          <td colspan="14">目前沒有會員資料</td>
+        <tr v-if="admins.length === 0">
+          <td colspan="9">目前沒有管理員資料</td>
         </tr>
-        <tr v-for="m in members" :key="m.memId">
-          <td>{{ m.memId }}</td>
-          <td>{{ m.memUsername }}</td>
-          <td>{{ m.memName }}</td>
-          <td>{{ m.memEmail }}</td>
-          <td>{{ m.memPhone }}</td>
-          <td>{{ m.memStatus }}</td>
-          <td>{{ m.memLevel }}</td>
-          <td>{{ m.memPoints }}</td>
-          <td>{{ m.memViolation }}</td>
-          <td>{{ m.memInvoice || '未提供' }}</td>
-          <td>{{ formatDateTime(m.createdAt) }}</td>
-          <td>{{ formatDateTime(m.updatedAt) }}</td>
+
+        <tr v-for="a in admins" :key="a.admId">
+          <td>{{ a.admId }}</td>
+          <td>{{ a.admUsername }}</td>
+          <td>{{ a.admName }}</td>
+          <td>{{ a.admEmail }}</td>
+          <td>{{ a.admRole }}</td>
+          <td>{{ formatDateTime(a.createdAt) }}</td>
+          <td>{{ formatDateTime(a.updatedAt) }}</td>
           <td>
             <button
               class="btn-edit"
-              @click="router.push(`/admin/members/edit/${m.memId}`)"
+              @click="router.push(`/admin/admins/edit/${a.admId}`)"
             >
               編輯
             </button>
           </td>
           <td>
-            <button class="btn-delete" @click="deleteMember(m.memId)">
+            <button class="btn-delete" @click="deleteAdmin(a.admId)">
               刪除
             </button>
           </td>
@@ -149,12 +141,15 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* 整個頁面 */
+button {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
 .member-page {
   padding: 20px;
 }
 
-/* 標題 */
 .title {
   text-align: center;
   margin-bottom: 20px;
@@ -162,7 +157,6 @@ onMounted(() => {
   font-weight: bold;
 }
 
-/* 上方工具列：搜尋（左）＋新增（右） */
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -170,7 +164,6 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
-/* 搜尋列 */
 .search-bar {
   display: flex;
   align-items: center;
@@ -187,11 +180,11 @@ onMounted(() => {
 
 .search-bar button {
   padding: 6px 12px;
-  font-size: 14px;
-  cursor: pointer;
+  margin-left: 6px;
   border: 1px solid #333;
   background-color: #f3f4f6;
   color: #333 !important;
+  border-radius: 4px;
 }
 
 .search-bar button:hover {
@@ -199,7 +192,6 @@ onMounted(() => {
   color: #111 !important;
 }
 
-/* 新增會員區 */
 .create-bar {
   display: flex;
   justify-content: flex-end;
@@ -219,14 +211,12 @@ onMounted(() => {
   background-color: #218838;
 }
 
-/* 表格 */
 table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 
-/* 表格欄位 */
 th,
 td {
   border: 1px solid #999;
@@ -235,32 +225,28 @@ td {
   white-space: nowrap;
 }
 
-/* 表頭 */
 th {
   background-color: #a8fefa;
   font-weight: bold;
 }
 
-/* 沒資料提示 */
 tbody tr td[colspan] {
   text-align: center;
   padding: 12px;
 }
 
-/* 錯誤訊息 */
 .error {
   color: red;
   text-align: center;
   margin-bottom: 10px;
 }
 
-/* 修改按鈕 */
 .btn-edit {
-  padding: 4px 8px;
-  cursor: pointer;
-  border: 1px solid #333;
+  padding: 4px 10px;
   background-color: #f3f4f6;
   color: #333 !important;
+  border: 1px solid #333;
+  border-radius: 4px;
 }
 
 .btn-edit:hover {
@@ -268,7 +254,6 @@ tbody tr td[colspan] {
   color: #111 !important;
 }
 
-/* 刪除按鈕 */
 .btn-delete {
   padding: 4px 8px;
   background-color: #ff4d4f;

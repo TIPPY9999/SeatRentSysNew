@@ -45,6 +45,14 @@ public class LoginMemberController {
                     .body("帳號或密碼錯誤");
         }
 
+        //=========================修正登不進去的問題=========================
+        //我們先加上 .trim() 來去除前後空白字元，造成燈不進去的問題
+        if(!password.trim().equals(member.getMemPassword().trim())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("帳號或密碼錯誤");
+        }
+        //========================分隔線 =========================================
+
         // 密碼比對
         if (!password.equals(member.getMemPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

@@ -65,4 +65,9 @@ public class MemberService {
     public void deleteById(Integer memId) {
         memberRepository.deleteById(memId);
     }
+
+    // 模糊查詢
+    public List<Member> search(String keyword) {
+        return memberRepository.findByKeyword(keyword);
+    }
 }

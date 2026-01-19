@@ -24,7 +24,7 @@ const router = useRouter()
             <p>管理與新增會員資料</p>
           </div>
 
-          <div class="card" @click="router.push('/admin')">
+          <div class="card" @click="router.push('/admin/admins')">
             <h3>管理員管理</h3>
             <p>管理後台人員帳號</p>
           </div>
