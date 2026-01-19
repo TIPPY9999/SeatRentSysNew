@@ -133,6 +133,24 @@ const logout = () => {
                 <p>優惠券管理</p>
               </RouterLink>
             </li>
+            <li class="nav-item">
+              <router-link 
+              to="/admin/redemption-logs" class="nav-link" active-class="active">
+              <i class="nav-icon bi bi-file-earmark-bar-graph"></i>
+                <p>兌換紀錄報表</p>
+              </router-link>
+            </li>
+
+            <li class="nav-item">
+              <RouterLink
+                to="/admin/payment"
+                class="nav-link"
+                :class="{ active: isActiveGroup('/admin/payment') }"
+              >
+                <i class="nav-icon fas fa-credit-card"></i>
+                <p>金流管理</p>
+              </RouterLink>
+            </li>
 
             <li class="nav-header">訂單與維修體系</li>
 

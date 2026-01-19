@@ -1,7 +1,10 @@
 package com.example.backend.service.merchantAndCoupon;
 
 import com.example.backend.model.merchantAndCoupon.DiscountBean;
+import com.example.backend.model.merchantAndCoupon.RedemptionLog;
 import com.example.backend.repository.merchantAndCoupon.DiscountRepository;
+import com.example.backend.repository.merchantAndCoupon.RedemptionLogRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +18,14 @@ public class DiscountService {
 
     @Autowired
     private DiscountRepository discountRepository;
+
+    @Autowired
+    private RedemptionLogRepository redemptionLogRepository;
+
+    public List<RedemptionLog> getAllRedemptionLogs() {
+        // 依時間倒序排列，讓管理員先看到最新的紀錄
+        return redemptionLogRepository.findAllByOrderByRedeemTimeDesc();
+    }
 
     public List<DiscountBean> getAll(String keyword) {
         discountRepository.autoUpdateStatus();
@@ -56,24 +67,29 @@ public class DiscountService {
 
     public boolean updateSingleStatus(Integer id, String action) {
         DiscountBean discount = getById(id);
-        if (discount == null) return false;
+        if (discount == null)
+            return false;
 
         if ("disable".equalsIgnoreCase(action)) {
             discount.setCouponStatus(3);
         } else if ("relist".equalsIgnoreCase(action)) {
             LocalDate start = discount.getStartDate();
             LocalDate end = discount.getEndDate();
-            
-            if (start == null || end == null) return false;
+
+            if (start == null || end == null)
+                return false;
 
             LocalDate today = LocalDate.now();
-            if (today.isBefore(start)) discount.setCouponStatus(0);
-            else if (today.isAfter(end)) discount.setCouponStatus(2);
-            else discount.setCouponStatus(1);
+            if (today.isBefore(start))
+                discount.setCouponStatus(0);
+            else if (today.isAfter(end))
+                discount.setCouponStatus(2);
+            else
+                discount.setCouponStatus(1);
         } else {
             return false;
         }
-        
+
         discountRepository.save(discount);
         return true;
     }

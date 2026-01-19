@@ -1,32 +1,63 @@
 <template>
-  <div class="game-wrapper">
-    <div class="status-bar">
-      <h2>🐍 貪吃蛇挑戰賽</h2>
-      <div class="info">
-        <span>得分: <strong>{{ score }}</strong></span>
-        <span>難度速度: <strong>{{ gameSpeed }}ms</strong></span>
-      </div>
-    </div>
+  <div class="container-fluid p-4">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        <div class="card shadow-lg border-0">
+          <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0"><i class="bi bi-controller me-2"></i>蛇蛇賺點數 (100分 = 1點)</h5>
+            <span class="badge bg-warning text-dark">會員ID: {{ memberId || '未登入' }}</span>
+          </div>
 
-    <div class="canvas-container">
-      <canvas ref="gameCanvas" width="400" height="400"></canvas>
-      
-      <div v-if="gameOver" class="overlay">
-        <h3>遊戲結束!</h3>
-        <p>最終分數: {{ score }}</p>
-        <button @click="startGame" class="btn-primary">再玩一次</button>
-        <button @click="uploadScore" class="btn-secondary" :disabled="isUploaded">
-          {{ isUploaded ? '已上傳' : '上傳分數' }}
-        </button>
-      </div>
+          <div class="card-body text-center bg-light">
+            <div class="row mb-3">
+              <div class="col-6">
+                <div class="p-2 border rounded bg-white shadow-sm">
+                  <small class="text-muted d-block">目前得分</small>
+                  <h3 class="text-dark mb-0 fw-bold">{{ score }}</h3>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="p-2 border rounded bg-white shadow-sm">
+                  <small class="text-muted d-block">可換點數</small>
+                  <h3 class="text-success mb-0 fw-bold">{{ Math.floor(score / 100) }}</h3>
+                </div>
+              </div>
+            </div>
 
-      <div v-if="!isGameRunning && !gameOver" class="overlay">
-        <button @click="startGame" class="btn-start">開始遊戲</button>
+            <div class="canvas-wrapper position-relative d-inline-block shadow">
+              <canvas ref="gameCanvas" width="400" height="400" class="rounded"></canvas>
+              
+              <div v-if="!isGameRunning && !gameOver" class="game-overlay d-flex flex-column justify-content-center align-items-center">
+                <button @click="startGame" class="btn btn-success btn-lg px-5 rounded-pill shadow">開始挑戰</button>
+              </div>
+
+              <div v-if="gameOver" class="game-overlay d-flex flex-column justify-content-center align-items-center text-white p-4">
+                <h2 class="display-5 fw-bold mb-2">GAME OVER</h2>
+                <p class="mb-4">本次得分 {{ score }}，可換取 <span class="text-warning fw-bold">{{ Math.floor(score / 100) }}</span> 點數</p>
+                
+                <div class="d-grid gap-2 col-10 mx-auto">
+                  <button @click="uploadScore" class="btn btn-warning btn-lg" :disabled="isUploaded || Math.floor(score / 100) < 1">
+                    {{ isUploaded ? '點數已入帳' : (Math.floor(score / 100) < 1 ? '分數不足兌換' : '領取點數') }}
+                  </button>
+                  <button @click="startGame" class="btn btn-outline-light btn-sm">重新開始</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 p-3 bg-white rounded border text-start">
+              <h6 class="small fw-bold text-primary"><i class="bi bi-info-circle me-1"></i> 遊戲規則：</h6>
+              <ul class="list-unstyled mb-0 x-small text-muted" style="font-size: 0.8rem;">
+                <li>• 使用鍵盤 <b>方向鍵</b> 控制蛇移動</li>
+                <li>• 每得 50 分蛇的移動速度會加快</li>
+                <li>• 撞到牆壁或自己則遊戲結束</li>
+                <li>• 遊戲得分達到 <b>100 分</b> 即可兌換 <b>1 點</b> 會員點數。</li>
+                <li>• 點數採無條件捨去（例：190 分兌換 1 點）。</li>
+                <li>• 撞牆或吃到自己時遊戲結束，結算當前分數。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-    
-    <div class="instructions">
-      使用方向鍵 ↑ ↓ ← → 控制移動
     </div>
   </div>
 </template>
@@ -35,13 +66,13 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 
-// 遊戲狀態
 const gameCanvas = ref(null);
 const score = ref(0);
 const gameSpeed = ref(150);
 const isGameRunning = ref(false);
 const gameOver = ref(false);
 const isUploaded = ref(false);
+const memberId = ref(localStorage.getItem('memberId'));
 
 let ctx = null;
 let snake = [];
@@ -49,19 +80,13 @@ let food = { x: 5, y: 5 };
 let direction = { x: 1, y: 0 };
 let nextDirection = { x: 1, y: 0 };
 const gridSize = 20;
-const tileCount = 20;
 
-// 初始化遊戲
 const startGame = () => {
   score.value = 0;
   gameSpeed.value = 150;
   direction = { x: 1, y: 0 };
   nextDirection = { x: 1, y: 0 };
-  snake = [
-    { x: 10, y: 10 },
-    { x: 9, y: 10 },
-    { x: 8, y: 10 }
-  ];
+  snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
   gameOver.value = false;
   isUploaded.value = false;
   isGameRunning.value = true;
@@ -69,10 +94,8 @@ const startGame = () => {
   gameLoop();
 };
 
-// 遊戲主循環 (使用 setTimeout 達成動態變速)
 const gameLoop = () => {
   if (!isGameRunning.value) return;
-
   setTimeout(() => {
     update();
     draw();
@@ -80,103 +103,112 @@ const gameLoop = () => {
   }, gameSpeed.value);
 };
 
-// 邏輯更新
 const update = () => {
   direction = nextDirection;
   const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
 
-  // 1. 碰撞偵測 (牆壁與身體)
-  if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount || 
-      snake.some(seg => seg.x === head.x && seg.y === head.y)) {
-    endGame();
+  if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 ||
+      snake.some(s => s.x === head.x && s.y === head.y)) {
+    isGameRunning.value = false;
+    gameOver.value = true;
     return;
   }
 
   snake.unshift(head);
-
-  // 2. 吃到食物偵測
   if (head.x === food.x && head.y === food.y) {
-    score.value += 10;
-    // 每得 50 分加速一次
-    if (score.value % 50 === 0 && gameSpeed.value > 60) {
-      gameSpeed.value -= 15;
-    }
+    score.value += 20; // 吃到一個食物加 20 分
+    if (score.value % 50 === 0 && gameSpeed.value > 50) gameSpeed.value -= 15;
     spawnFood();
   } else {
     snake.pop();
   }
 };
 
-// 繪製畫面
 const draw = () => {
-  // 背景
-  ctx.fillStyle = "#2c3e50";
+  if (!ctx) return;
+  ctx.fillStyle = "#1e272e";
   ctx.fillRect(0, 0, 400, 400);
 
   // 食物
-  ctx.fillStyle = "#e63946";
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = "#e63946";
+  ctx.fillStyle = "#ff4757";
   ctx.fillRect(food.x * gridSize + 2, food.y * gridSize + 2, gridSize - 4, gridSize - 4);
 
   // 蛇
-  ctx.shadowBlur = 0;
-  snake.forEach((part, index) => {
-    ctx.fillStyle = index === 0 ? "#ffffff" : "#42b983"; // 蛇頭是白色的
-    ctx.fillRect(part.x * gridSize + 1, part.y * gridSize + 1, gridSize - 2, gridSize - 2);
+  snake.forEach((p, i) => {
+    ctx.fillStyle = i === 0 ? "#ffffff" : "#2ecc71";
+    ctx.fillRect(p.x * gridSize + 1, p.y * gridSize + 1, gridSize - 2, gridSize - 2);
   });
 };
 
 const spawnFood = () => {
-  food = {
-    x: Math.floor(Math.random() * tileCount),
-    y: Math.floor(Math.random() * tileCount)
-  };
-  // 防止食物長在蛇身上
-  if (snake.some(seg => seg.x === food.x && seg.y === food.y)) spawnFood();
+  food = { x: Math.floor(Math.random() * 20), y: Math.floor(Math.random() * 20) };
+  if (snake.some(s => s.x === food.x && s.y === food.y)) spawnFood();
 };
 
-const handleKeydown = (e) => {
-  switch (e.key) {
-    case 'ArrowUp': if (direction.y === 0) nextDirection = { x: 0, y: -1 }; break;
-    case 'ArrowDown': if (direction.y === 0) nextDirection = { x: 0, y: 1 }; break;
-    case 'ArrowLeft': if (direction.x === 0) nextDirection = { x: -1, y: 0 }; break;
-    case 'ArrowRight': if (direction.x === 0) nextDirection = { x: 1, y: 0 }; break;
-  }
-};
-
-const endGame = () => {
-  isGameRunning.value = false;
-  gameOver.value = true;
+const handleKeyDown = (e) => {
+  if (e.key === 'ArrowUp' && direction.y === 0) nextDirection = { x: 0, y: -1 };
+  if (e.key === 'ArrowDown' && direction.y === 0) nextDirection = { x: 0, y: 1 };
+  if (e.key === 'ArrowLeft' && direction.x === 0) nextDirection = { x: -1, y: 0 };
+  if (e.key === 'ArrowRight' && direction.x === 0) nextDirection = { x: 1, y: 0 };
 };
 
 const uploadScore = async () => {
+  // 1. 檢查是否有登入
+  const currentMemberId = localStorage.getItem('memberId');
+
+  if (!currentMemberId) {
+    // 未登入：將分數存入 SessionStorage (瀏覽器關閉前都在)
+    sessionStorage.setItem('pendingSnakeScore', score.value);
+    
+    if (confirm(`您目前獲得 ${score.value} 分！登入後即可換取點數，是否前往登入？`)) {
+      // 跳轉到登入頁，並帶上一個「回傳路徑」參數，方便登入後跳回來
+      router.push({ path: '/login', query: { redirect: '/admin/snake' } });
+    }
+    return;
+  }
+
+  // 2. 已登入：正常執行上傳
+  const pointsToDeliver = Math.floor(score.value / 100);
   try {
-    await axios.post('http://localhost:8080/api/game/score', { score: score.value });
+    const res = await axios.post('http://localhost:8080/api/game/add-points', {
+      memberId: currentMemberId,
+      points: pointsToDeliver
+    });
     isUploaded.value = true;
-    alert('分數上傳成功！');
-  } catch (error) {
-    alert('上傳失敗，請檢查後端連線');
+    alert(`兌換成功！目前帳戶點數：${res.data.currentPoints}`);
+    sessionStorage.removeItem('pendingSnakeScore'); // 上傳完就清除暫存
+  } catch (e) {
+    alert("存檔失敗，請確認後端連線。");
   }
 };
-
 onMounted(() => {
   ctx = gameCanvas.value.getContext('2d');
-  window.addEventListener('keydown', handleKeydown);
-  draw(); // 畫出初始背景
-});
+  window.addEventListener('keydown', handleKeyDown);
+  
+  // 檢查是否有登入後跳回來的暫存分數
+  const savedScore = sessionStorage.getItem('pendingSnakeScore');
+  const currentMemberId = localStorage.getItem('memberId');
 
-onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
+  if (savedScore && currentMemberId) {
+    score.value = parseInt(savedScore);
+    gameOver.value = true; // 直接進入結算畫面
+    isGameRunning.value = false;
+    alert(`歡迎回來！您剛才獲得的 ${score.value} 分現在可以領取了！`);
+  }
+  
+  draw();
+});
+onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 </script>
 
 <style scoped>
-.game-wrapper { display: flex; flex-direction: column; align-items: center; background: #ecf0f1; padding: 20px; border-radius: 15px; }
-.status-bar { width: 400px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.canvas-container { position: relative; border: 8px solid #34495e; border-radius: 5px; }
-canvas { display: block; background: #2c3e50; }
-.overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
-.btn-start, .btn-primary { padding: 12px 30px; font-size: 1.2rem; background: #42b983; color: white; border: none; border-radius: 25px; cursor: pointer; margin: 10px; }
-.btn-secondary { padding: 8px 20px; background: #3498db; color: white; border: none; border-radius: 20px; cursor: pointer; }
-.btn-secondary:disabled { background: #95a5a6; }
-.instructions { margin-top: 15px; color: #7f8c8d; font-size: 0.9rem; }
+.game-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(2px);
+  z-index: 5;
+}
+canvas { background: #1e272e; display: block; }
+.shadow { box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important; }
 </style>
