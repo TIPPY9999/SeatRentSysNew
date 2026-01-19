@@ -179,6 +179,10 @@ const particlesOptions = {
     },
   },
 }
+
+const goRegister = () => {
+  router.push('/register')
+}
 </script>
 
 <template>
@@ -228,6 +232,13 @@ const particlesOptions = {
                 :placeholder="loginType === 'member' ? '會員密碼' : '管理員密碼'"
                 required
               />
+            </div>
+
+            <div
+              v-if="loginType === 'member'"
+              class="register-link"
+            >
+              <span @click="goRegister">註冊會員</span>
             </div>
 
             <button type="submit" class="btn btn-primary btn-block">登入</button>
@@ -282,5 +293,21 @@ const particlesOptions = {
   background-color: #007bff;
   color: #fff;
   border-color: #007bff;
+}
+
+.register-link {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.register-link span {
+  font-size: 13px;
+  color: #007bff;
+  cursor: pointer;
+}
+
+.register-link span:hover {
+  text-decoration: underline;
 }
 </style>

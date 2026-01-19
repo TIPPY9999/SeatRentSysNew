@@ -30,6 +30,8 @@ import AdminEditView from '@/views/member/AdminEditView.vue'
 import MemberLayout from '@/layouts/MemberLayout.vue'
 import MemberProfileView from '@/views/member/MemberProfileView.vue'
 
+import AuthLayout from '@/layouts/AuthLayout.vue'
+
 /**
  * ==========================================
  * 2. 懶加載導入 (Dynamic Imports)
@@ -92,6 +94,18 @@ const routes = [
       },
     ],
 >>>>>>> 5f5b7ccb5a1adb7a59306eca17992fe8add2de40
+  },
+
+  // 註冊會員
+  {
+    path: '/register',
+    component: AuthLayout,
+    children: [
+      {
+        path: '',
+        component: () => import('@/views/member/Register.vue'),
+      },
+    ],
   },
 
   /**

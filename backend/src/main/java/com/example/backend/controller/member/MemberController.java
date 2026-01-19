@@ -102,4 +102,15 @@ public class MemberController {
         }
         return memberService.search(keyword);
     }
+
+    // 會員註冊
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody Member member) {
+        try {
+            memberService.insert(member);
+            return ResponseEntity.ok("註冊成功");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
