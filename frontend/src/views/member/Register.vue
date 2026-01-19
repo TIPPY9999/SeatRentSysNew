@@ -67,7 +67,7 @@ const goLogin = () => {
 
 <template>
   <div class="register-card">
-    <h2 class="page-title">電子郵件註冊</h2>
+    <h2 class="page-title">會員註冊</h2>
     
     <form @submit.prevent="submit" novalidate class="register-form">
       <div class="form-group">
