@@ -142,6 +142,7 @@ onMounted(fetchMerchants)
             <tr>
               <th class="text-center" style="width: 70px">ID</th>
               <th>商家名稱</th>
+              <th class="text-center">地址</th>
               <th>電話</th>
               <th class="text-center">狀態</th>
               <th class="text-center">管理操作</th>
@@ -151,6 +152,7 @@ onMounted(fetchMerchants)
             <tr v-for="m in merchants" :key="m.merchantId">
               <td class="text-center text-muted small">{{ m.merchantId }}</td>
               <td class="fw-bold text-dark">{{ m.merchantName }}</td>
+              <td class="text-center">{{ m.merchantAddress }}</td>
               <td>{{ m.merchantPhone }}</td>
               <td class="text-center">
                 <span

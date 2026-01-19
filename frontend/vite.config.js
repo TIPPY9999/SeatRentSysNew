@@ -57,4 +57,13 @@ export default defineConfig({
       '/spot': { target: 'http://localhost:8080', changeOrigin: true },
     },
   },
+  //Vue 跨域環境設定
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080/SeatRentSysNew',
+        changeOrigin: true,
+      },
+    },
+  },
 })
