@@ -123,27 +123,27 @@ const routes = [
       },
 
       // ==========================================
-      // [整合] 座位管理模組 (Seat) - 來自組員 TXT 檔案
+      // [整合] 座位管理模組 (Seat)
       // ==========================================
       {
         path: 'seat/list',
         name: 'seat-list',
-        component: () => import('@/views/seat/SeatList.vue'),
+        component: () => import('@/views/spot/SeatList.vue'),
       },
       {
         path: 'seat/insert',
         name: 'seat-insert',
-        component: () => import('@/views/seat/SeatForm.vue'),
+        component: () => import('@/views/spot/SeatForm.vue'),
       },
       {
         path: 'seat/edit/:id',
         name: 'seat-edit',
-        component: () => import('@/views/seat/SeatForm.vue'),
+        component: () => import('@/views/spot/SeatForm.vue'),
       },
       {
         path: 'seat/view/:id',
         name: 'seat-view',
-        component: () => import('@/views/seat/SeatOne.vue'),
+        component: () => import('@/views/spot/SeatOne.vue'),
       },
 
       // [核心功能] 商家與優惠券管理
