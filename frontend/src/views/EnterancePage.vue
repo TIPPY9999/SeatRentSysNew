@@ -4,6 +4,12 @@ import "@googlemaps/extended-component-library/api_loader.js";
 import "@googlemaps/extended-component-library/place_picker.js";
 import axios from "axios";
 import MainLayout from "@/layouts/MainLayout.vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+
+// --- Router and Store ---
+const router = useRouter();
+const authStore = useAuthStore();
 
 // 1. ---組態設定---
 const center = ref({ lat: 23.973875, lng: 120.982025 });
@@ -77,6 +83,18 @@ const closeInfoWindow = () => {
   infoWindow.value.opened = false;
 };
 
+// --- 新增的導航邏輯 ---
+const handleNavigation = (action) => {
+  if (authStore.isLogin) {
+    // 已登入，直接導航
+    router.push({ name: 'rec-rent-user', params: { action } });
+  } else {
+    // 未登入，導向登入頁並帶上重定向參數
+    const redirectPath = router.resolve({ name: 'rec-rent-user', params: { action } }).path;
+    router.push({ name: 'login', query: { redirect: redirectPath } });
+  }
+};
+
 onMounted(() => {
   initializeMapCenter();
   fetchSpots();
@@ -120,12 +138,12 @@ onMounted(() => {
             <p><strong>ID:</strong> {{ infoWindow.spot.id }}</p>
             <p><strong>狀態:</strong> {{ infoWindow.spot.status }}</p>
             <div class="button-group">
-              <router-link :to="{ name: 'rec-rent-user', params: { action: 'order' } }" class="btn btn-success">
+              <button @click="handleNavigation('order')" class="btn btn-success">
                 租借
-              </router-link>
-              <router-link :to="{ name: 'rec-rent-user', params: { action: 'complete' } }" class="btn btn-primary">
+              </button>
+              <button @click="handleNavigation('complete')" class="btn btn-primary">
                 歸還
-              </router-link>
+              </button>
             </div>
           </div>
         </GMapInfoWindow>

@@ -10,7 +10,7 @@ INSERT INTO--
 VALUES--
 
 --R
-SWLWCT * FROM --
+SELECT * FROM --
 
 --D
 DELETE --

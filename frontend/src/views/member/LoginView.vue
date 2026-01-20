@@ -1,16 +1,19 @@
 <script setup>
 import { ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router' // 引入 useRoute
 import axios from 'axios'
 
 //  SweetAlert2：統一用彈窗顯示成功/失敗訊息（取代 errorMsg/successMsg）
 import Swal from 'sweetalert2'
 
-//  Pinia：管理員登入後要存入 store，供 AdminLayout 顯示管理員資訊
+//  Pinia：引入兩種 store
 import { useAdminAuthStore } from '@/stores/adminAuth'
+import { useAuthStore } from '@/stores/auth'
 
 const adminAuthStore = useAdminAuthStore()
+const authStore = useAuthStore() // 引入會員 store
 const router = useRouter()
+const route = useRoute() // 建立 route 實例
 
 /**
  * 登入類型：
@@ -61,6 +64,9 @@ const login = async () => {
       const token = res.data?.token || 'login-ok'
       localStorage.setItem('token', token)
 
+      //  [+] 將登入狀態存入 Pinia，讓整個 App 保持同步
+      authStore.login(res.data, 'member')
+
       // 成功提示
       await Swal.fire({
         icon: 'success',
@@ -70,8 +76,12 @@ const login = async () => {
         timer: 1200,
       })
 
-      //  會員登入導向會員頁
-      router.push('/member/profile')
+      //  檢查是否有重定向路徑，若有則跳轉，否則導向會員頁
+      if (route.query.redirect) {
+        router.push(route.query.redirect)
+      } else {
+        router.push('/member/profile')
+      }
       return
     }
 
