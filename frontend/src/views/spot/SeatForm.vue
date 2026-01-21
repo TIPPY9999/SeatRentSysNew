@@ -111,7 +111,7 @@ onMounted(async () => {
 // 取得所有據點 (用於下拉選單)
 const fetchSpots = async () => {
   try {
-    const res = await axios.get('/api/spots')
+    const res = await axios.get('/api/spot/list')
     spotList.value = res.data
   } catch (err) {
     console.error('無法取得據點列表:', err)
