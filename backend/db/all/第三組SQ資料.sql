@@ -263,51 +263,200 @@ VALUES
 ('superuser', 'Pass1234', N'黃巧玲', 'superuser@system.com', 9);
 
 
---翌帆
-CREATE TABLE maintenanceStaff (  --維修聯絡人員表 
 
-staffId INT IDENTITY(1,1) PRIMARY KEY,	--維護人員編號
-staffName  NVARCHAR(50)  NOT NULL,      --維護人姓名
-staffCompany NVARCHAR(100) NULL,		--廠商名稱  (未來期末專題有機會再建一張廠商表，這個欄位就會換掉，換成廠商ID去FK廠商資料表)
-staffPhone VARCHAR(20) NULL,			--電話
-staffEmail VARCHAR(100) NULL,			--信箱
-staffNote NVARCHAR(200) NULL,			--備註
-createdAt DATETIME2		NOT NULL DEFAULT SYSDATETIME()		--建立時間
 
-);
-Go
+--============BUILD TABLE============
+--翌帆2026/01/21
+USE [SeatRentSys];
+GO
 
-CREATE TABLE maintenanceInformation ( --維護資料表
-
-ticketId INT IDENTITY(1,1) PRIMARY KEY,  --工單編號
-spotId	INT NOT NULL,
-issueType NVARCHAR(200) NOT NULL,   --問題類型
-issueDesc	NVARCHAR(500) NULL,		--問題描述
-issuePriority VARCHAR(100)  NOT NULL  DEFAULT 'NORMAL', --工單優先順序(影響可能? 會員等級、狀況緊急等等...) 
-issueStatus  VARCHAR(50) NOT NULL DEFAULT 'REPORTED', --工單狀態
-assignedStaffId INT NULL ,--派工維護人員
-reportedAt DATETIME2 NOT NULL DEFAULT SYSDATETIME(),-- 報修發生時間
-startAt DATETIME2 NULL, -- 開始維修時間
-resolvedAt DATETIME2 NULL,--維修完成時間
-resolveNote NVARCHAR(500) NULL,--維修說明
-resultType NVARCHAR(50) NULL--維修結果
-
+CREATE TABLE [dbo].[maintenanceInformation] (
+    [ticketId]        INT            IDENTITY (1, 1) NOT NULL,
+    [spotId]          INT            NULL,
+    [issueType]       NVARCHAR (200) NOT NULL,
+    [issueDesc]       NVARCHAR (500) NULL,
+    [issuePriority]   VARCHAR (100)  DEFAULT ('NORMAL') NOT NULL,
+    [issueStatus]     VARCHAR (50)   DEFAULT ('REPORTED') NOT NULL,
+    [assignedStaffId] INT            NULL,
+    [reportedAt]      DATETIME2 (7)  DEFAULT (sysdatetime()) NOT NULL,
+    [startAt]         DATETIME2 (7)  NULL,
+    [resolvedAt]      DATETIME2 (7)  NULL,
+    [resolveNote]     NVARCHAR (500) NULL,
+    [resultType]      NVARCHAR (50)  NULL,
+    [seatsId]         INT            NULL,
+    PRIMARY KEY CLUSTERED ([ticketId] ASC),
+    CONSTRAINT [FK_maintenanceInformation_seats] FOREIGN KEY ([seatsId]) REFERENCES [dbo].[seats] ([seatsId]),
+    CONSTRAINT [fkMaintAssignedStaffId] FOREIGN KEY ([assignedStaffId]) REFERENCES [dbo].[maintenanceStaff] ([staffId])
 );
 
-ALTER TABLE maintenanceInformation
-ADD CONSTRAINT fkMaintAssignedStaffId -- 維護工單 assignedStaffId 對應 maintenanceStaff.staffId
-    FOREIGN KEY (assignedStaffId)
-    REFERENCES maintenanceStaff(staffId);
+
+USE [SeatRentSys];
+GO
+
+CREATE TABLE [dbo].[maintenanceStaff] (
+    [staffId]      INT            IDENTITY (1, 1) NOT NULL,
+    [staffName]    NVARCHAR (50)  NOT NULL,
+    [staffCompany] NVARCHAR (100) NULL,
+    [staffPhone]   VARCHAR (20)   NULL,
+    [staffEmail]   VARCHAR (100)  NULL,
+    [staffNote]    NVARCHAR (200) NULL,
+    [createdAt]    DATETIME2 (7)  DEFAULT (sysdatetime()) NOT NULL,
+    [isActive]     BIT            CONSTRAINT [DF_maintenanceStaff_isActive] DEFAULT ((1)) NOT NULL,
+    PRIMARY KEY CLUSTERED ([staffId] ASC)
+);
+
+
+
+USE [SeatRentSys];
+GO
+-- 建立排程表
+CREATE TABLE [dbo].[maintenanceSchedule] (
+    [scheduleId]       INT            IDENTITY (1, 1) NOT NULL,
+    [title]            NVARCHAR (100) NOT NULL,    -- 任務名稱
+    
+    -- 目標設定 (Polymorphic Association)
+    [targetType]       VARCHAR (20)   NOT NULL,    -- 'SPOT' 或 'SEAT'
+    [targetId]         INT            NOT NULL,    -- 對應 renting_Spot.spotId 或 seats.seatsId
+    
+    -- 頻率設定
+    [scheduleType]     VARCHAR (20)   NOT NULL,    -- 'DAILY', 'WEEKLY', 'MONTHLY'
+    [dayOfWeek]        INT            NULL,        -- 1-7 (週排程用)
+    [dayOfMonth]       INT            NULL,        -- 1-31 (月排程用)
+    [executeTime]      TIME (7)       NOT NULL,    -- 預計執行時間
+    
+    -- 工單內容預設值
+    [issueType]        NVARCHAR (200) NOT NULL,
+    [issuePriority]    VARCHAR (50)   DEFAULT ('NORMAL') NOT NULL,
+    [assignedStaffId]  INT            NULL,        -- 預設指派的虛擬廠商ID
+    
+    -- 排程控制
+    [isActive]         BIT            DEFAULT ((1)) NOT NULL,
+    [lastExecutedAt]   DATETIME2 (7)  NULL,
+    [nextExecuteAt]    DATETIME2 (7)  NOT NULL,    -- 系統自動計算的下次執行時間
+    
+    [createdAt]        DATETIME2 (7)  DEFAULT (sysdatetime()) NOT NULL,
+    [updatedAt]        DATETIME2 (7)  DEFAULT (sysdatetime()) NOT NULL,
+
+    PRIMARY KEY CLUSTERED ([scheduleId] ASC)
+);
+GO
+
+-- =============================================
+-- 以下是AI建議的強力約束 (Constraints)
+
+
+-- 1. 限制 targetType 只能是 SPOT 或 SEAT
+ALTER TABLE [dbo].[maintenanceSchedule]
+ADD CONSTRAINT [CK_schedule_targetType] 
+CHECK ([targetType] IN ('SPOT', 'SEAT'));
+
+-- 2. 限制 scheduleType 只能是三種頻率之一
+ALTER TABLE [dbo].[maintenanceSchedule]
+ADD CONSTRAINT [CK_schedule_scheduleType] 
+CHECK ([scheduleType] IN ('DAILY', 'WEEKLY', 'MONTHLY'));
+
+-- 3. 限制 issuePriority 只能是定義好的優先級
+ALTER TABLE [dbo].[maintenanceSchedule]
+ADD CONSTRAINT [CK_schedule_priority] 
+CHECK ([issuePriority] IN ('LOW', 'NORMAL', 'HIGH', 'URGENT'));
+
+-- 4. 邏輯檢查：確保頻率與參數一致 (防呆)
+-- DAILY: 不需要 dayOfWeek 和 dayOfMonth
+-- WEEKLY: 必須有 dayOfWeek (1-7)
+-- MONTHLY: 必須有 dayOfMonth (1-31)
+ALTER TABLE [dbo].[maintenanceSchedule]
+ADD CONSTRAINT [CK_schedule_rule_logic]
+CHECK (
+    ([scheduleType]='DAILY'   AND [dayOfWeek] IS NULL AND [dayOfMonth] IS NULL)
+ OR ([scheduleType]='WEEKLY'  AND [dayOfWeek] BETWEEN 1 AND 7 AND [dayOfMonth] IS NULL)
+ OR ([scheduleType]='MONTHLY' AND [dayOfMonth] BETWEEN 1 AND 31 AND [dayOfWeek] IS NULL)
+);
+
+-- 5. 建立 Foreign Key (只針對 assignedStaffId，因為 targetId 是動態的無法設 FK)
+ALTER TABLE [dbo].[maintenanceSchedule]
+ADD CONSTRAINT [FK_schedule_staff]
+FOREIGN KEY ([assignedStaffId]) REFERENCES [dbo].[maintenanceStaff] ([staffId]);
+
+-- 6. 建立索引 (Index) - 讓排程掃描速度飛快
+CREATE NONCLUSTERED INDEX [IX_schedule_due_check]
+ON [dbo].[maintenanceSchedule] ([isActive], [nextExecuteAt])
+INCLUDE ([scheduleId]); -- 包含 ID 以加速查詢
+GO
+
+-- =============================================
+-- 表名：maintenanceLog (維修歷程記錄表)
+-- 整合版：包含 Idempotency 檢查與效能索引
+-- =============================================
+USE [SeatRentSys];
+GO
+-- 1. 建立資料表 (如果表不存在才建立)
+IF OBJECT_ID(N'dbo.maintenanceLog', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[maintenanceLog] (
+        [logId]     INT            IDENTITY (1, 1) NOT NULL, -- 流水號 PK
+        [ticketId]  INT            NOT NULL,                 -- 關聯原本的工單 ID
+        [operator]  NVARCHAR (50)  NOT NULL,                 -- 操作者 (支援中文)
+        [action]    VARCHAR (50)   NOT NULL,                 -- 動作代號 (英文)
+        [comment]   NVARCHAR (500) NULL,                     -- 詳細說明
+        [createdAt] DATETIME2 (7)  DEFAULT (sysdatetime()) NOT NULL, -- 發生時間 (預設當下)
+
+        -- 設定主鍵 (Primary Key)
+        CONSTRAINT [PK_maintenanceLog] PRIMARY KEY CLUSTERED ([logId] ASC)
+    );
+
+
+-- 2. 建立外鍵關聯 (如果 FK 不存在才建立)
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_maintenanceLog_ticket')
+BEGIN
+    ALTER TABLE [dbo].[maintenanceLog]
+    ADD CONSTRAINT [FK_maintenanceLog_ticket] 
+    FOREIGN KEY ([ticketId]) 
+    REFERENCES [dbo].[maintenanceInformation] ([ticketId])
+    ON DELETE CASCADE; -- 工單刪除時，歷史紀錄一併刪除
+    PRINT ' 外鍵 FK_maintenanceLog_ticket 建立成功';
+END;
+
+-- 3. 建立查詢索引 (針對 Timeline 優化)
+-- 這會讓 "SELECT * FROM logs WHERE ticketId = ? ORDER BY createdAt DESC" 飛快
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_maintenanceLog_ticket_createdAt')
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_maintenanceLog_ticket_createdAt]
+    ON [dbo].[maintenanceLog] ([ticketId] ASC, [createdAt] DESC);
+    PRINT '效能索引 IX_maintenanceLog_ticket_createdAt 建立成功';
+END;
 GO
 
 
-
-ALTER TABLE maintenanceInformation  --等光宇的表好了 我再ALTER
-ADD CONSTRAINT fkMaintSpotId          -- 維護工單spotId 對應 rentingSpot.spotId
-    FOREIGN KEY (spotId)
-    REFERENCES rentingSpot(spotId);
+--============TEST DATA==============
+--==翌帆2026/01/21
+USE [SeatRentSys];
 GO
 
+INSERT INTO [dbo].[maintenanceStaff] 
+([staffName], [staffCompany], [staffPhone], [staffEmail], [staffNote], [isActive])
+VALUES
+(N'陳國榮', N'永安機電工程行', '0912-345-678', 'kuorong.chen@yongan-fix.com', N'特約水電師傅，負責電力線路查修', 1),
+(N'林雅婷', N'潔淨家園服務社', '0922-123-456', 'yating.lin@cleanhome.tw', N'外包清潔廠商，負責場地日常打掃', 1),
+(N'黃志明', N'極速電腦工作室', '0933-987-654', 'cm.huang@speedy-pc.tw', N'負責機台硬體故障排除 (螢幕、主機)', 1),
+(N'張惠雯', NULL, '0911-222-333', 'huiwen.chang@gmail.com', N'個人接案清潔人員，配合彈性高', 1),
+(N'李建華', N'光速網路企業社', '0955-666-777', 'ch.lee@lightnet.com.tw', N'網路佈線與連線異常處理廠商', 1),
+(N'王怡君', N'安心監控科技', '0988-555-444', 'yichun.wang@safe-monitor.com', N'負責門禁系統與監視器設備維護', 1),
+(N'劉志偉', N'涼爽空調維修站', '0977-111-222', 'cw.liu@cool-ac.tw', N'負責空調設備保養與通風問題', 1),
+(N'吳淑芬', NULL, '0966-888-999', 'shufen.wu@yahoo.com.tw', N'臨時工，負責支援緊急清潔任務', 1),
+(N'蔡明哲', N'智匯資訊科技', '0921-000-111', 'mingche.tsai@smart-it.com.tw', N'軟體系統重灌與設定支援', 1),
+(N'楊宗翰', N'頂尖程式工作室', '0932-444-555', 'th.yang@top-code.com', N'遠端系統除錯與軟體更新協助', 1),
+(N'許家豪', N'強力電力工程', '0910-123-123', 'chiahao.hsu@power-fix.tw', N'高壓電設備檢修與配電盤維護', 1),
+(N'鄭淑惠', N'亮晶晶清潔公司', '0958-777-888', 'shuhui.cheng@shining.com', N'定期深度清潔與消毒作業', 1),
+(N'謝欣怡', N'訊號通訊行', '0917-555-666', 'hsinyi.hsieh@signal-comm.tw', N'無線網路訊號測試與優化', 1),
+(N'洪志強', N'阿強綜合水電', '0929-333-444', 'cc.hung@gmail.com', N'假日緊急叫修支援 (個人)', 1),
+(N'郭美玲', NULL, '0987-654-321', 'meiling.kuo@hotmail.com', N'合作已終止，暫不派案', 0),
+(N'曾國華', N'順風家電維修', '0935-112-233', 'kh.tseng@wind-fix.com', N'一般電器設備更換與維修', 1),
+(N'廖俊傑', N'全能修繕工程', '0918-999-000', 'jj.liao@all-fix.com', N'桌椅結構損壞修補與更換', 1),
+(N'賴秀英', N'美好環境維護', '0920-555-123', 'hsiuying.lai@nice-env.com', N'負責垃圾清運與資源回收分類', 1),
+(N'徐文雄', N'金鑰匙鎖印行', '0970-111-999', 'wh.hsu@key-lock.tw', N'電子鎖電池更換與開鎖服務', 1),
+(N'蘇郁婷', N'連線通科技', '0916-222-888', 'yuting.su@connect-tech.com', N'路由器與交換器硬體設定', 1);
+GO
+--===============END=================
 
 
 
