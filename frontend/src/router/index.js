@@ -80,6 +80,16 @@ const routes = [
         name: 'member-profile',
         component: MemberProfileView,
       },
+      {
+        path: 'user-info',
+        name: 'member-user-info',
+        component: () => import('@/views/rec/IdHoldingPage.vue'),
+      },
+      {
+        path: 'rent/:action?',
+        name: 'rec-rent-user',
+        component: () => import('@/views/rec/RecRentUserPage.vue'),
+      },
     ],
   },
 
@@ -216,11 +226,6 @@ const routes = [
         path: 'rec-rent',
         name: 'rec-rent',
         component: () => import('@/views/rec/RecRentMgnPage.vue'),
-      },
-      {
-        path: 'rent/:action?',
-        name: 'rec-rent-user',
-        component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
 
       // [功能] 維修管理 (Maintenance)

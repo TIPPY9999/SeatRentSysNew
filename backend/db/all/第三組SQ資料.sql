@@ -1,4 +1,23 @@
+--重置資料庫
+--Version Log: 2026/01/21
+--===========CLEAR==================
+USE SeatRentSys
+DROP TABLE recRent;
+DROP TABLE merchant;
+DROP TABLE discount;
+DROP TABLE maintenanceStaff;
+DROP TABLE maintenanceInformation;
+DROP TABLE renting_Spot;
+DROP TABLE seats;
+DROP TABLE member;
+DROP TABLE admin;
+--============BUILD TABLE============
 
+--============TEST DATA==============
+
+
+
+--===============END=================
 --光宇
 CREATE TABLE renting_Spot (
     spot_Id        INT IDENTITY(1,1) PRIMARY KEY,        -- 租借點編號
@@ -7,11 +26,20 @@ CREATE TABLE renting_Spot (
     spot_Address   NVARCHAR(200) NULL,                   -- 租借地址
     spotStatus     NVARCHAR(20) NOT NULL,                -- 租借點位狀況
     merchant_Id    INT NULL,                             -- 合作商家 ID
-    created_At     DATETIME2 NOT NULL 
-                     DEFAULT SYSDATETIME(),              -- 設置時間
-    updated_At     DATETIME2 NOT NULL 
-                     DEFAULT SYSDATETIME()               -- 更新時間
+    created_At     DATETIME2 NOT NULL DEFAULT SYSDATETIME(), -- 設置時間
+    updated_At     DATETIME2 NOT NULL DEFAULT SYSDATETIME()  -- 更新時間
 );
+
+ALTER TABLE renting_Spot
+ADD latitude  DECIMAL(10,7) NULL,
+    longitude DECIMAL(10,7) NULL;
+    
+ALTER TABLE renting_Spot
+ADD spotDescription NVARCHAR(500) NULL;
+
+ALTER TABLE renting_Spot
+ADD spotImage NVARCHAR(255) NULL;
+
 
 CREATE TABLE seats (
     seats_id      INT IDENTITY(1,1) PRIMARY KEY,        -- 設備編號
@@ -28,10 +56,6 @@ CREATE TABLE seats (
 );
 select * from seats;
 select * from renting_Spot;
-
-ALTER TABLE renting_Spot
-ADD latitude  DECIMAL(10,7) NULL,
-    longitude DECIMAL(10,7) NULL;
 
 ALTER TABLE seats
 ADD serial_number VARCHAR(50) NULL,
@@ -72,6 +96,7 @@ CREATE TABLE merchant (
     merchantStatus INT,                                -- 狀態
     createdTime DATETIME2 DEFAULT SYSDATETIME()        -- 建立時間
 );
+
 
 CREATE TABLE discount (
     couponId INT IDENTITY(1,1) PRIMARY KEY,            -- PK 優惠券ID
@@ -297,7 +322,7 @@ SELECT * FROM V_RentDetails
 DROP VIEW V_RentDetails;
 
 --C
-
+--子桓
 CREATE VIEW V_RentDetails AS
 SELECT 
     r.recId,
@@ -334,6 +359,7 @@ LEFT JOIN renting_Spot s2 ON r.spotIdReturn = s2.spotId;
 
 --spot ver.20251129 
 --C TABLE
+
 
 CREATE TABLE renting_Spot (
     spotId        INT IDENTITY(1,1) PRIMARY KEY,        -- 租借點編號
@@ -423,6 +449,7 @@ VALUES
 
 --RecRent ver.20251129
 --C
+
 CREATE TABLE recRent (    
     recSeqId INT IDENTITY(1,1) NOT NULL,  --  隱藏的流水號，負責自動遞增
     -- 2. 定義 recId 為「計算欄位」，自動生成 R00001, R00002...    -- 邏輯：'R' + 補零至 9 位數

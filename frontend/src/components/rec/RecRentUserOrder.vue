@@ -2,6 +2,14 @@
 import { ref, onMounted, computed, watch } from "vue";
 import axios from "axios";
 
+// --- Props ---
+const props = defineProps({
+  memId: {
+    type: Number,
+    required: true,
+  },
+});
+
 // --- 狀態定義 ---
 const spots = ref([]);
 const seats = ref([]);
@@ -48,7 +56,7 @@ const loadSeats = async (spotId) => {
   selectedSeat.value = null;
   try {
     const response = await axios.get(
-      `http://localhost:8080/seat/listBySoptId?spotId=${spotId}`
+      `http://localhost:8080/seats/search?spotId=${spotId}`
     );
     // 根據需求，只顯示狀態為"空閒"的座位
     seats.value = response.data.filter((seat) => seat.seatsStatus === "空閒");
@@ -74,12 +82,17 @@ const closeModal = () => {
 };
 
 const proceedWithRent = async () => {
+  if (!props.memId) {
+    errorMessage.value = "無法獲取會員資訊，請重新登入。";
+    closeModal();
+    return;
+  }
   if (!isReadyToRent.value || !agreedToTerms.value) {
     alert("請完成所有租借步驟並同意使用條款。");
     return;
   }
   const rentalData = {
-    memId: 1, // 假設的會員 ID，應從登入狀態取得
+    memId: props.memId, // 使用 props 傳入的會員 ID
     spotIdRent: selectedSpot.value.spotId,
     seatsId: selectedSeat.value.seatsId,
     paymentMethod: selectedPaymentMethod.value,
@@ -125,7 +138,10 @@ const step3Class = computed(() =>
   isStep3Completed.value ? "status-completed" : "status-pending"
 );
 
-const isReadyToRent = computed(() => isStep1Completed.value && isStep2Completed.value&& isStep3Completed.value);
+// 新增 computed：檢查會員 ID 是否有效
+const isMemIdValid = computed(() => props.memId && props.memId > 0);
+
+const isReadyToRent = computed(() => isStep1Completed.value && isStep2Completed.value && isStep3Completed.value && isMemIdValid.value);
 
 // --- Watchers ---
 watch(selectedSpot, (newSpot) => {
@@ -144,6 +160,7 @@ onMounted(loadSpots);
   <div class="user-order-container">
     <div class="card">
       <h1 class="card-header">即時座位租借</h1>
+      <div v-if="!isMemIdValid" class="alert alert-danger m-3">無法獲取您的會員資訊，請確保您已正確登入。</div>
       <div v-if="errorMessage" class="alert alert-danger m-3">{{ errorMessage }}</div>
 
       <!-- 步驟一: 選擇站點 -->
@@ -213,7 +230,7 @@ onMounted(loadSpots);
             class="btn btn-success btn-lg"
             :disabled="!isReadyToRent"
           >
-            {{ isReadyToRent ? "確認租借，前往付款" : "請完成各步驟" }}
+            {{ isReadyToRent ? "確認租借，前往付款" : "請完成各步驟或檢查登入狀態" }}
           </button>
         </fieldset>
       </div>
