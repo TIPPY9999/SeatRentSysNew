@@ -37,5 +37,5 @@ public class Admin {
     private LocalDateTime updatedAt;
 
     @Column(name = "admStatus")
-    private Integer admStatus;
+    private Integer admStatus = 1;
 }
