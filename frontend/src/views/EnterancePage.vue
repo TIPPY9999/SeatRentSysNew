@@ -60,6 +60,7 @@ const fetchSpots = async () => {
       id: spot.spotId,
       name: spot.spotName,
       status: spot.spotStatus,
+      hasActiveMaintenance: spot.hasActiveMaintenance || false,
       position: {
         lat: parseFloat(spot.latitude),
         lng: parseFloat(spot.longitude),
@@ -107,6 +108,38 @@ const handleNavigation = (action) => {
   }
 };
 
+// ✅ P2 修復：根據維修狀態返回不同顏色的地圖標記
+const getMarkerIcon = (spot) => {
+  // 優先檢查是否有進行中的維修工單
+  if (spot.hasActiveMaintenance) {
+    return {
+      url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
+      scaledSize: { width: 40, height: 40 }
+    };
+  }
+  
+  // 檢查據點狀態
+  if (spot.status === '已關閉') {
+    return {
+      url: 'http://maps.google.com/mapfiles/ms/icons/grey-dot.png',
+      scaledSize: { width: 40, height: 40 }
+    };
+  }
+  
+  if (spot.status === '暫停營運') {
+    return {
+      url: 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+      scaledSize: { width: 40, height: 40 }
+    };
+  }
+  
+  // 預設：營運中
+  return {
+    url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
+    scaledSize: { width: 40, height: 40 }
+  };
+};
+
 onMounted(() => {
   initializeMapCenter();
   fetchSpots();
@@ -137,6 +170,7 @@ onMounted(() => {
           :position="spot.position"
           :title="spot.name"
           :clickable="true"
+          :icon="getMarkerIcon(spot)"
           @click="openInfoWindow(spot)"
         />
         <GMapInfoWindow

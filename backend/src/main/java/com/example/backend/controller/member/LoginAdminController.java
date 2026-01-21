@@ -56,13 +56,21 @@ public class LoginAdminController {
         // 登入成功
         session.setAttribute("loginAdmin", admin);
 
-        // 回傳給前端用的資料
-        // 使用 HashMap 避免 Map.of 因欄位為 null 而拋出 NullPointerException
-        Map<String, Object> result = new HashMap<>();
-        result.put("admUsername", admin.getAdmUsername());
-        result.put("admName", admin.getAdmName());
-        result.put("admRole", admin.getAdmRole());
+        // ✅ 修正：返回前端需要的格式
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", "Bearer_" + admin.getAdmId() + "_" + System.currentTimeMillis()); // 簡化版 token
+        
+        // 構建管理員物件
+        Map<String, Object> adminData = new HashMap<>();
+        adminData.put("admId", admin.getAdmId());
+        adminData.put("admUsername", admin.getAdmUsername());
+        adminData.put("admName", admin.getAdmName());
+        adminData.put("admEmail", admin.getAdmEmail());
+        adminData.put("admRole", admin.getAdmRole());
+        adminData.put("admStatus", admin.getAdmStatus());
+        
+        response.put("admin", adminData);
 
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(response);
     }
 }

@@ -2,6 +2,7 @@ package com.example.backend.controller.maintenance;
 
 import com.example.backend.dto.maintenance.SpotOptionDto;
 import com.example.backend.dto.maintenance.MaintenanceLogResponseDto;
+import com.example.backend.dto.maintenance.MaintenanceTicketDto;
 import com.example.backend.model.maintenance.MaintenanceInformation;
 import com.example.backend.model.maintenance.MaintenanceStaff;
 import com.example.backend.model.spot.Seat;
@@ -105,6 +106,31 @@ public List<MaintenanceStaffResponseDto> getAllStaff() {
     @GetMapping("/tickets/{id}")
     public MaintenanceInformation getTicketById(@PathVariable Integer id) {
         return mtifService.getRequiredTicket(id);
+    }
+
+    // ✅ P5 修復：新增 DTO 端點（推薦使用）
+    // 1. 取得「待處理」工單 (DTO 版本)
+    @GetMapping("/tickets/active/dto")
+    public List<MaintenanceTicketDto> getActiveTicketsDto() {
+        return mtifService.getActiveTicketsDto();
+    }
+
+    // 2. 取得「歷史」工單 (DTO 版本)
+    @GetMapping("/tickets/history/dto")
+    public List<MaintenanceTicketDto> getHistoryTicketsDto() {
+        return mtifService.getHistoryTicketsDto();
+    }
+
+    // 3. 取得「全部」工單 (DTO 版本)
+    @GetMapping("/tickets/dto")
+    public List<MaintenanceTicketDto> getAllTicketsDto() {
+        return mtifService.getAllTicketsDto();
+    }
+
+    // 4. 取得單張工單詳情 (DTO 版本)
+    @GetMapping("/tickets/{id}/dto")
+    public MaintenanceTicketDto getTicketByIdDto(@PathVariable Integer id) {
+        return mtifService.getTicketByIdDto(id);
     }
 
     // ================== 工單操作 (Create / Update) ==================

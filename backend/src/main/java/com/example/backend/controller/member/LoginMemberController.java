@@ -62,7 +62,12 @@ public class LoginMemberController {
         // 登入成功，存 session
         session.setAttribute("loginMember", member);
 
-        // 回成功訊息
-        return ResponseEntity.ok("登入成功");
+        // ✅ 修正：返回前端需要的格式
+        Map<String, Object> response = Map.of(
+            "token", "Bearer_" + member.getMemId() + "_" + System.currentTimeMillis(), // 簡化版 token
+            "member", member
+        );
+
+        return ResponseEntity.ok(response);
     }
 }

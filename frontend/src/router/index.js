@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Swal from 'sweetalert2'
+import NProgress from 'nprogress'
+import '@/assets/nprogress-custom.css'
 
 /**
  * ==========================================
@@ -331,6 +333,18 @@ router.beforeEach((to, from, next) => {
     allowOutsideClick: false,
   })
   next('/login')
+})
+
+// NProgress 配置
+NProgress.configure({ showSpinner: false, speed: 400, trickleSpeed: 200 })
+
+router.beforeEach((to, from, next) => {
+  NProgress.start()
+  next()
+})
+
+router.afterEach(() => {
+  NProgress.done()
 })
 
 export default router

@@ -1,8 +1,10 @@
 package com.example.backend.controller.spot;
 
 import com.example.backend.controller.spot.DTO.SpotUpdateRequest;
+import com.example.backend.dto.spot.SpotMapDto;
 import com.example.backend.model.spot.RentalSpot;
 import com.example.backend.service.spot.RentalSpotService;
+import com.example.backend.service.maintenance.MaintenanceInformationService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * [重構] 租借據點 (RentalSpot) 資源的統一控制器
@@ -21,20 +24,35 @@ import java.util.Map;
 public class RentalSpotController {
 
     private final RentalSpotService rentalSpotService;
+    private final MaintenanceInformationService maintenanceService;
 
-    public RentalSpotController(RentalSpotService rentalSpotService) {
+    public RentalSpotController(RentalSpotService rentalSpotService, 
+                                MaintenanceInformationService maintenanceService) {
         this.rentalSpotService = rentalSpotService;
+        this.maintenanceService = maintenanceService;
     }
 
     // region 查詢功能 (Read)
 
     /**
-     * 查詢所有據點 (GET /api/spots)
-     * (原 SpotListController)
+     * 查詢所有據點（地圖用，含即時維修狀態）(GET /spot/list)
+     * ✅ P1 修復：動態計算即時維修狀態
      */
     @GetMapping("/list")
-    public List<RentalSpot> getAllSpots() {
-        return rentalSpotService.selectAll();
+    public ResponseEntity<List<SpotMapDto>> getAllSpotsForMap() {
+        List<RentalSpot> spots = rentalSpotService.selectAll();
+        
+        List<SpotMapDto> dtos = spots.stream()
+            .map(spot -> {
+                SpotMapDto dto = SpotMapDto.fromEntity(spot);
+                // ✅ 動態檢查是否有進行中的機台維修工單
+                boolean hasActiveMaintenance = maintenanceService.hasActiveMachineRepair(spot.getSpotId());
+                dto.setHasActiveMaintenance(hasActiveMaintenance);
+                return dto;
+            })
+            .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(dtos);
     }
 
     /**

@@ -14,6 +14,8 @@ import VueGoogleMaps from '@fawmi/vue-google-maps'
 // Particles.js（Vue 3 版）
 import Particles from '@tsparticles/vue3'
 import { loadSlim } from '@tsparticles/slim'
+// ✅ Phase 1: 引入 Motion 動畫插件
+import { MotionPlugin } from '@vueuse/motion'
 
 import App from './App.vue'
 import router from './router'
@@ -75,6 +77,9 @@ app.use(router)
 
 // Element Plus
 app.use(ElementPlus)
+
+// ✅ Phase 1: 註冊 Motion 插件
+app.use(MotionPlugin)
 
 // --- 啟用 vue-google-maps 並設定 API 金鑰 ---
 app.use(VueGoogleMaps, {

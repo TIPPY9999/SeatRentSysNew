@@ -6,6 +6,11 @@ import { useTicketConfig } from '@/composables/maintenance/useTicketConfig'
 import { usePagination } from '@/composables/maintenance/usePagination'
 import TicketCharts from '@/components/maintenance/TicketCharts.vue'
 import TicketTimeline from '@/components/maintenance/TicketTimeline.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const props = defineProps({ historyMode: Boolean })
 const tickets = ref([])
@@ -373,38 +378,34 @@ onMounted(() => {
   <div class="ticket-list-container">
     <section class="content-header">
       <div class="container-fluid">
-        <transition name="slide-down" appear>
-          <div class="page-title-box">
-            <div class="title-icon" :class="historyMode ? 'history-mode' : 'active-mode'">
-              <i :class="historyMode ? 'fas fa-archive' : 'fas fa-clipboard-list'"></i>
-            </div>
-            <div class="title-content">
-              <h1>{{ historyMode ? '維修歷史檔案' : '維修工單管理' }}</h1>
-              <p class="subtitle">
-                {{ historyMode ? '查看已完成或取消的工單紀錄' : '管理與追蹤所有維修工單' }}
-              </p>
-            </div>
-            <div class="title-actions">
-              <el-button-group>
-                <router-link v-if="historyMode" to="/admin/mtif-list">
-                  <el-button type="primary" plain class="action-btn">
-                    <i class="fas fa-arrow-left mr-2"></i> 返回列表
-                  </el-button>
-                </router-link>
-                <router-link v-if="!historyMode" to="/admin/mtif-history">
-                  <el-button type="info" plain class="action-btn">
-                    <i class="fas fa-history mr-2"></i> 歷史紀錄
-                  </el-button>
-                </router-link>
-                <router-link v-if="!historyMode" to="/admin/mtif-form">
-                  <el-button type="success" class="action-btn add-btn">
-                    <i class="fas fa-plus mr-2"></i> 新增工單
-                  </el-button>
-                </router-link>
-              </el-button-group>
-            </div>
-          </div>
-        </transition>
+        <PageHeader
+          :title="historyMode ? '維修歷史檔案' : '維修工單管理'"
+          :subtitle="historyMode ? '查看已完成或取消的工單紀錄' : '管理與追蹤所有維修工單'"
+          :icon="historyMode ? 'fas fa-archive' : 'fas fa-clipboard-list'"
+          :back-button="historyMode"
+          @back="router.push('/admin/mtif-list')"
+        >
+          <template #actions>
+            <ActionButton 
+              v-if="!historyMode"
+              type="secondary"
+              size="medium"
+              icon="fas fa-history"
+              @click="router.push('/admin/mtif-history')"
+            >
+              歷史紀錄
+            </ActionButton>
+            <ActionButton 
+              v-if="!historyMode"
+              type="primary"
+              size="medium"
+              icon="fas fa-plus"
+              @click="router.push('/admin/mtif-form')"
+            >
+              新增工單
+            </ActionButton>
+          </template>
+        </PageHeader>
       </div>
     </section>
 

@@ -1,6 +1,7 @@
 package com.example.backend.service.maintenance;
 
 import com.example.backend.dto.maintenance.SpotOptionDto;
+import com.example.backend.dto.maintenance.MaintenanceTicketDto;
 import com.example.backend.model.maintenance.MaintenanceInformation;
 import com.example.backend.model.maintenance.MaintenanceStaff;
 import com.example.backend.model.spot.RentalSpot;
@@ -90,6 +91,23 @@ public class MaintenanceInformationService {
         return seatRepo.findBySpotId(spotId);
     }
 
+    // ✅ P1 修復：檢查機台是否有進行中的維修工單
+    @Transactional(readOnly = true)
+    public boolean hasActiveMachineRepair(Integer spotId) {
+        if (spotId == null) return false;
+        List<String> activeStatuses = Arrays.asList(STATUS_REPORTED, STATUS_ASSIGNED, STATUS_UNDER_MAINTENANCE);
+        // 檢查機台級別的工單 (seatsId 為 null)
+        return mtifRepo.existsBySpotIdAndSeatsIdIsNullAndIssueStatusIn(spotId, activeStatuses);
+    }
+
+    // ✅ P3 修復：檢查座位是否維修中
+    @Transactional(readOnly = true)
+    public boolean isSeatUnderMaintenance(Integer seatsId) {
+        if (seatsId == null) return false;
+        List<String> activeStatuses = Arrays.asList(STATUS_REPORTED, STATUS_ASSIGNED, STATUS_UNDER_MAINTENANCE);
+        return mtifRepo.existsBySeatsIdAndIssueStatusIn(seatsId, activeStatuses);
+    }
+
     private boolean isBlank(String s) {
         return s == null || s.isBlank();
     }
@@ -163,6 +181,11 @@ public class MaintenanceInformationService {
         mtif.setResolveNote(null);
 
         MaintenanceInformation saved = mtifRepo.save(mtif);
+        
+        // ✅ P4 修復：如果是機台工單，級聯更新所有座位狀態
+        if (saved.getSpotId() != null && saved.getSeatsId() == null) {
+            cascadeSpotMaintenanceToSeats(saved.getSpotId(), true);
+        }
         
         // ★ 記錄工單建立歷程
         String operator = "系統管理員"; // 實際應從 Spring Security 取得當前使用者
@@ -317,6 +340,61 @@ public class MaintenanceInformationService {
         );
     }
 
+    // ✅ P5 修復：DTO 轉換方法
+    @Transactional(readOnly = true)
+    public List<MaintenanceTicketDto> getActiveTicketsDto() {
+        return getActiveTickets().stream()
+            .map(this::enrichTicketDto)
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceTicketDto> getHistoryTicketsDto() {
+        return getHistoryTickets().stream()
+            .map(this::enrichTicketDto)
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceTicketDto> getAllTicketsDto() {
+        return getAllTickets().stream()
+            .map(this::enrichTicketDto)
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public MaintenanceTicketDto getTicketByIdDto(Integer ticketId) {
+        MaintenanceInformation entity = getRequiredTicket(ticketId);
+        return enrichTicketDto(entity);
+    }
+
+    /**
+     * 增強工單 DTO：補充 spot 和 seat 關聯資料
+     */
+    private MaintenanceTicketDto enrichTicketDto(MaintenanceInformation entity) {
+        MaintenanceTicketDto dto = MaintenanceTicketDto.fromEntity(entity);
+        
+        // 補充 spot 名稱
+        if (entity.getSpotId() != null) {
+            rentalSpotRepo.findById(entity.getSpotId())
+                .ifPresent(spot -> dto.setSpotName(spot.getSpotName()));
+        }
+        
+        // 補充 seat 名稱
+        if (entity.getSeatsId() != null) {
+            seatRepo.findById(entity.getSeatsId())
+                .ifPresent(seat -> dto.setSeatName(seat.getSeatsName()));
+        }
+        
+        // 補充人員名稱
+        if (entity.getAssignedStaffId() != null) {
+            staffRepo.findById(entity.getAssignedStaffId())
+                .ifPresent(staff -> dto.setAssignedStaffName(staff.getStaffName()));
+        }
+        
+        return dto;
+    }
+
     // ============ 狀態流程 ============
 
     public void assignStaff(int ticketId, Integer staffId) {
@@ -467,6 +545,11 @@ public class MaintenanceInformationService {
                         .orElseThrow(() -> new IllegalArgumentException("找不到指定租借點 " + mtif.getSpotId()));
                 spot.setSpotStatus(SPOT_STATUS_OPERATIONAL); // 恢復營運
                 rentalSpotRepo.save(spot);
+                
+                // ✅ P4 修復：機台工單結案時，恢復所有座位狀態（如果修復成功）
+                if (mtif.getSeatsId() == null && "FIXED".equals(resultType)) {
+                    cascadeSpotMaintenanceToSeats(mtif.getSpotId(), false);
+                }
             }
         }
 
@@ -535,6 +618,41 @@ public class MaintenanceInformationService {
         if (isBlank(priority)) return false;
         return Arrays.asList(PRIORITY_LOW, PRIORITY_NORMAL, PRIORITY_HIGH, PRIORITY_URGENT)
                      .contains(priority);
+    }
+
+    /**
+     * ✅ P4 修復：機台工單級聯更新所有座位狀態
+     * @param spotId 機台 ID
+     * @param setMaintenance true=設為維修中, false=恢復為啟用
+     */
+    @Transactional
+    private void cascadeSpotMaintenanceToSeats(Integer spotId, boolean setMaintenance) {
+        if (spotId == null) return;
+        
+        // 查詢該機台下的所有座位
+        List<Seat> seats = seatRepo.findBySpotId(spotId);
+        
+        if (seats.isEmpty()) {
+            return; // 該機台沒有座位，無需級聯
+        }
+        
+        String targetStatus = setMaintenance ? SEAT_STATUS_REPAIRING : SEAT_STATUS_ENABLED;
+        int updatedCount = 0;
+        
+        for (Seat seat : seats) {
+            // 只更新狀態不同的座位，避免不必要的資料庫寫入
+            if (!targetStatus.equals(seat.getSeatsStatus())) {
+                seat.setSeatsStatus(targetStatus);
+                seatRepo.save(seat);
+                updatedCount++;
+            }
+        }
+        
+        // 記錄級聯更新日誌（可選）
+        if (updatedCount > 0) {
+            System.out.printf("✅ P4 級聯更新：機台 #%d 的 %d 個座位狀態已更新為 %s%n", 
+                spotId, updatedCount, targetStatus);
+        }
     }
 
     /**

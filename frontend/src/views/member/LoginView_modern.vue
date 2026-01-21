@@ -56,8 +56,8 @@ const login = async () => {
       router.push('/member/profile')
     } else {
       const res = await axios.post('http://localhost:8080/login/admin', {
-        admUsername: account.value,
-        admPassword: password.value,
+        adminUsername: account.value,
+        adminPassword: password.value,
       })
 
       const { token, admin } = res.data
