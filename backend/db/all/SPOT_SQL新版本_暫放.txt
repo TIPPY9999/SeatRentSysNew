@@ -11,7 +11,9 @@ CREATE TABLE renting_Spot (
     updatedAt     DATETIME2 NOT NULL               -- 更新時間
                      DEFAULT SYSDATETIME(),
     latitude decimal(10,7),
-     longitude decimal(10,7)
+    longitude decimal(10,7),
+    spotDescription NVARCHAR(500) NULL,
+    spotImage       VARCHAR(255)  NULL
 );
 
 
