@@ -28,8 +28,8 @@
               <input v-model="formData.spotAddress" type="text" class="form-control" required />
             </div>
             <div class="col-md-4">
-              <label class="form-label">所屬商家 ID (Merchant ID) <span class="text-danger">*</span></label>
-              <input v-model.number="formData.merchantId" type="number" class="form-control" required min="1" />
+              <label class="form-label">所屬商家 ID (Merchant ID)</label>
+              <input v-model.number="formData.merchantId" type="number" class="form-control" min="1" placeholder="無商家可留空" />
             </div>
           </div>
 
@@ -42,7 +42,8 @@
             <div class="col-md-6">
               <label class="form-label">狀態</label>
               <select v-model="formData.spotStatus" class="form-select">
-                <option value="啟用">啟用</option>
+                <option value="營運中">營運中</option>
+                <option value="維修中">維修中</option>
                 <option value="停用">停用</option>
               </select>
             </div>
@@ -104,7 +105,7 @@ const formData = ref({
   spotAddress: '',
   merchantId: '',
   spotDescription: '',
-  spotStatus: '啟用',
+  spotStatus: '營運中',
   spotImage: '' 
 });
 
@@ -112,7 +113,7 @@ const formData = ref({
 onMounted(async () => {
   if (isEditMode.value) {
     try {
-      const res = await axios.get(`/api/spots/${route.params.id}`);
+      const res = await axios.get(`/api/spot/${route.params.id}`);
       formData.value = res.data;
       // 若原本有圖片，顯示預覽
       if (formData.value.spotImage) {
@@ -139,12 +140,18 @@ const submitForm = async () => {
   isSubmitting.value = true;
   try {
     // 這裡示範傳送 JSON 資料
+    // [修正] 處理 merchantId，如果是空字串轉為 null，避免後端 Integer 轉換錯誤
+    const payload = { ...formData.value };
+    if (payload.merchantId === '' || payload.merchantId === undefined) {
+      payload.merchantId = null;
+    }
+
     // 若需上傳圖片，建議改用 FormData 或分兩階段上傳
     if (isEditMode.value) {
-      await axios.put(`/api/spots/${route.params.id}`, formData.value);
+      await axios.put(`/api/spot/${route.params.id}`, payload);
       alert('更新成功！');
     } else {
-      await axios.post('/api/spots', formData.value);
+      await axios.post('/api/spot', payload);
       alert('新增成功！');
     }
     

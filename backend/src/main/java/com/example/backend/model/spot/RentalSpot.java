@@ -54,12 +54,9 @@ public class RentalSpot {
     @Column(name = "longitude", precision = 10, scale = 7) // 10 總位數，7 小數位
     private BigDecimal longitude;
 
-    // [修正] 資料庫欄位名稱為 spotDescription，需與 DB 一致
-    // 對應 SQL: spotDescription NVARCHAR(500)
     @Column(name = "spotDescription", length = 500)
     private String spotDescription;
 
-    // [修正] 補上長度以符合 DB 定義
     @Column(name = "spotImage", length = 255)
     private String spotImage;
 

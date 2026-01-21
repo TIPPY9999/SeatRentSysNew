@@ -7,28 +7,18 @@
           <!-- 新增搜尋框 -->
           <div class="search-bar">
             <!-- [修復] 補上遺失的關鍵字搜尋框 -->
-            <input
-              type="text"
-              v-model="searchKeyword"
-              placeholder="搜尋名稱、代碼或地址"
-              class="search-input"
-            />
+            <input type="text" v-model="searchKeyword" placeholder="搜尋名稱、代碼或地址" class="search-input" />
             <!-- Merchant ID 搜尋框 ，說明：min="0" 讓點擊上下箭頭時不會變負數；oninput 則是防止使用者直接用鍵盤打 - 號。-->
-            <input
-              type="number"
-              v-model.number="searchMerchantId"
-              placeholder="搜尋ID"
-              class="search-input-mid"
-              min="1"
-              step="1"
-              @input="sanitizeMerchantId"
-            />
+            <input type="number" v-model.number="searchMerchantId" placeholder="搜尋ID" class="search-input-mid" min="1"
+              step="1" @input="sanitizeMerchantId" />
             <!-- 狀態下拉選單 -->
             <select v-model="searchStatus" class="search-select">
               <option value="">全部狀態</option>
-              <option value="營運中">啟用</option>
+              <option value="營運中">營運中</option>
               <option value="停用">停用</option>
+              <option value="維修中">維修中</option>
             </select>
+
           </div>
           <!-- 點擊新增，跳轉到 SpotForm (無 ID) -->
           <button class="btn-add" @click="goToAdd">新增據點</button>
@@ -58,16 +48,14 @@
               <!-- 建議後端 DTO 補上 merchantName -->
               <td>{{ spot.merchantName || spot.merchantId }}</td>
               <td>
-                <span :class="['badge', (spot.spotStatus === '啟用' || spot.spotStatus === 1) ? 'bg-success' : 'bg-secondary']">
+                <span
+                  :class="['badge', (spot.spotStatus === '啟用' || spot.spotStatus === 1) ? 'bg-success' : 'bg-secondary']">
                   {{ spot.spotStatus }}
                 </span>
               </td>
               <td>
                 <!-- [修改] 改用 button 統一操作風格，並呼叫 goToView 函式 -->
-                <button
-                  class="btn btn-info btn-sm me-1 text-white"
-                  @click="goToView(spot.spotId)"
-                >
+                <button class="btn btn-info btn-sm me-1 text-white" @click="goToView(spot.spotId)">
                   詳細
                 </button>
                 <!-- 點擊編輯，跳轉到 SpotForm (帶 ID) -->
@@ -118,7 +106,7 @@ const sanitizeMerchantId = () => {
 const loadSpots = async () => {
   try {
     // 呼叫後端 API (對應 RentalSpotController 的 list 方法)
-    // [修正] 改用 RESTful 風格路徑，對應 RentalSpotController 的 @GetMapping("/api/spots")
+    // [修正] 改用 RESTful 風格路徑，對應 RentalSpotController 的 @GetMapping("/api/spot")
     // TODO: 若資料量大，建議將 searchKeyword, searchMerchantId 等參數傳給後端進行過濾，而非前端過濾
     const res = await axios.get('/api/spot/list', {
       // params: {
@@ -206,23 +194,27 @@ onMounted(() => {
 .spot-list {
   padding: 20px;
 }
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
+
 .table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
 }
+
 .table th,
 .table td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
 }
+
 .table th {
   background-color: #f4f4f4;
 }
@@ -234,6 +226,7 @@ onMounted(() => {
   border: 1px solid #ccc;
   border-radius: 4px;
 }
+
 /* 補上 search-input 樣式 */
 .search-bar .search-input {
   width: 200px;
@@ -241,7 +234,8 @@ onMounted(() => {
 }
 
 .search-bar .search-input-mid {
-  width: 150px; /* 數字欄位可以窄一點 */
+  width: 150px;
+  /* 數字欄位可以窄一點 */
   margin-left: 10px;
 }
 
@@ -261,17 +255,21 @@ button {
   border-radius: 4px;
   color: white;
 }
+
 .btn-add {
   background-color: #28a745;
   font-size: 1.1em;
   padding: 8px 16px;
 }
+
 .btn-edit {
   background-color: #007bff;
 }
+
 .btn-delete {
   background-color: #dc3545;
 }
+
 button:hover {
   opacity: 0.9;
 }

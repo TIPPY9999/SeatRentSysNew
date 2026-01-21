@@ -190,6 +190,11 @@ public class MaintenanceInformationService {
             throw new IllegalStateException("維修中不允許修改工單基本資訊");
         }
 
+        // ★ 任務2：檢測 assignedStaffId 是否變更
+        Integer oldStaffId = existing.getAssignedStaffId();
+        Integer newStaffId = mtif.getAssignedStaffId();
+        boolean staffChanged = !java.util.Objects.equals(oldStaffId, newStaffId) && newStaffId != null;
+
         // 更新欄位 (含 Trim)
         existing.setIssueType(mtif.getIssueType().trim());
 
@@ -208,7 +213,33 @@ public class MaintenanceInformationService {
             existing.setIssuePriority(p);
         }
 
-        return mtifRepo.save(existing);
+        // ★ 任務2：更新指派人員
+        if (newStaffId != null) {
+            validateAssignedStaff(newStaffId);
+            existing.setAssignedStaffId(newStaffId);
+        }
+
+        // 儲存更新
+        MaintenanceInformation saved = mtifRepo.save(existing);
+
+        // ★ 任務2：如果指派人員有變更，記錄 Log 並可能更新狀態
+        if (staffChanged) {
+            // 查詢新負責人的姓名
+            String staffName = staffRepo.findById(newStaffId)
+                    .map(MaintenanceStaff::getStaffName)
+                    .orElse("未指定");
+
+            // 如果當前狀態是 REPORTED，更新為 ASSIGNED
+            if (STATUS_REPORTED.equals(saved.getIssueStatus())) {
+                saved.setIssueStatus(STATUS_ASSIGNED);
+                saved = mtifRepo.save(saved);
+            }
+
+            // 記錄指派歷程
+            saveLog(saved, "System", "ASSIGNED", "已指派負責人：" + staffName);
+        }
+
+        return saved;
     }
 
     //

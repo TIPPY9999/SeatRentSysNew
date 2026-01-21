@@ -1,11 +1,16 @@
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
 import axios from "axios";
+import { useAuthStore } from "@/stores/auth";
+
+// --- Pinia Store ---
+const authStore = useAuthStore();
 
 // --- 狀態定義 ---
 const spots = ref([]);
 const seats = ref([]);
 const selectedSpot = ref(null);
+const selectedSeat =ref(null);
 const selectedPaymentMethod = ref(null);
 const isLoading = ref({
   spots: false,
@@ -47,7 +52,7 @@ const loadSeats = async (spotId) => {
   selectedSeat.value = null;
   try {
     const response = await axios.get(
-      `http://localhost:8080/seat/listBySoptId?spotId=${spotId}`
+      `http://localhost:8080/seats/search?spotId=${spotId}`
     );
     // 根據需求，只顯示狀態為"空閒"的座位
     seats.value = response.data.filter((seat) => seat.seatsStatus === "空閒");
@@ -73,8 +78,14 @@ const closeModal = () => {
 };
 
 const proceedWithRent = async () => {
+  if (!authStore.user?.member?.memId) {
+    errorMessage.value = "無法獲取您的會員資訊，請重新登入。";
+    closeModal();
+    return;
+  }
+
   const rentalData = {
-    memId: 1, // 假設的會員 ID，應從登入狀態取得
+    memId: authStore.user.member.memId, // 從 Pinia Store 取得會員 ID
     spotIdRent: selectedSpot.value.spotId,
     seatsId: selectedSeat.value.seatsId,
     paymentMethod: selectedPaymentMethod.value,

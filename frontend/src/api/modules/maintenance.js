@@ -257,6 +257,16 @@ export const toggleSchedule = (id) => {
   return http.patch(`/maintenance/schedule/${id}/toggle`)
 }
 
+// ============ 資產健康度統計 (Stats) API ============
+
+/**
+ * 取得資產健康度統計
+ * @param {string} assetType - 資產類型：'SPOT' 或 'SEAT'
+ */
+export const getAssetStats = (assetType) => {
+  return http.get('/maintenance/stats/assets', { params: { assetType } })
+}
+
 // 匯出所有 API 作為預設物件 (方便一次 import)
 export default {
   // Staff
@@ -295,4 +305,6 @@ export default {
   updateSchedule,
   deleteSchedule,
   toggleSchedule,
+  // Stats
+  getAssetStats,
 }

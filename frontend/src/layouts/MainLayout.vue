@@ -23,16 +23,14 @@ const toggleSidebar = () => {
             <span class="icon-wrapper">
               <el-icon><Avatar /></el-icon>
             </span>
-            <span class="menu-text" style="padding: 18px">會員登入</span>
+            <span class="menu-text" style="padding: 2px">會員登入</span>
           </router-link>
         </li>
         <li class="menu-item">
-          <router-link to="/" class="member-info">
-            <span class="icon-wrapper">
-              <el-icon></el-icon>
-            </span>
-            <span class="menu-text">你的ID:</span>
-          </router-link>
+          <!-- <span class="icon-wrapper">
+            <el-icon><CircleCheckFilled /></el-icon>
+          </span> -->
+          <span class="menu-text">UID:</span>
         </li>
         <li class="menu-item">
           <router-link to="/rent" class="member-info">

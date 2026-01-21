@@ -10,8 +10,13 @@ import com.example.backend.model.member.Admin;
 
 public interface AdminRepository extends JpaRepository<Admin, Integer> {
 
-    // 管理員登入用
+    // 登入
     Admin findByAdmUsername(String admUsername);
+
+    // 新增前檢查用
+    boolean existsByAdmUsername(String admUsername);
+
+    boolean existsByAdmEmail(String admEmail);
 
     // 模糊查詢
     @Query("""
