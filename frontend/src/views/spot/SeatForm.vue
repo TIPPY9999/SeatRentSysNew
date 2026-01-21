@@ -41,12 +41,13 @@
 
       <!-- 類型 -->
       <div class="form-group">
-        <label for="seatsType">類型</label>
+        <label for="seatsType">類型 <span class="required">*</span></label>
         <input
           id="seatsType"
           type="text"
           v-model="formData.seatsType"
           placeholder="例如:高腳椅、塑膠椅..."
+          required
         />
       </div>
 
@@ -148,25 +149,33 @@ const handleSubmit = async () => {
   if (isSubmitting.value) return
   isSubmitting.value = true
 
+  // [優化] 建立一個乾淨的 payload，避免直接修改 ref
+  const payload = { ...formData.value };
+
+  // [修正] 如果序號為空字串，應轉為 null 送出，以符合資料庫的唯一索引篩選 (WHERE serialNumber IS NOT NULL)
+  // 避免多筆空字串資料違反唯一約束
+  if (payload.serialNumber === '') {
+    payload.serialNumber = null;
+  }
+
   try {
     if (isEditMode.value) {
       // 更新 (PUT)
       const seatId = route.params.id
-      if (!seatId) {
-        throw new Error('無法取得座位ID')
-      }
-      await axios.put(`/api/seats/${seatId}`, formData.value)
+      await axios.put(`/api/seats/${seatId}`, payload)
       alert('更新成功')
     } else {
       // 新增 (POST)
-      await axios.post('/api/seats', formData.value)
+      await axios.post('/api/seats', payload)
       alert('新增成功')
     }
     // 成功後返回列表
     router.push('/admin/seat/list')
   } catch (err) {
     console.error('儲存失敗:', err)
-    alert('儲存失敗，請檢查輸入資料')
+    // [優化] 顯示更詳細的錯誤訊息
+    const errorMsg = err.response?.data?.message || '儲存失敗，請檢查輸入資料或後端連線';
+    alert(errorMsg);
   } finally {
     isSubmitting.value = false
   }
