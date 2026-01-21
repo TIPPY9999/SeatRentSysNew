@@ -29,6 +29,11 @@ public class AdminService {
         }
     }
 
+    private void normalize(Admin admin) {
+        admin.setAdmUsername(admin.getAdmUsername().trim());
+        admin.setAdmEmail(admin.getAdmEmail().trim().toLowerCase());
+    }
+
     // 查全部（findAllAdmins）
     public List<Admin> findAll() {
         return adminRepository.findAll();
@@ -47,16 +52,22 @@ public class AdminService {
     // 新增管理員（saveAdmin）
     public void insert(Admin admin) {
         validatePassword(admin.getAdmPassword());
-        try {
-            adminRepository.save(admin);
-        } catch (DataIntegrityViolationException e) {
-            // 對應你 JDBC 裡 UNIQUE constraint 的判斷
+        normalize(admin);
+
+        if (adminRepository.existsByAdmUsername(admin.getAdmUsername())) {
             throw new IllegalArgumentException("管理員帳號已存在");
         }
+
+        if (adminRepository.existsByAdmEmail(admin.getAdmEmail())) {
+            throw new IllegalArgumentException("Email 已存在");
+        }
+
+        adminRepository.save(admin);
     }
 
     // 更新管理員（updateAdmin）
     public void update(Admin admin) {
+        normalize(admin);
         adminRepository.save(admin);
     }
 
