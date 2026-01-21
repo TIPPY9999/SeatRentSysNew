@@ -47,15 +47,14 @@ public class MaintenanceInformationService {
 
     //場地狀態常數
     public static final String SPOT_STATUS_OPERATIONAL = "營運中";
-    public static final String SPOT_STATUS_MAINTENANCE = "維護中";
+    public static final String SPOT_STATUS_MAINTENANCE = "維修中";  // 修正：改為符合資料庫約束的 "維修中"
         public static final String SPOT_STATUS_SUSPENDED   = "暫停營運";
         public static final String SPOT_STATUS_CLOSED      = "已關閉";
 
     //椅子狀態常數
-    public static final String SEAT_STATUS_NORMAL      = "正常"; 
-    public static final String SEAT_STATUS_REPAIRING   = "維修中"; // 正在修
-    public static final String SEAT_STATUS_MAINTENANCE = "維護中"; // 定期保養
-    public static final String SEAT_STATUS_SCRAPPED    = "已報廢"; // 壞掉丟棄
+    public static final String SEAT_STATUS_ENABLED     = "啟用";    // 修正：正常可用狀態
+    public static final String SEAT_STATUS_DISABLED    = "停用";    // 修正：停用狀態
+    public static final String SEAT_STATUS_REPAIRING   = "維修中";  // 正在修理
 
     
     
@@ -481,12 +480,12 @@ public class MaintenanceInformationService {
                     .filter(t -> !t.getTicketId().equals(ticketId)) 
                     .anyMatch(t -> activeStatuses.contains(t.getIssueStatus()));
 
-            // 3. 只有在「沒有」其他未完成工單時，才把椅子變回正常
+            // 3. 只有在「沒有」其他未完成工單時，才把椅子變回啟用狀態
             if (!hasOtherActiveTickets) {
                 Seat seat = this.seatRepo.findById(mtif.getSeatsId())
                         .orElseThrow(() -> new IllegalArgumentException("找不到指定的椅子 " + mtif.getSeatsId()));
                 
-                seat.setSeatsStatus(SEAT_STATUS_NORMAL); // 恢復為正常
+                seat.setSeatsStatus(SEAT_STATUS_ENABLED); // 恢復為啟用
                 this.seatRepo.save(seat);
             }
         }
