@@ -1,12 +1,7 @@
 --重置資料庫
-<<<<<<< HEAD
---Version Log: 2026/01/21
---===========CLEAR==================
-=======
 --奕穎
 --Version Log: 2026/01/21
 --===========CLEAR=================
->>>>>>> member2
 USE SeatRentSys
 DROP TABLE recRent;
 DROP TABLE merchant;
@@ -17,46 +12,124 @@ DROP TABLE renting_Spot;
 DROP TABLE seats;
 DROP TABLE member;
 DROP TABLE admin;
-<<<<<<< HEAD
---============BUILD TABLE============
-
---============TEST DATA==============
-
-
-
---===============END=================
---光宇
-CREATE TABLE renting_Spot (
-    spot_Id        INT IDENTITY(1,1) PRIMARY KEY,        -- 租借點編號
-    spot_Code      VARCHAR(30) NOT NULL UNIQUE,          -- 租借點主機代號
-    spot_Name      NVARCHAR(100) NOT NULL,               -- 租借點位名稱
-    spot_Address   NVARCHAR(200) NULL,                   -- 租借地址
-    spotStatus     NVARCHAR(20) NOT NULL,                -- 租借點位狀況
-    merchant_Id    INT NULL,                             -- 合作商家 ID
-    created_At     DATETIME2 NOT NULL DEFAULT SYSDATETIME(), -- 設置時間
-    updated_At     DATETIME2 NOT NULL DEFAULT SYSDATETIME()  -- 更新時間
-);
-
-ALTER TABLE renting_Spot
-ADD latitude  DECIMAL(10,7) NULL,
-    longitude DECIMAL(10,7) NULL;
-    
-ALTER TABLE renting_Spot
-ADD spotDescription NVARCHAR(500) NULL;
-
-ALTER TABLE renting_Spot
-ADD spotImage NVARCHAR(255) NULL;
-
-
-CREATE TABLE seats (
-    seats_id      INT IDENTITY(1,1) PRIMARY KEY,        -- 設備編號
-    seats_name    NVARCHAR(100) NOT NULL,                -- 設備名稱
-    seats_type    NVARCHAR(50) NOT NULL,                 -- 設備類型
-    seats_status  NVARCHAR(20) NOT NULL,                 -- 設備狀態
-    spot_id       INT NULL,                              -- 所屬租借點位
-    updated_at    DATETIME2 NOT NULL,                    -- 更新時間
-=======
 --============BUILD TABLE==============
+--ver.1150121 光宇 14:52
+/* =========================================================
+   1) 建立 renting_Spot
+   ========================================================= */
+CREATE TABLE dbo.renting_Spot
+(
+    spotId       INT IDENTITY(1,1),
+    spotCode     VARCHAR(30)        NOT NULL,
+    spotName     NVARCHAR(100)      NOT NULL,
+    spotAddress  NVARCHAR(200)      NULL,
+
+       spotStatus   NVARCHAR(20)       NOT NULL
+        CONSTRAINT DF_renting_Spot_spotStatus DEFAULT (N'營運中'),
+
+    merchantId   INT               NULL,
+
+    createdAt    DATETIME2(7)       NOT NULL
+        CONSTRAINT DF_renting_Spot_createdAt DEFAULT (SYSDATETIME()),
+
+    updatedAt    DATETIME2(7)       NOT NULL
+        CONSTRAINT DF_renting_Spot_updatedAt DEFAULT (SYSDATETIME()),
+
+    latitude     DECIMAL(10,7)      NULL,
+    longitude    DECIMAL(10,7)      NULL,
+    spotDescription  NVARCHAR(500)      NULL,
+    spotImage    VARCHAR(255)       NULL,
+
+    CONSTRAINT PK_renting_Spot PRIMARY KEY CLUSTERED (spotId),
+
+    CONSTRAINT CK_renting_Spot_spotStatus
+        CHECK (spotStatus IN (N'營運中', N'停用', N'維修中'))
+);
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX UQ_renting_Spot_spotCode
+ON dbo.renting_Spot (spotCode);
+GO
+
+
+/* =========================================================
+   2) 建立 seats
+   ========================================================= */
+CREATE TABLE dbo.seats
+(
+    seatsId       INT IDENTITY(1,1),
+    seatsName     NVARCHAR(100)      NOT NULL,
+    seatsType     NVARCHAR(50)       NOT NULL,
+    seatsStatus   NVARCHAR(20)       NOT NULL
+        CONSTRAINT DF_seats_seatsStatus DEFAULT (N'啟用'),
+
+    spotId        INT               NULL,
+
+    updatedAt     DATETIME2(7)       NOT NULL
+        CONSTRAINT DF_seats_updatedAt DEFAULT (SYSDATETIME()),
+
+    serialNumber  VARCHAR(50)        NULL,
+
+    createdAt     DATETIME2(7)       NOT NULL
+        CONSTRAINT DF_seats_createdAt DEFAULT (SYSDATETIME()),
+
+    CONSTRAINT PK_seats PRIMARY KEY CLUSTERED (seatsId),
+
+    CONSTRAINT FK_seats_spot
+        FOREIGN KEY (spotId)
+        REFERENCES dbo.renting_Spot (spotId),
+
+    CONSTRAINT CK_seats_seatsStatus
+        CHECK (seatsStatus IN (N'啟用', N'停用', N'維修中'))
+);
+GO
+
+/* 一般索引：加速以 spotId 查 seats */
+CREATE NONCLUSTERED INDEX IX_seats_spotId
+ON dbo.seats (spotId);
+GO
+
+/* serialNumber 唯一索引：Filtered Unique Index，避免 NULL 互相衝突 */
+CREATE UNIQUE NONCLUSTERED INDEX UQ_seats_spot_serialNumber
+ON dbo.seats (serialNumber)
+WHERE serialNumber IS NOT NULL;
+GO
+
+
+/* =========================================================
+   3) updatedAt 自動刷新 Trigger（AFTER UPDATE）
+   ========================================================= */
+CREATE TRIGGER dbo.trg_renting_Spot_updatedAt
+ON dbo.renting_Spot
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE s
+    SET updatedAt = SYSDATETIME()
+    FROM dbo.renting_Spot s
+    INNER JOIN inserted i ON s.spotId = i.spotId;
+END;
+GO
+
+CREATE TRIGGER dbo.trg_seats_updatedAt
+ON dbo.seats
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE s
+    SET updatedAt = SYSDATETIME()
+    FROM dbo.seats s
+    INNER JOIN inserted i ON s.seatsId = i.seatsId;
+END;
+GO
+
+
+--==============================
+
 CREATE TABLE admin
 (
     admId INT IDENTITY(1,1) PRIMARY KEY,
@@ -109,6 +182,81 @@ CREATE TABLE member
     --發票載具
 );
 --============TEST DATA==============
+--ver1150121 光宇 14:52
+-- 桃園市區域測試資料 (20筆)- 不插入 spotStatus，改吃 DEFAULT (N'營運中')
+INSERT INTO dbo.renting_Spot
+    (spotCode, spotName, spotAddress, merchantId, latitude, longitude)
+VALUES
+(N'TYN001', N'桃園高鐵站',       N'桃園市中壢區高鐵北路一段6號',    NULL, 25.0133300, 121.2144300),
+(N'TYN002', N'中壢火車站',       N'桃園市中壢區中和路139號',        101,  24.9537811, 121.2255764),
+(N'TYN003', N'桃園火車站',       N'桃園市桃園區萬壽路三段123號',     102,  24.9898236, 121.3134382),
+(N'TYN004', N'內壢火車站',       N'桃園市中壢區中華路一段27號',       NULL, 24.9748600, 121.2673200),
+(N'TYN005', N'埔心火車站',       N'桃園市楊梅區永美路2號',            NULL, 24.9284000, 121.1810500),
+(N'TYN006', N'桃園市政府',       N'桃園市桃園區縣府路1號',            NULL, 24.9930115, 121.3015976),
+(N'TYN007', N'桃園展演中心',     N'桃園市桃園區中正路1188號',         105,  25.0152016, 121.3009949),
+(N'TYN008', N'國立中央大學',     N'桃園市中壢區中大路300號',           NULL, 24.9682000, 121.1921200),
+(N'TYN009', N'元智大學',         N'桃園市中壢區遠東路135號',           NULL, 24.9715100, 121.2690300),
+(N'TYN010', N'長庚大學',         N'桃園市龜山區文化一路259號',         NULL, 25.0441500, 121.3857600),
+(N'TYN011', N'台茂購物中心',     N'桃園市蘆竹區南崁路一段112號',       108,  25.0475311, 121.2926712),
+(N'TYN012', N'大江國際購物中心', N'桃園市中壢區中園路二段501號',       109,  25.0130692, 121.2335663),
+(N'TYN013', N'華泰名品城',       N'桃園市中壢區春德路189號',           110,  25.0425301, 121.2148132),
+(N'TYN014', N'統領廣場',         N'桃園市桃園區中正路61號',            111,  24.9902600, 121.3138800),
+(N'TYN015', N'中原夜市',         N'桃園市中壢區實踐路',                NULL, 24.9575900, 121.2393300),
+(N'TYN016', N'竹圍漁港',         N'桃園市大園區沙崙里1鄰10號',         NULL, 25.1118100, 121.2096300),
+(N'TYN017', N'石門水庫',         N'桃園市大溪區復興里環湖路一段68號',   NULL, 24.8118000, 121.2464000),
+(N'TYN018', N'小人國主題樂園',   N'桃園市龍潭區高原路891號',           NULL, 24.8315100, 121.1895600),
+(N'TYN019', N'桃園國際棒球場',   N'桃園市中壢區領航北路一段1號',       NULL, 25.0345000, 121.2036000),
+(N'TYN020', N'林口長庚紀念醫院', N'桃園市龜山區復興街5號',             NULL, 25.0494400, 121.3713900);
+
+
+-- 台北市區域測試資料 (20筆) - 不插入 spotStatus，改吃 DEFAULT (N'營運中')
+INSERT INTO dbo.renting_Spot
+    (spotCode, spotName, spotAddress, merchantId, latitude, longitude)
+VALUES
+(N'TPE001', N'台北101',                   N'台北市信義區信義路五段7號',          201,  25.0339640, 121.5644720),
+(N'TPE002', N'國立故宮博物院',             N'台北市士林區至善路二段221號',         NULL, 25.1022200, 121.5484200),
+(N'TPE003', N'台北車站',                  N'台北市中正區黎明里北平西路3號',        202,  25.0477600, 121.5170900),
+(N'TPE004', N'西門紅樓',                  N'台北市萬華區成都路10號',              NULL, 25.0423000, 121.5073600),
+(N'TPE005', N'總統府',                    N'台北市中正區重慶南路一段122號',        NULL, 25.0403000, 121.5117200),
+(N'TPE006', N'中正紀念堂',                N'台北市中正區中山南路21號',             NULL, 25.0348200, 121.5219200),
+(N'TPE007', N'國立臺灣大學',              N'台北市大安區羅斯福路四段1號',           NULL, 25.0173500, 121.5397500),
+(N'TPE008', N'台北市立動物園',            N'台北市文山區新光路二段30號',            NULL, 24.9984900, 121.5810700),
+(N'TPE009', N'松山文創園區',              N'台北市信義區光復南路133號',             205,  25.0436900, 121.5601500),
+(N'TPE010', N'士林夜市',                  N'台北市士林區基河路101號',              NULL, 25.0877400, 121.5242400),
+(N'TPE011', N'台北市政府',                N'台北市信義區市府路1號',                NULL, 25.0375000, 121.5636100),
+(N'TPE012', N'SOGO忠孝館',                N'台北市大安區忠孝東路四段45號',           208,  25.0430200, 121.5445200),
+(N'TPE013', N'新光三越 台北信義新天地A8', N'台北市信義區松高路12號',               209,  25.0371300, 121.5663700),
+(N'TPE014', N'美麗華百樂園',              N'台北市中山區敬業三路20號',              210,  25.0833900, 121.5562700),
+(N'TPE015', N'台北小巨蛋',                N'台北市松山區南京東路四段2號',           NULL, 25.0514100, 121.5531700),
+(N'TPE016', N'捷運大安森林公園站',        N'台北市大安區信義路三段100號',            NULL, 25.0326100, 121.5367500),
+(N'TPE017', N'捷運市政府站',              N'台北市信義區忠孝東路五段6號',            NULL, 25.0409000, 121.5645000),
+(N'TPE018', N'捷運中山站',                N'台北市大同區南京西路16號',              NULL, 25.0524400, 121.5204400),
+(N'TPE019', N'捷運東門站',                N'台北市中正區信義路二段166號',            NULL, 25.0330600, 121.5292400),
+(N'TPE020', N'南港展覽館1館',             N'台北市南港區經貿二路1號',               NULL, 25.0551800, 121.6154600);
+
+-- seats（不插入 seatsStatus，改吃 DEFAULT(N'啟用')）
+INSERT INTO dbo.seats (seatsName, seatsType, spotId, updatedAt, serialNumber, createdAt)
+VALUES 
+(N'按摩椅-A01', N'T椅', 1,  SYSDATETIME(), 'SN-2025001', DEFAULT),
+(N'按摩椅-A02', N'T椅', 1,  SYSDATETIME(), 'SN-2025002', DEFAULT),
+(N'充電椅-B01', N'E椅', 2,  SYSDATETIME(), 'SN-2025003', DEFAULT),
+(N'充電椅-B02', N'E椅', 2,  SYSDATETIME(), 'SN-2025004', DEFAULT),
+(N'按摩椅-C01', N'H椅', 3,  SYSDATETIME(), 'SN-2025005', DEFAULT),
+(N'按摩椅-C02', N'T椅', 3,  SYSDATETIME(), 'SN-2025006', DEFAULT),
+(N'置物椅-D01', N'T椅', 4,  SYSDATETIME(), 'SN-2025007', DEFAULT),
+(N'置物椅-D02', N'H椅', 4,  SYSDATETIME(), 'SN-2025008', DEFAULT),
+(N'KTV椅-E01',  N'F椅', 5,  SYSDATETIME(), 'SN-2025009', DEFAULT),
+(N'按摩椅-F01', N'T椅', 6,  SYSDATETIME(), 'SN-2025010', DEFAULT),
+(N'充電椅-G01', N'E椅', 7,  SYSDATETIME(), 'SN-2025011', DEFAULT),
+(N'按摩椅-H01', N'T椅', 8,  SYSDATETIME(), 'SN-2025012', DEFAULT),
+(N'按摩椅-I01', N'H椅', 9,  SYSDATETIME(), 'SN-2025013', DEFAULT),
+(N'按摩椅-J01', N'T椅', 10, SYSDATETIME(), 'SN-2025014', DEFAULT),
+(N'備用設備-Z99', N'H椅', NULL, SYSDATETIME(), 'SN-2025999', DEFAULT);
+
+--============
+
+
+--======================================
 INSERT INTO admin
     (admUsername, admPassword, admName, admEmail, admRole)
 VALUES
@@ -175,7 +323,6 @@ CREATE TABLE seats
     -- 所屬租借點位
     updated_at DATETIME2 NOT NULL,
     -- 更新時間
->>>>>>> member2
 
     CONSTRAINT FK_seats_spot FOREIGN KEY (spot_id)
         REFERENCES renting_Spot(spot_Id)
@@ -235,16 +382,10 @@ CREATE TABLE merchant
     -- 建立時間
 );
 
-<<<<<<< HEAD
-
-CREATE TABLE discount (
-    couponId INT IDENTITY(1,1) PRIMARY KEY,            -- PK 優惠券ID
-=======
 CREATE TABLE discount
 (
     couponId INT IDENTITY(1,1) PRIMARY KEY,
     -- PK 優惠券ID
->>>>>>> member2
 
     couponDescription NVARCHAR(1000),
     -- 優惠內容
@@ -472,14 +613,6 @@ VALUES
     ('superuser', 'Pass1234', N'黃巧玲', 'superuser@system.com', 9);
 
 
-<<<<<<< HEAD
-
-
---============BUILD TABLE============
---翌帆2026/01/21
-USE [SeatRentSys];
-GO
-=======
 --翌帆
 CREATE TABLE maintenanceStaff
 (
@@ -525,7 +658,6 @@ CREATE TABLE maintenanceInformation
     resolvedAt DATETIME2 NULL,--維修完成時間
     resolveNote NVARCHAR(500) NULL,--維修說明
     resultType NVARCHAR(50) NULL--維修結果
->>>>>>> member2
 
 CREATE TABLE [dbo].[maintenanceInformation] (
     [ticketId]        INT            IDENTITY (1, 1) NOT NULL,
@@ -729,33 +861,6 @@ FROM V_RentDetails
 DROP VIEW V_RentDetails;
 
 --C
-<<<<<<< HEAD
---子桓
-CREATE VIEW V_RentDetails AS
-SELECT 
-    r.recId,
-    r.memId,
-    m.memName,          -- 來自 member 表
-    r.couponId,
-    d.couponDescription couponDesc,
-    r.seatsId,        
-    r.spotIdRent, -- 租借點資訊
-    s1.spotName AS RentSpotName,  -- 來自 renting_Spot (借出點)    
-    r.spotIdReturn, -- 歸還點資訊 (可能為 NULL)
-    s2.spotName AS ReturnSpotName, -- 來自 renting_Spot (歸還點)    
-    r.recRentDT2,-- 交易與時間細節
-    r.recReturnDT2,
-    r.recUsageDT2,
-    r.recPrice,
-    r.recRequestPay,
-    r.recPayment,
-    r.recPayBy,
-    r.recInvoice,
-    r.recCarrier,
-    r.recViolatInt,
-    r.recNote,
-    r.recStatus
-=======
 
 CREATE VIEW V_RentDetails
 AS
@@ -782,7 +887,6 @@ AS
         r.recViolatInt,
         r.recNote,
         r.recStatus
->>>>>>> member2
 
     FROM recRent r
         -- 1. 關聯會員 (必定存在，使用 INNER JOIN)
@@ -796,20 +900,6 @@ AS
 --spot ver.20251129 
 --C TABLE
 
-<<<<<<< HEAD
-
-CREATE TABLE renting_Spot (
-    spotId        INT IDENTITY(1,1) PRIMARY KEY,        -- 租借點編號
-    spotCode      VARCHAR(30) NOT NULL UNIQUE,          -- 租借點主機代號
-    spotName      NVARCHAR(100) NOT NULL,               -- 租借點位名稱
-    spotAddress   NVARCHAR(200) NULL,                   -- 租借地址
-    spotStatus     NVARCHAR(20) NOT NULL,                -- 租借點位狀況
-    merchantId    INT NULL,                             -- 合作商家 ID
-    createdAt     DATETIME2 NOT NULL 
-                     DEFAULT SYSDATETIME(),              -- 設置時間
-    updatedAt     DATETIME2 NOT NULL 
-                     DEFAULT SYSDATETIME()               -- 更新時間
-=======
 CREATE TABLE renting_Spot
 (
     spotId INT IDENTITY(1,1) PRIMARY KEY,
@@ -830,7 +920,6 @@ CREATE TABLE renting_Spot
     updatedAt DATETIME2 NOT NULL
         DEFAULT SYSDATETIME()
     -- 更新時間
->>>>>>> member2
 );
 
 
@@ -921,16 +1010,10 @@ VALUES
 
 --RecRent ver.20251129
 --C
-<<<<<<< HEAD
-
-CREATE TABLE recRent (    
-    recSeqId INT IDENTITY(1,1) NOT NULL,  --  隱藏的流水號，負責自動遞增
-=======
 CREATE TABLE recRent
 (
     recSeqId INT IDENTITY(1,1) NOT NULL,
     --  隱藏的流水號，負責自動遞增
->>>>>>> member2
     -- 2. 定義 recId 為「計算欄位」，自動生成 R00001, R00002...    -- 邏輯：'R' + 補零至 9 位數
     recId AS ('R' + RIGHT('000000000' + CAST(recSeqId AS VARCHAR(9)), 9)) PERSISTED,
     memId INT NOT NULL,
