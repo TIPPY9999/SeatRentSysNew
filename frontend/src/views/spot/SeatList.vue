@@ -7,27 +7,16 @@
           <!-- 搜尋區塊 -->
           <!-- [修改] 參考 SpotList.vue 的搜尋介面 -->
           <div class="search-bar">
-            <input
-              type="text"
-              v-model="searchKeyword"
-              placeholder="搜尋名稱、類型或序號"
-              class="search-input"
-            />
-            <input
-              type="number"
-              v-model.number="searchSpotId"
-              placeholder="搜尋據點ID"
-              class="search-input-mid"
-              min="1"
-              step="1"
-              @input="sanitizeSpotId"
-            />
+            <input type="text" v-model="searchKeyword" placeholder="搜尋名稱、類型或序號" class="search-input" />
+            <input type="number" v-model.number="searchSpotId" placeholder="搜尋據點ID" class="search-input-mid" min="1"
+              step="1" @input="sanitizeSpotId" />
             <select v-model="searchStatus" class="search-select">
               <option value="">全部狀態</option>
               <option value="啟用">啟用</option>
               <option value="停用">停用</option>
               <option value="維修中">維修中</option>
             </select>
+
           </div>
           <button class="btn-add" @click="goToAdd">新增座位</button>
         </div>
@@ -60,11 +49,10 @@
                 </span>
               </td>
               <td>
-                <button class="btn btn-info btn-sm me-1 text-white" 
-                @click="goToView(seat.seatsId)">
+                <button class="btn btn-info btn-sm me-1 text-white" @click="goToView(seat.seatsId)">
                   詳細
                 </button>
-                
+
                 <button class="btn-edit" @click="goToEdit(seat.seatsId)">
                   編輯
                 </button>
@@ -205,23 +193,27 @@ onMounted(() => {
 .seat-list {
   padding: 20px;
 }
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
+
 .table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
 }
+
 .table th,
 .table td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
 }
+
 .table th {
   background-color: #f4f4f4;
 }
@@ -233,8 +225,10 @@ onMounted(() => {
   border: 1px solid #ccc;
   border-radius: 4px;
 }
+
 .search-bar .search-input {
-  width: 200px; /* 調整寬度以容納更多欄位 */
+  width: 200px;
+  /* 調整寬度以容納更多欄位 */
   margin-right: 10px;
 }
 
@@ -243,6 +237,7 @@ onMounted(() => {
   width: 150px;
   margin-left: 10px;
 }
+
 .search-bar .search-select {
   padding: 8px;
   margin-left: 10px;
@@ -259,17 +254,21 @@ button {
   border-radius: 4px;
   color: white;
 }
+
 .btn-add {
   background-color: #28a745;
   font-size: 1.1em;
   padding: 8px 16px;
 }
+
 .btn-edit {
   background-color: #007bff;
 }
+
 .btn-delete {
   background-color: #dc3545;
 }
+
 button:hover {
   opacity: 0.9;
 }
