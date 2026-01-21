@@ -59,6 +59,14 @@ const toggleSidebar = () => {
           </router-link>
         </li>
         <li class="menu-item">
+          <router-link to="/snake" class="member-info">
+            <span class="icon-wrapper">
+              <el-icon><SwitchFilled /></el-icon>
+            </span>
+            <span class="menu-text">小遊戲</span>
+          </router-link>
+        </li>
+        <li class="menu-item">
           <span class="icon-wrapper">
             <el-icon><MapLocation /></el-icon>
           </span>
@@ -77,7 +85,7 @@ const toggleSidebar = () => {
           <span class="menu-text">客服支援</span>
         </li>
         <li class="menu-item">
-          <router-link to="/snake" class="member-info">
+          <router-link to="/payment" class="member-info">
             <span class="icon-wrapper">
               <el-icon><StarFilled /></el-icon>
             </span>
