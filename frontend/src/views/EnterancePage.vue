@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, nextTick } from "vue";
 import "@googlemaps/extended-component-library/api_loader.js";
 import "@googlemaps/extended-component-library/place_picker.js";
 import axios from "axios";
@@ -72,15 +72,27 @@ const fetchSpots = async () => {
 };
 
 const openInfoWindow = (spot) => {
-  infoWindow.value = {
-    position: spot.position,
-    spot: spot,
-    opened: true,
-  };
+  // 1. 先強制將狀態設為關閉，確保任何情況下都能從乾淨的狀態開始
+  infoWindow.value.opened = false;
+
+  // 2. 使用 nextTick 等待 UI 更新週期完成
+  nextTick(() => {
+    // 3. 在下一個更新週期，用新資料賦予一個全新的狀態物件來打開視窗
+    infoWindow.value = {
+      position: spot.position,
+      spot: spot,
+      opened: true,
+    };
+  });
 };
 
 const closeInfoWindow = () => {
-  infoWindow.value.opened = false;
+  // 採用「物件替換」模式，徹底重設狀態，確保響應性被觸發
+  infoWindow.value = {
+    position: null,
+    spot: null,
+    opened: false,
+  };
 };
 
 // --- 新增的導航邏輯 ---
@@ -131,8 +143,8 @@ onMounted(() => {
           :opened="infoWindow.opened"
           :position="infoWindow.position"
           :options="{ pixelOffset: { width: 0, height: -35 } }"
-          @closeclick="closeInfoWindow"
-        >
+          
+                  >
           <div v-if="infoWindow.spot" class="info-window-content">
             <h4>{{ infoWindow.spot.name }}</h4>
             <p><strong>ID:</strong> {{ infoWindow.spot.id }}</p>

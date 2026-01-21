@@ -1,6 +1,10 @@
---重置資料庫
+--重置資料庫 
 --Version Log: 2026/01/21
+<<<<<<< HEAD
 --===========CLEAR=================
+=======
+--==============DB CLEAR==================
+>>>>>>> rec
 USE SeatRentSys
 DROP TABLE recRent;
 DROP TABLE maintenanceLog;
@@ -14,6 +18,7 @@ DROP TABLE discount;
 DROP TABLE merchant;
 DROP TABLE member;
 DROP TABLE admin;
+<<<<<<< HEAD
 --============BUILD TABLE==============
 --===========奕穎  ver 2026/1/21 ==============
 /** =========================================================
@@ -572,6 +577,9 @@ VALUES
     ('阿美水果行', N'0988-888-888', N'fruitamei@mail.com', N'桃園市中壢區中正路120號', 1),
     ('新味壽司', N'0999-999-999', N'newtaste@mail.com', N'新竹市東區光明路66號', 1),
     ('樂町火鍋', N'0910-010-010', N'hotpotjoy@mail.com', N'嘉義市西區文化路45號', 1);
+=======
+--===============BUILD TABLE===============
+>>>>>>> rec
 
 INSERT INTO discount
     (couponName,couponDescription, pointsRequired, startDate, endDate, merchantId, couponStatus,couponImg)
@@ -671,5 +679,9 @@ VALUES
 --         -- 3. 關聯歸還點 (可能未還，使用 LEFT JOIN)
 --         LEFT JOIN renting_Spot s2 ON r.spotIdReturn = s2.spotId;
 
+<<<<<<< HEAD
 --==================子桓 DATA END====================
 --=================DB BUILD END====================
+=======
+--=============== TEST DATA END=================
+>>>>>>> rec

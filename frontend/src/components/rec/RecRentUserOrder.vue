@@ -1,14 +1,15 @@
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
 import axios from "axios";
+import { useAuthStore } from '@/stores/auth';
 
-// --- Props ---
-const props = defineProps({
-  memId: {
-    type: Number,
-    required: true,
-  },
-});
+// --- Pinia Store ---
+const authStore = useAuthStore();
+
+// --- Computed properties from store ---
+const isLoggedIn = computed(() => authStore.isLogin && authStore.user);
+const memberId = computed(() => authStore.user?.member?.memId);
+const memberName = computed(() => authStore.user?.member?.memName || '訪客');
 
 // --- 狀態定義 ---
 const spots = ref([]);
@@ -82,7 +83,7 @@ const closeModal = () => {
 };
 
 const proceedWithRent = async () => {
-  if (!props.memId) {
+  if (!memberId.value) {
     errorMessage.value = "無法獲取會員資訊，請重新登入。";
     closeModal();
     return;
@@ -92,7 +93,7 @@ const proceedWithRent = async () => {
     return;
   }
   const rentalData = {
-    memId: props.memId, // 使用 props 傳入的會員 ID
+    memId: memberId.value, // 使用從 store 獲取的會員 ID
     spotIdRent: selectedSpot.value.spotId,
     seatsId: selectedSeat.value.seatsId,
     paymentMethod: selectedPaymentMethod.value,
@@ -138,10 +139,7 @@ const step3Class = computed(() =>
   isStep3Completed.value ? "status-completed" : "status-pending"
 );
 
-// 新增 computed：檢查會員 ID 是否有效
-const isMemIdValid = computed(() => props.memId && props.memId > 0);
-
-const isReadyToRent = computed(() => isStep1Completed.value && isStep2Completed.value && isStep3Completed.value && isMemIdValid.value);
+const isReadyToRent = computed(() => isStep1Completed.value && isStep2Completed.value && isStep3Completed.value && isLoggedIn.value);
 
 // --- Watchers ---
 watch(selectedSpot, (newSpot) => {
@@ -153,33 +151,58 @@ watch(selectedSpot, (newSpot) => {
   }
 });
 
-onMounted(loadSpots);
+onMounted(() => {
+  // 應用程式的狀態恢復邏輯已移至 App.vue
+  // 此處僅需執行此組件自身的初始化任務
+  loadSpots();
+});
 </script>
 
 <template>
   <div class="user-order-container">
     <div class="card">
       <h1 class="card-header">即時座位租借</h1>
-      <div v-if="!isMemIdValid" class="alert alert-danger m-3">無法獲取您的會員資訊，請確保您已正確登入。</div>
+
+      <!-- 會員資訊顯示區塊 -->
+      <div class="card-body user-info-section">
+        <div v-if="isLoggedIn">
+            <h5><i class="fas fa-user-check"></i> 會員資訊</h5>
+            <p class="mb-0">歡迎，<strong>{{ memberName }}</strong> (ID: {{ memberId }})</p>
+            
+            <!-- 除錯用：顯示整個 user 物件結構 -->
+            <details class="mt-2">
+              <summary style="cursor: pointer; font-size: 0.8rem;">點此查看原始會員資料物件</summary>
+              <pre style="background-color: #333; color: #fff; padding: 10px; border-radius: 4px; font-size: 0.8rem;">{{ JSON.stringify(authStore.user, null, 2) }}</pre>
+            </details>
+
+        </div>
+        <div v-else class="alert alert-warning">
+            <h5><i class="fas fa-exclamation-triangle"></i> 訪客你好</h5>
+            <p class="mb-0">請先登入以進行租借。</p>
+        </div>
+      </div>
+
       <div v-if="errorMessage" class="alert alert-danger m-3">{{ errorMessage }}</div>
 
       <!-- 步驟一: 選擇站點 -->
       <div class="card-body" :class="step1Class">
         <h2><i class="fas fa-store"></i> 步驟一：選擇租借站點</h2>
-        <div class="form-group">
-          <label for="spot-select">請選擇站點：</label>
-          <select id="spot-select" class="form-control" v-model="selectedSpot">
-            <option :value="null" disabled>-- 請選擇一個站點 --</option>
-            <option v-for="spot in spots" :key="spot.spotId" :value="spot">
-              {{ spot.spotName }} ({{ spot.spotAddress }})
-            </option>
-          </select>
-        </div>
+        <fieldset :disabled="!isLoggedIn">
+            <div class="form-group">
+                <label for="spot-select">請選擇站點：</label>
+                <select id="spot-select" class="form-control" v-model="selectedSpot">
+                    <option :value="null" disabled>-- 請選擇一個站點 --</option>
+                    <option v-for="spot in spots" :key="spot.spotId" :value="spot">
+                    {{ spot.spotName }} ({{ spot.spotAddress }})
+                    </option>
+                </select>
+            </div>
+        </fieldset>
       </div>
 
       <!-- 步驟二: 選擇座位 -->
       <div class="card-body" :class="step2Class">
-        <fieldset :disabled="!isStep1Completed">
+        <fieldset :disabled="!isStep1Completed || !isLoggedIn">
           <h2><i class="fas fa-chair"></i> 步驟二：選擇座椅類型</h2>
           <div v-if="isLoading.seats" class="text-center">
             <span class="spinner-border spinner-border-sm"></span> 正在載入座位...
@@ -202,7 +225,7 @@ onMounted(loadSpots);
 
       <!-- 步驟三: 付款與租借 -->
       <div class="card-body" :class="step3Class">
-        <fieldset :disabled="!isStep2Completed">
+        <fieldset :disabled="!isStep2Completed || !isLoggedIn">
           <h2><i class="fas fa-credit-card"></i> 步驟三：確認付款資訊並租借</h2>
           
           <h3>基本費用:前三十分鐘 20 NTD</h3>
@@ -317,6 +340,9 @@ onMounted(loadSpots);
 }
 .card-body:last-child {
   border-bottom: none;
+}
+.user-info-section {
+    background-color: #e9ecef;
 }
 
 .status-pending {

@@ -1,10 +1,53 @@
 <script setup>
+import { onMounted } from 'vue';
+import { RouterView } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { useAdminAuthStore } from '@/stores/adminAuth';
+
 /**
  * App.vue：整個前端的「根容器」
- * [關鍵修正] 這裡只留 RouterView，確保登入頁面是乾淨的。
- * 後台的側邊欄與導覽列，已經全部搬家到 AdminLayout.vue 了，這裡不需要留。
+ *
+ * [核心邏輯] 應用程式狀態恢復 (Rehydration)
+ * 此處的 onMounted 會在整個應用程式啟動時執行一次。
+ * 它的任務是檢查 localStorage 中是否儲存了上次的登入資訊，
+ * 如果有，就將其恢復到 Pinia store 中。
+ * 這可以確保用戶在重新整理頁面後，登入狀態得以保持。
  */
-import { RouterView } from 'vue-router'
+onMounted(() => {
+  const authStore = useAuthStore();
+  const adminAuthStore = useAdminAuthStore();
+
+  // 1. 恢復一般會員的登入狀態
+  if (!authStore.isLogin) {
+    const storedUser = localStorage.getItem('member_user');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        authStore.login(userData, 'member');
+        console.log('App.vue: 會員登入狀態已從 localStorage 恢復。');
+      } catch (e) {
+        console.error('恢復會員狀態失敗:', e);
+        // 如果解析失敗，清除損壞的資料
+        localStorage.removeItem('member_user');
+      }
+    }
+  }
+
+  // 2. 恢復管理員的登入狀態
+  if (!adminAuthStore.admin) {
+    const storedAdmin = localStorage.getItem('admin');
+    if (storedAdmin) {
+      try {
+        const adminData = JSON.parse(storedAdmin);
+        adminAuthStore.setAdmin(adminData);
+        console.log('App.vue: 管理員登入狀態已從 localStorage 恢復。');
+      } catch (e) {
+        console.error('恢復管理員狀態失敗:', e);
+        localStorage.removeItem('admin');
+      }
+    }
+  }
+});
 </script>
 
 <template>
