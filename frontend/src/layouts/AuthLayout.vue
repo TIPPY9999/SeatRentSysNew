@@ -1,11 +1,10 @@
-<script setup>
-</script>
+<script setup></script>
 
 <template>
   <div class="auth-page">
     <!-- 上方白色區塊 -->
     <header class="auth-header">
-      <h1 class="logo">SeatRentSys</h1>
+        <h1 class="logo">SeatRentSys</h1>
     </header>
 
     <!-- 下方灰色背景區：只負責置中，不再包白卡 -->

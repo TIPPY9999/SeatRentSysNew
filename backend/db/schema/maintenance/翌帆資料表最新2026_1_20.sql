@@ -1,3 +1,6 @@
+USE [SeatRentSys];
+GO
+
 CREATE TABLE [dbo].[maintenanceInformation] (
     [ticketId]        INT            IDENTITY (1, 1) NOT NULL,
     [spotId]          INT            NULL,
@@ -19,7 +22,9 @@ CREATE TABLE [dbo].[maintenanceInformation] (
 
 
 
-=================================
+--=================================
+USE [SeatRentSys];
+GO
 
 CREATE TABLE [dbo].[maintenanceStaff] (
     [staffId]      INT            IDENTITY (1, 1) NOT NULL,
@@ -32,8 +37,9 @@ CREATE TABLE [dbo].[maintenanceStaff] (
     [isActive]     BIT            CONSTRAINT [DF_maintenanceStaff_isActive] DEFAULT ((1)) NOT NULL,
     PRIMARY KEY CLUSTERED ([staffId] ASC)
 );
-===================================================
-
+--===================================================
+USE [SeatRentSys];
+GO
 -- 建立排程表
 CREATE TABLE [dbo].[maintenanceSchedule] (
     [scheduleId]       INT            IDENTITY (1, 1) NOT NULL,
@@ -112,7 +118,8 @@ GO
 -- 表名：maintenanceLog (維修歷程記錄表)
 -- 整合版：包含 Idempotency 檢查與效能索引
 -- =============================================
-
+USE [SeatRentSys];
+GO
 -- 1. 建立資料表 (如果表不存在才建立)
 IF OBJECT_ID(N'dbo.maintenanceLog', N'U') IS NULL
 BEGIN
@@ -148,3 +155,4 @@ BEGIN
     ON [dbo].[maintenanceLog] ([ticketId] ASC, [createdAt] DESC);
     PRINT '效能索引 IX_maintenanceLog_ticket_createdAt 建立成功';
 END;
+GO

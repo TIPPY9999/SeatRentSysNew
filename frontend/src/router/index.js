@@ -80,6 +80,16 @@ const routes = [
         name: 'member-profile',
         component: MemberProfileView,
       },
+      {
+        path: 'user-info',
+        name: 'member-user-info',
+        component: () => import('@/views/rec/IdHoldingPage.vue'),
+      },
+      {
+        path: 'rent/:action?',
+        name: 'rec-rent-user',
+        component: () => import('@/views/rec/RecRentUserPage.vue'),
+      },
     ],
   },
 
@@ -123,7 +133,7 @@ const routes = [
       },
 
       // ==========================================
-      // [整合] 座位管理模組 (Seat) - 來自組員 TXT 檔案
+      // [整合] 座位管理模組 (Seat)
       // ==========================================
       {
         path: 'seat/list',
@@ -217,11 +227,6 @@ const routes = [
         name: 'rec-rent',
         component: () => import('@/views/rec/RecRentMgnPage.vue'),
       },
-      {
-        path: 'rent/:action?',
-        name: 'rec-rent-user',
-        component: () => import('@/views/rec/RecRentUserPage.vue'),
-      },
 
       // [功能] 維修管理 (Maintenance)
       {
@@ -234,6 +239,14 @@ const routes = [
         name: 'staff-form',
         component: () => import('@/views/maintenance/MaintenanceStaffForm.vue'),
       },
+
+      // 維修人員歷史紀錄
+      {
+        path: 'staff-history',
+        name: 'staff-history',
+        component: () => import('@/views/maintenance/MaintenanceStaffHistory.vue'),
+      },
+
       {
         path: 'mtif-list',
         name: 'mtif-list',

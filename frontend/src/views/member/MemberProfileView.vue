@@ -91,6 +91,7 @@ const saveEdit = async () => {
       <!-- 操作按鈕 -->
       <div class="actions">
         <template v-if="!isEdit">
+          <router-link :to="{ name: 'member-user-info' }" class="btn btn-info">查看ID資訊＃TESTPAGE</router-link>
           <button class="edit-btn" @click="startEdit">編輯資料</button>
         </template>
         <template v-else>
