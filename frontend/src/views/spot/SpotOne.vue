@@ -91,7 +91,7 @@ onMounted(async () => {
   const id = route.params.id;
   if (id) {
     try {
-      const response = await axios.get(`/api/spots/${id}`);
+      const response = await axios.get(`/api/spot/${id}`);
       spot.value = response.data;
     } catch (error) {
       console.error('Error fetching spot:', error);

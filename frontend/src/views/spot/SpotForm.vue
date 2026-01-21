@@ -112,7 +112,7 @@ const formData = ref({
 onMounted(async () => {
   if (isEditMode.value) {
     try {
-      const res = await axios.get(`/api/spots/${route.params.id}`);
+      const res = await axios.get(`/api/spot/${route.params.id}`);
       formData.value = res.data;
       // 若原本有圖片，顯示預覽
       if (formData.value.spotImage) {
@@ -141,10 +141,10 @@ const submitForm = async () => {
     // 這裡示範傳送 JSON 資料
     // 若需上傳圖片，建議改用 FormData 或分兩階段上傳
     if (isEditMode.value) {
-      await axios.put(`/api/spots/${route.params.id}`, formData.value);
+      await axios.put(`/api/spot/${route.params.id}`, formData.value);
       alert('更新成功！');
     } else {
-      await axios.post('/api/spots', formData.value);
+      await axios.post('/api/spot', formData.value);
       alert('新增成功！');
     }
     
