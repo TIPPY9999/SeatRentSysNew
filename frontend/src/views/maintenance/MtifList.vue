@@ -13,6 +13,56 @@ const filters = reactive({ keyword: '', priority: '', status: '' })
 const loading = ref(false)
 const pageVisible = ref(false)
 
+// ====== 資產健康度統計 ======
+const assetStatsTab = ref('SPOT')
+const assetStats = ref([])
+const assetStatsLoading = ref(false)
+
+// 取得資產健康度統計
+const fetchAssetStats = async () => {
+  try {
+    assetStatsLoading.value = true
+    const res = await maintenanceApi.getAssetStats(assetStatsTab.value)
+    assetStats.value = res.data || []
+  } catch (err) {
+    console.error('取得資產統計失敗:', err)
+    assetStats.value = []
+    Swal.fire({
+      icon: 'error',
+      title: '載入失敗',
+      text: '無法取得資產健康度統計',
+      timer: 2000,
+      showConfirmButton: false
+    })
+  } finally {
+    assetStatsLoading.value = false
+  }
+}
+
+// 監聽 tab 切換
+watch(assetStatsTab, () => {
+  fetchAssetStats()
+})
+
+// 格式化百分比
+const formatPercent = (value) => {
+  if (value == null || isNaN(value)) return '0.0%'
+  return (value * 100).toFixed(1) + '%'
+}
+
+// 格式化故障率
+const formatRate = (value) => {
+  if (value == null || isNaN(value)) return '0.00'
+  return value.toFixed(2)
+}
+
+// 取得妥善率狀態顏色
+const getAvailabilityStatus = (value) => {
+  if (value >= 0.95) return 'success'
+  if (value >= 0.8) return 'warning'
+  return 'exception'
+}
+
 // 控制 LOG 彈窗的變數
 const logDialogVisible = ref(false)
 const currentLogTicketId = ref(0)
@@ -40,18 +90,18 @@ const showResolveDialog = ref(false)
 const resolveForm = reactive({ ticketId: 0, resultType: 'FIXED', resolveNote: '' })
 
 // 使用共用 composables
-const { 
-  priorityConfig, 
-  statusConfig, 
+const {
+  priorityConfig,
+  statusConfig,
   resultConfig,
-  getPriorityTag, 
-  getStatusTag, 
-  getPriorityText, 
-  getStatusText, 
-  getPriorityIcon, 
+  getPriorityTag,
+  getStatusTag,
+  getPriorityText,
+  getStatusText,
+  getPriorityIcon,
   getStatusIcon,
   getResultText,
-  getResultIcon
+  getResultIcon,
 } = useTicketConfig()
 
 // 向後相容：保留原有變數名稱 (供模板使用)
@@ -270,7 +320,7 @@ const viewTicketDetail = (row) => {
               <span style="font-size: 18px; margin-right: 6px;">📜</span>
               <strong>歷程記錄</strong>
             </p>
-            <p style="margin: 0 0 10px; color: #909399; font-size: 12px;">查看工單的完整生命週期與操作紀錄</p>
+            <p style="margin: 0 0 10px; color: #909399; font-size: 12px;">查看工單的操作紀錄</p>
             <button 
               id="btn-open-log" 
               style="width: 100%; padding: 10px; background: #e6a23c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s;"
@@ -312,6 +362,7 @@ watch(
 
 onMounted(() => {
   fetchTickets()
+  fetchAssetStats() // 載入資產健康度統計
   setTimeout(() => (pageVisible.value = true), 100)
 })
 
@@ -410,6 +461,121 @@ onMounted(() => {
             </el-row>
 
             <TicketCharts :tickets="filteredTickets" class="mb-4" />
+
+            <!-- ====== 資產健康度統計區塊 ====== -->
+            <el-card shadow="hover" class="mb-4 asset-stats-card" v-if="!historyMode">
+              <template #header>
+                <div class="card-header-content">
+                  <div class="header-left">
+                    <span class="header-icon" style="background: linear-gradient(135deg, #67c23a, #95d475);">
+                      <i class="fas fa-heartbeat"></i>
+                    </span>
+                    <span class="header-text">資產健康度統計</span>
+                    <el-tag type="success" effect="light" size="small" class="ml-2" round>
+                      最近 7 天
+                    </el-tag>
+                  </div>
+                  <div class="header-right">
+                    <el-radio-group v-model="assetStatsTab" size="small">
+                      <el-radio-button value="SPOT">
+                        <i class="fas fa-desktop mr-1"></i> 機台
+                      </el-radio-button>
+                      <el-radio-button value="SEAT">
+                        <i class="fas fa-chair mr-1"></i> 椅子
+                      </el-radio-button>
+                    </el-radio-group>
+                    <el-button type="info" plain size="small" @click="fetchAssetStats" class="ml-2">
+                      <i class="fas fa-sync-alt"></i>
+                    </el-button>
+                  </div>
+                </div>
+              </template>
+
+              <el-skeleton :rows="4" animated v-if="assetStatsLoading" />
+              
+              <el-empty v-else-if="assetStats.length === 0" description="暫無統計資料" />
+
+              <el-table
+                v-else
+                :data="assetStats"
+                stripe
+                style="width: 100%"
+                max-height="400"
+              >
+                <el-table-column prop="assetName" label="資產名稱" min-width="150" fixed>
+                  <template #default="{ row }">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <i :class="row.assetType === 'SPOT' ? 'fas fa-desktop' : 'fas fa-chair'" 
+                         :style="{ color: row.assetType === 'SPOT' ? '#409eff' : '#e6a23c' }"></i>
+                      <span>{{ row.assetName || '未知資產#' + row.assetId }}</span>
+                    </div>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="維修次數" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-tag :type="row.repairCount > 0 ? 'danger' : 'info'" effect="light" size="small">
+                      {{ row.repairCount || 0 }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="保養次數" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-tag type="primary" effect="light" size="small">
+                      {{ row.maintainCount || 0 }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="未結案" width="90" align="center">
+                  <template #default="{ row }">
+                    <el-tag :type="row.openCount > 0 ? 'warning' : 'success'" effect="plain" size="small">
+                      {{ row.openCount || 0 }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="妥善率" width="140" align="center">
+                  <template #default="{ row }">
+                    <el-progress 
+                      :percentage="Math.round((row.availability || 0) * 100)" 
+                      :status="getAvailabilityStatus(row.availability)"
+                      :stroke-width="10"
+                      style="width: 100px; display: inline-block;"
+                    />
+                    <span style="margin-left: 8px; font-size: 12px; color: #606266;">
+                      {{ formatPercent(row.availability) }}
+                    </span>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="故障率(/天)" width="110" align="center">
+                  <template #default="{ row }">
+                    <span :style="{ color: row.failureRatePerDay > 0.5 ? '#f56c6c' : '#67c23a', fontWeight: 'bold' }">
+                      {{ formatRate(row.failureRatePerDay) }}
+                    </span>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="維修率" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-tag :type="row.repairRate >= 1 ? 'success' : row.repairRate > 0 ? 'warning' : 'info'" 
+                            effect="plain" size="small">
+                      {{ formatPercent(row.repairRate) }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="停機時間" width="100" align="center">
+                  <template #default="{ row }">
+                    <span style="color: #909399; font-size: 12px;">
+                      {{ row.downtimeMinutes || 0 }} 分鐘
+                    </span>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
 
             <el-card shadow="hover" class="table-card">
               <template #header>
@@ -578,7 +744,11 @@ onMounted(() => {
                       </el-tooltip>
 
                       <!-- ★ (2A) 修復：編輯按鈕加入 disabled 和動態 tooltip -->
-                      <el-tooltip v-if="!historyMode" :content="getEditTooltip(row)" placement="top">
+                      <el-tooltip
+                        v-if="!historyMode"
+                        :content="getEditTooltip(row)"
+                        placement="top"
+                      >
                         <el-button
                           size="small"
                           circle
@@ -689,10 +859,7 @@ onMounted(() => {
       width="760px"
       destroy-on-close
     >
-      <TicketTimeline
-        v-if="currentLogTicketId"
-        :ticketId="currentLogTicketId"
-      />
+      <TicketTimeline v-if="currentLogTicketId" :ticketId="currentLogTicketId" />
     </el-dialog>
 
     <!-- 原有的 Resolve Dialog -->

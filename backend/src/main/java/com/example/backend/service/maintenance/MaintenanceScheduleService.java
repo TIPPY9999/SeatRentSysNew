@@ -1,7 +1,10 @@
 package com.example.backend.service.maintenance;
 
+import com.example.backend.dto.maintenance.MaintenanceScheduleResponseDto;
 import com.example.backend.model.maintenance.MaintenanceSchedule;
+import com.example.backend.model.maintenance.MaintenanceStaff;
 import com.example.backend.repository.maintenance.MaintenanceScheduleRepository;
+import com.example.backend.repository.maintenance.MaintenanceStaffRepository;
 import com.example.backend.repository.spot.RentalSpotRepository;
 import com.example.backend.repository.spot.SeatRepository;
 import org.springframework.stereotype.Service;
@@ -12,6 +15,9 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 定期維護排程 Service
@@ -23,14 +29,17 @@ public class MaintenanceScheduleService {
     private static final ZoneId TAIPEI_ZONE = ZoneId.of("Asia/Taipei");
 
     private final MaintenanceScheduleRepository scheduleRepo;
+    private final MaintenanceStaffRepository staffRepo;
     private final RentalSpotRepository spotRepo;
     private final SeatRepository seatRepo;
 
     public MaintenanceScheduleService(
             MaintenanceScheduleRepository scheduleRepo,
+            MaintenanceStaffRepository staffRepo,
             RentalSpotRepository spotRepo,
             SeatRepository seatRepo) {
         this.scheduleRepo = scheduleRepo;
+        this.staffRepo = staffRepo;
         this.spotRepo = spotRepo;
         this.seatRepo = seatRepo;
     }
@@ -38,14 +47,17 @@ public class MaintenanceScheduleService {
     // ==================== 查詢 ====================
 
     /**
-     * 取得所有排程
+     * 取得所有排程 (含人員姓名 DTO)
+     * 注意：Controller 可能聲明返回 List<MaintenanceSchedule>，但 DTO 會被正確序列化
      */
-    public List<MaintenanceSchedule> getAllSchedules() {
-        return scheduleRepo.findAll();
+    @SuppressWarnings("unchecked")
+    public List getAllSchedules() {
+        List<MaintenanceSchedule> schedules = scheduleRepo.findAll();
+        return mapToDtoList(schedules);
     }
 
     /**
-     * 依 ID 取得排程
+     * 依 ID 取得排程 (Entity)
      */
     public MaintenanceSchedule getScheduleById(Integer id) {
         return scheduleRepo.findById(id)
@@ -53,25 +65,39 @@ public class MaintenanceScheduleService {
     }
 
     /**
-     * 取得所有啟用中的排程
+     * 取得所有啟用中的排程 (含人員姓名 DTO)
      */
-    public List<MaintenanceSchedule> getActiveSchedules() {
-        return scheduleRepo.findByIsActive(true);
+    @SuppressWarnings("unchecked")
+    public List getActiveSchedules() {
+        List<MaintenanceSchedule> schedules = scheduleRepo.findByIsActive(true);
+        return mapToDtoList(schedules);
     }
 
     /**
-     * 取得特定目標的排程
+     * 取得特定目標的排程 (含人員姓名 DTO)
      */
-    public List<MaintenanceSchedule> getSchedulesByTarget(String targetType, Integer targetId) {
-        return scheduleRepo.findByTargetTypeAndTargetId(targetType, targetId);
+    @SuppressWarnings("unchecked")
+    public List getSchedulesByTarget(String targetType, Integer targetId) {
+        List<MaintenanceSchedule> schedules = scheduleRepo.findByTargetTypeAndTargetId(targetType, targetId);
+        return mapToDtoList(schedules);
     }
 
     /**
-     * 查詢已到期且啟用的排程 (供定時任務使用)
+     * 查詢已到期且啟用的排程 (Entity - 供定時任務使用)
      */
-    public List<MaintenanceSchedule> getDueSchedules() {
+    public List<MaintenanceSchedule> getDueSchedulesEntity() {
         LocalDateTime now = ZonedDateTime.now(TAIPEI_ZONE).toLocalDateTime();
         return scheduleRepo.findByNextExecuteAtBeforeAndIsActiveTrue(now);
+    }
+
+    /**
+     * 查詢已到期且啟用的排程 (含人員姓名 DTO)
+     */
+    @SuppressWarnings("unchecked")
+    public List getDueSchedules() {
+        LocalDateTime now = ZonedDateTime.now(TAIPEI_ZONE).toLocalDateTime();
+        List<MaintenanceSchedule> schedules = scheduleRepo.findByNextExecuteAtBeforeAndIsActiveTrue(now);
+        return mapToDtoList(schedules);
     }
 
     // ==================== 新增 ====================
@@ -427,6 +453,68 @@ public class MaintenanceScheduleService {
                 executeTime.getHour(),
                 executeTime.getMinute(),
                 executeTime.getSecond()
+        );
+    }
+
+    // ==================== DTO 轉換方法 ====================
+
+    /**
+     * 批量轉換 Entity 為 DTO (避免 N+1 查詢)
+     */
+    private List<MaintenanceScheduleResponseDto> mapToDtoList(List<MaintenanceSchedule> schedules) {
+        if (schedules == null || schedules.isEmpty()) {
+            return List.of();
+        }
+
+        // 收集所有 staffId (去重、排除 null)
+        List<Integer> staffIds = schedules.stream()
+                .map(MaintenanceSchedule::getAssignedStaffId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 一次查詢所有人員，建立 Map<id, name>
+        Map<Integer, String> staffNameMap = staffIds.isEmpty() 
+                ? Map.of()
+                : staffRepo.findAllById(staffIds).stream()
+                        .collect(Collectors.toMap(
+                                MaintenanceStaff::getStaffId,
+                                MaintenanceStaff::getStaffName
+                        ));
+
+        // 轉換為 DTO
+        return schedules.stream()
+                .map(entity -> mapToDto(entity, staffNameMap))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 單筆轉換 Entity 為 DTO
+     */
+    private MaintenanceScheduleResponseDto mapToDto(MaintenanceSchedule entity, Map<Integer, String> staffNameMap) {
+        String staffName = "未指定";
+        if (entity.getAssignedStaffId() != null) {
+            staffName = staffNameMap.getOrDefault(entity.getAssignedStaffId(), "未指定");
+        }
+
+        return new MaintenanceScheduleResponseDto(
+                entity.getScheduleId(),
+                entity.getTitle(),
+                entity.getTargetType(),
+                entity.getTargetId(),
+                entity.getScheduleType(),
+                entity.getDayOfWeek(),
+                entity.getDayOfMonth(),
+                entity.getExecuteTime(),
+                entity.getIssueType(),
+                entity.getIssuePriority(),
+                entity.getAssignedStaffId(),
+                staffName,
+                entity.getIsActive(),
+                entity.getLastExecutedAt(),
+                entity.getNextExecuteAt(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
         );
     }
 

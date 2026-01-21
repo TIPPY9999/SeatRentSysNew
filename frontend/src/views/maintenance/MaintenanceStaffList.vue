@@ -155,8 +155,8 @@ const closeTransferDialog = () => {
 const filteredList = computed(() => {
   const key = searchText.value.trim().toLowerCase()
   // ★ 修正：只顯示啟用中的人員 (isActive = true)
-  const activeStaff = staffList.value.filter(s => s.isActive === true)
-  
+  const activeStaff = staffList.value.filter((s) => s.isActive === true)
+
   if (!key) return activeStaff
   return activeStaff.filter(
     (s) =>
@@ -186,34 +186,57 @@ const formatDate = (row, column, cellValue) => {
   return new Date(cellValue).toLocaleDateString('zh-TW')
 }
 
-// 快速檢視人員詳情（增強版）
+// ★ 任務3：快速檢視人員詳情（增強版 - 區分維修與保養）
 const viewDetail = async (row) => {
-  // ★ 取得統計資料
-  let currentTasks = 0
-  let completedTasks = 0
-  let loadingStats = true
-  
+  // ★ 任務3：拆分為維修與保養統計
+  let repairCurrent = 0    // 維修 + 未完成
+  let maintainCurrent = 0  // 保養 + 未完成
+  let repairDone = 0       // 維修 + 已完成
+  let maintainDone = 0     // 保養 + 已完成
+
+  // ★ 任務3：判斷是否為保養任務
+  const isMaintenance = (issueType) => {
+    if (!issueType) return false
+    const keywords = ['保養', '例行', '檢查']
+    return keywords.some(keyword => issueType.includes(keyword))
+  }
+
+  // ★ 任務3：判斷是否已完成
+  const isCompleted = (status) => {
+    return ['RESOLVED', 'CLOSED', 'CANCELLED'].includes(status)
+  }
+
   try {
     const res = await maintenanceApi.getAllTickets()
     const allTickets = res.data || []
+
+    // ★ 任務3：分類統計該人員的工單
+    const staffTickets = allTickets.filter(t => t.assignedStaffId === row.staffId)
     
-    // 當前進行中的工單
-    currentTasks = allTickets.filter(t => 
-      t.assignedStaffId === row.staffId && 
-      t.issueStatus === 'UNDER_MAINTENANCE'
-    ).length
-    
-    // 已完成的工單
-    completedTasks = allTickets.filter(t => 
-      t.assignedStaffId === row.staffId && 
-      t.issueStatus === 'RESOLVED'
-    ).length
-    
-    loadingStats = false
+    staffTickets.forEach(ticket => {
+      const isMaintenanceTask = isMaintenance(ticket.issueType)
+      const isDone = isCompleted(ticket.issueStatus)
+      
+      if (isMaintenanceTask) {
+        // 保養類任務
+        if (isDone) {
+          maintainDone++
+        } else {
+          maintainCurrent++
+        }
+      } else {
+        // 維修類任務
+        if (isDone) {
+          repairDone++
+        } else {
+          repairCurrent++
+        }
+      }
+    })
   } catch {
-    loadingStats = false
+    // 統計失敗時保持為 0
   }
-  
+
   Swal.fire({
     title: `<div style="display: flex; align-items: center; gap: 12px;">
       <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; font-weight: bold;">
@@ -224,15 +247,27 @@ const viewDetail = async (row) => {
     html: `
       <div style="text-align: left; margin-top: 20px;">
         <div style="display: grid; gap: 12px;">
-          <!-- ★ 統計卡片 -->
+          <!-- ★ 任務3：2x2 Grid 統計卡片 -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
+            <!-- 左上：待修任務 -->
             <div style="padding: 16px; background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%); border-radius: 10px; text-align: center; color: white;">
-              <p style="margin: 0; font-size: 12px; opacity: 0.9;">當前任務</p>
-              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${currentTasks}</p>
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;">🔧 待修任務</p>
+              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${repairCurrent}</p>
             </div>
+            <!-- 右上：待保養 -->
+            <div style="padding: 16px; background: linear-gradient(135deg, #409eff 0%, #79bbff 100%); border-radius: 10px; text-align: center; color: white;">
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;">📋 待保養</p>
+              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${maintainCurrent}</p>
+            </div>
+            <!-- 左下：維修完成 -->
             <div style="padding: 16px; background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); border-radius: 10px; text-align: center; color: white;">
-              <p style="margin: 0; font-size: 12px; opacity: 0.9;">已完成</p>
-              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${completedTasks}</p>
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;">✅ 維修完成</p>
+              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${repairDone}</p>
+            </div>
+            <!-- 右下：保養完成 -->
+            <div style="padding: 16px; background: linear-gradient(135deg, #909399 0%, #c0c4cc 100%); border-radius: 10px; text-align: center; color: white;">
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;">🏁 保養完成</p>
+              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${maintainDone}</p>
             </div>
           </div>
           
@@ -346,7 +381,7 @@ onMounted(() => {
                     <i class="fas fa-user-check"></i>
                   </div>
                   <div class="stat-info">
-                    <h3>{{ staffList.length }}</h3>
+                    <h3>{{ staffList.filter((s) => s.isActive).length }}</h3>
                     <span>在職人員</span>
                   </div>
                   <div class="stat-bg-icon">
