@@ -1,102 +1,79 @@
-<script setup>
-import { useAuthStore } from "@/stores/auth";
-import { storeToRefs } from 'pinia';
-
-const authStore = useAuthStore();
-const { user, isLogin } = storeToRefs(authStore);
-
-// Helper function for date formatting, assuming createdAt is available
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  return date.toLocaleDateString();
-};
-
-console.log(user);
-console.log(user.value);
-console.log(user.data);
-
-</script>
-
 <template>
-  <div>
-    <h1>使用者資訊</h1>
-    <div v-if="isLogin && user">
-      <div class="info-grid">
-        <div class="info-row">
-          <label>使用者ID</label>
-          <div class="value">{{ user.memUsername || 'N/A' }}</div>
+  <div class="container mt-4">
+    <div class="card">
+      <div class="card-header">
+        <h4>會員ID 持久化測試頁面</h4>
+      </div>
+      <div class="card-body">
+        <p>此頁面用於測試能否從 Pinia store 中成功獲取已登入的會員資料。</p>
+        
+        <div v-if="isLoggedIn" class="alert alert-success">
+          <h5 class="alert-heading">驗證成功</h5>
+          <p>已成功從 Pinia store 中讀取到會員資料。</p>
+          <hr>
+          <p class="mb-0">
+            會員ID (Member ID): <strong>{{ memberId }}</strong>
+          </p>
+          <p class="mb-0">
+            會員帳號 (Username): <strong>{{ memberUsername }}</strong>
+          </p>
+          <pre class="mt-2" style="background-color: #f0f0f0; padding: 10px; border-radius: 4px;"><code>{{ fullMemberObject }}</code></pre>
         </div>
-        <div class="info-row">
-          <label>姓名</label>
-          <div class="value">{{ user.memName || 'N/A' }}</div>
-        </div>
-        <div class="info-row">
-          <label>手機</label>
-          <div class="value">{{ user.memPhone || 'N/A' }}</div>
-        </div>
-        <div class="info-row">
-          <label>Email</label>
-          <div class="value">{{ user.memEmail || 'N/A' }}</div>
-        </div>
-        <div class="info-row">
-          <label>發票載具</label>
-          <div class="value">{{ user.memInvoice || 'N/A' }}</div>
-        </div>
-        <div class="info-row">
-          <label>註冊日期</label>
-          <div class="value">{{ formatDate(user.createdAt) }}</div>
+        
+        <div v-else class="alert alert-warning">
+          <h5 class="alert-heading">驗證失敗</h5>
+          <p>無法從 Pinia store 中讀取到會員資料。</p>
+          <p>這可能是因為您尚未登入，或是瀏覽器被重新整理且應用程式沒有將 localStorage 的資料恢復回 Pinia store。</p>
+          <router-link to="/member/login" class="btn btn-primary">前往登入頁面</router-link>
         </div>
       </div>
-      <hr />
-      <h3>偵錯用原始資料:</h3>
-      <pre>{{ user }}</pre>
-    </div>
-    <div v-else>
-      <p>使用者未登入或資訊載入失敗。</p>
     </div>
   </div>
 </template>
 
+<script setup>
+import { computed, onMounted } from 'vue';
+import { useAuthStore } from '@/stores/auth';
+
+// 1. 引入並實例化 auth store
+const authStore = useAuthStore();
+
+// 2. 建立 computed 屬性來安全地獲取資料
+//    使用 computed 可以讓資料保持響應性
+const isLoggedIn = computed(() => authStore.isLogin && authStore.user);
+const memberId = computed(() => authStore.user?.memId || 'N/A'); // 假設會員ID的欄位是 memId
+const memberUsername = computed(() => authStore.user?.memUsername || 'N/A');
+const fullMemberObject = computed(() => JSON.stringify(authStore.user, null, 2));
+
+
+// (可選) 應用程式初始化邏輯：
+// 理想情況下，這段邏輯應該放在 App.vue 的 onMounted 中，確保應用程式一啟動就執行。
+// 這裡放一份是為了確保此測試頁面在單獨測試時也能運作。
+onMounted(() => {
+  // 如果 Pinia store 是空的，但 localStorage 有資料，則進行"恢復"
+  if (!authStore.isLogin) {
+    const storedUser = localStorage.getItem('member_user');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        // 呼叫 action 來恢復狀態，而不是直接修改 state
+        authStore.login(userData, 'member'); 
+        console.log('從 localStorage 恢復會員資料到 Pinia store。');
+      } catch (e) {
+        console.error('從 localStorage 讀取會員資料失敗:', e);
+        localStorage.removeItem('member_user');
+      }
+    }
+  }
+});
+</script>
+
 <style scoped>
-.info-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 1rem;
-  max-width: 600px;
-  margin-top: 1rem;
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #f9f9f9;
+.container {
+  max-width: 800px;
 }
-
-.info-row {
-  display: contents; /* Allows grid layout to apply to children */
-}
-
-.info-row label {
-  font-weight: bold;
-  text-align: right;
-  padding-right: 1rem;
-}
-
-.info-row .value {
-  background-color: #fff;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
 pre {
-  background-color: #f4f4f4;
-  padding: 1rem;
-  border-radius: 5px;
   white-space: pre-wrap;
-  word-break: break-all;
-}
-
-hr {
-  margin: 1.5rem 0;
+  word-wrap: break-word;
 }
 </style>

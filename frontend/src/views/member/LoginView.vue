@@ -66,6 +66,8 @@ const login = async () => {
 
       //  [+] 將登入狀態存入 Pinia，讓整個 App 保持同步
       authStore.login(res.data, 'member')
+      //  [+] 將會員資料存入 localStorage，實現持久化登入
+      localStorage.setItem('member_user', JSON.stringify(res.data))
 
       // 成功提示
       await Swal.fire({
