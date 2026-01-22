@@ -24,7 +24,7 @@ onMounted(() => {
       try {
         const userData = JSON.parse(storedUser);
         authStore.login(userData, 'member');
-        console.log('App.vue: 會員登入狀態已從 localStorage 恢復。');
+        console.log('member login');
       } catch (e) {
         console.error('恢復會員狀態失敗:', e);
         // 如果解析失敗，清除損壞的資料
@@ -40,7 +40,7 @@ onMounted(() => {
       try {
         const adminData = JSON.parse(storedAdmin);
         adminAuthStore.setAdmin(adminData);
-        console.log('App.vue: 管理員登入狀態已從 localStorage 恢復。');
+        console.log('admin login');
       } catch (e) {
         console.error('恢復管理員狀態失敗:', e);
         localStorage.removeItem('admin');

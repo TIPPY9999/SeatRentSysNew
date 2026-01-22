@@ -60,7 +60,7 @@ const loadSeats = async (spotId) => {
       `http://localhost:8080/seats/search?spotId=${spotId}`
     );
     // 根據需求，只顯示狀態為"空閒"的座位
-    seats.value = response.data.filter((seat) => seat.seatsStatus === "空閒");
+    seats.value = response.data.filter((seat) => seat.seatsStatus === "啟用");
   } catch (error) {
     console.error(`載入 ${spotId} 的座位失敗:`, error);
     errorMessage.value = "無法載入該站點的座位資訊。";
