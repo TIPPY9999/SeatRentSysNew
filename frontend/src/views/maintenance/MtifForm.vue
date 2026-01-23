@@ -2,7 +2,8 @@
 import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import maintenanceApi from '@/api/modules/maintenance'
-import Swal from 'sweetalert2'
+// UI: replace individual Swal.fire with unified mtSwal helpers
+import { mtSwal, mtSwalSuccess, mtSwalError, mtSwalConfirmDanger } from '@/utils/maintenance/swal'
 import { useTicketConfig } from '@/composables/maintenance/useTicketConfig'
 import TicketTimeline from '@/components/maintenance/TicketTimeline.vue'
 
@@ -677,6 +678,8 @@ const handleCancel = async () => {
 </template>
 
 <style scoped>
+/* 導入 maintenance 設計系統 */
+@import '@/styles/maintenance/index.css';
 .ticket-form-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);

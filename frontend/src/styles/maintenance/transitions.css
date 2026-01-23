@@ -1,0 +1,179 @@
+/**
+ * Maintenance 設計系統 - Transition 動畫
+ * 用途: 集中定義 maintenance 模組的 transition class，避免重複定義
+ * 範圍: 僅限 maintenance 模組使用 (避免影響其他模組)
+ * 命名規則: 使用 mt- 前綴確保命名空間隔離
+ */
+
+/* ==================== 縮放淡入淡出 ==================== */
+.mt-zoom-fade-enter-active,
+.mt-zoom-fade-leave-active {
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+}
+
+.mt-zoom-fade-enter-from,
+.mt-zoom-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.mt-zoom-fade-enter-to,
+.mt-zoom-fade-leave-from {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ==================== 滑動淡入淡出 ==================== */
+.mt-slide-fade-enter-active,
+.mt-slide-fade-leave-active {
+  transition: all var(--mt-duration-normal) var(--mt-ease-smooth);
+}
+
+.mt-slide-fade-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.mt-slide-fade-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.mt-slide-fade-enter-to,
+.mt-slide-fade-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ==================== 向下滑動 ==================== */
+.mt-slide-down-enter-active,
+.mt-slide-down-leave-active {
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+}
+
+.mt-slide-down-enter-from,
+.mt-slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.mt-slide-down-enter-to,
+.mt-slide-down-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ==================== 彈跳進入 ==================== */
+.mt-bounce-enter-active {
+  animation: mt-bounce-in var(--mt-duration-slow) var(--mt-ease-bounce);
+}
+
+.mt-bounce-leave-active {
+  animation: mt-bounce-out var(--mt-duration-normal) var(--mt-ease-out-quint);
+}
+
+@keyframes mt-bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(-50px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes mt-bounce-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* ==================== 漸層滑動 ==================== */
+.mt-gradient-slide-enter-active,
+.mt-gradient-slide-leave-active {
+  transition: all var(--mt-duration-normal) var(--mt-ease-smooth);
+}
+
+.mt-gradient-slide-enter-from {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+}
+
+.mt-gradient-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
+}
+
+.mt-gradient-slide-enter-to,
+.mt-gradient-slide-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ==================== 向後相容 (TODO: 待確認後移除) ==================== */
+/* 保留舊有的 class 名稱，避免立即破壞現有頁面 */
+.zoom-fade-enter-active { @apply mt-zoom-fade-enter-active; }
+.zoom-fade-leave-active { @apply mt-zoom-fade-leave-active; }
+.zoom-fade-enter-from { @apply mt-zoom-fade-enter-from; }
+.zoom-fade-leave-to { @apply mt-zoom-fade-leave-to; }
+
+.slide-fade-enter-active { @apply mt-slide-fade-enter-active; }
+.slide-fade-leave-active { @apply mt-slide-fade-leave-active; }
+.slide-fade-enter-from { @apply mt-slide-fade-enter-from; }
+.slide-fade-leave-to { @apply mt-slide-fade-leave-to; }
+
+.slide-down-enter-active { @apply mt-slide-down-enter-active; }
+.slide-down-leave-active { @apply mt-slide-down-leave-active; }
+.slide-down-enter-from { @apply mt-slide-down-enter-from; }
+.slide-down-leave-to { @apply mt-slide-down-leave-to; }
+
+/* 如果專案未使用 Tailwind CSS，則使用原始 CSS 定義 */
+/* TODO: 確認專案是否使用 Tailwind，若無則啟用以下區塊 */
+/*
+.zoom-fade-enter-active,
+.zoom-fade-leave-active {
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+}
+
+.zoom-fade-enter-from,
+.zoom-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all var(--mt-duration-normal) var(--mt-ease-smooth);
+}
+
+.slide-fade-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+*/

@@ -1,0 +1,130 @@
+/**
+ * Maintenance 設計系統 - Design Tokens
+ * 用途: 統一 maintenance 模組的色票、尺寸、陰影等視覺 token
+ * 範圍: 僅限 maintenance 模組使用 (避免影響其他模組)
+ * 命名規則: 所有變數使用 --mt- 前綴避免全域污染
+ */
+
+:root {
+  /* ==================== 色票系統 ==================== */
+  /* 主要色系 */
+  --mt-primary: #409eff;
+  --mt-success: #67c23a;
+  --mt-warning: #e6a23c;
+  --mt-danger: #f56c6c;
+  --mt-info: #909399;
+
+  /* 文字色系 */
+  --mt-text-primary: #303133;
+  --mt-text-regular: #606266;
+  --mt-text-secondary: #909399;
+  --mt-text-placeholder: #c0c4cc;
+
+  /* 背景色系 */
+  --mt-bg-page: #f5f7fa;
+  --mt-bg-card: #ffffff;
+  --mt-bg-light: #fafbfc;
+
+  /* 邊框色系 */
+  --mt-border-light: #ebeef5;
+  --mt-border-base: #dcdfe6;
+  --mt-border-dark: #c0c4cc;
+
+  /* 狀態背景色 (淺色版) */
+  --mt-primary-light: #ecf5ff;
+  --mt-success-light: #f0f9eb;
+  --mt-warning-light: #fdf6ec;
+  --mt-danger-light: #fef0f0;
+  --mt-info-light: #f4f4f5;
+
+  /* ==================== 尺寸系統 ==================== */
+  /* 圓角 */
+  --mt-radius-sm: 6px;
+  --mt-radius-md: 10px;
+  --mt-radius-lg: 14px;
+  --mt-radius-xl: 18px;
+
+  /* 間距 */
+  --mt-spacing-xs: 4px;
+  --mt-spacing-sm: 8px;
+  --mt-spacing-md: 12px;
+  --mt-spacing-lg: 16px;
+  --mt-spacing-xl: 20px;
+  --mt-spacing-xxl: 24px;
+
+  /* 陰影系統 */
+  --mt-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --mt-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --mt-shadow-lg: 0 6px 20px rgba(0, 0, 0, 0.12);
+  --mt-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.15);
+  
+  /* 動畫系統 */
+  --mt-ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --mt-ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --mt-ease-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* 動畫持續時間 */
+  --mt-duration-fast: 0.15s;
+  --mt-duration-normal: 0.3s;
+  --mt-duration-slow: 0.5s;
+
+  /* ==================== 字體系統 ==================== */
+  /* 字體大小 */
+  --mt-text-xs: 11px;
+  --mt-text-sm: 12px;
+  --mt-text-base: 14px;
+  --mt-text-lg: 16px;
+  --mt-text-xl: 18px;
+  --mt-text-2xl: 20px;
+
+  /* 行高 */
+  --mt-leading-tight: 1.2;
+  --mt-leading-normal: 1.5;
+  --mt-leading-loose: 1.8;
+
+  /* ==================== 特殊效果 ==================== */
+  /* 卡片漸層邊框 */
+  --mt-gradient-border: linear-gradient(135deg, var(--mt-primary), var(--mt-success));
+  
+  /* 按鈕漸層背景 */
+  --mt-gradient-primary: linear-gradient(135deg, #409eff 0%, #69c0ff 100%);
+  --mt-gradient-success: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  --mt-gradient-warning: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
+  --mt-gradient-danger: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
+
+  /* Z-index 層級 */
+  --mt-z-dropdown: 1000;
+  --mt-z-modal: 2000;
+  --mt-z-notification: 3000;
+  --mt-z-tooltip: 4000;
+}
+
+/* ==================== 實用工具類別 ==================== */
+.mt-scope {
+  /* 作為 maintenance 模組的範圍標記 */
+  --scope: maintenance;
+}
+
+/* 快速間距工具 */
+.mt-scope .mt-p-sm { padding: var(--mt-spacing-sm); }
+.mt-scope .mt-p-md { padding: var(--mt-spacing-md); }
+.mt-scope .mt-p-lg { padding: var(--mt-spacing-lg); }
+.mt-scope .mt-m-sm { margin: var(--mt-spacing-sm); }
+.mt-scope .mt-m-md { margin: var(--mt-spacing-md); }
+.mt-scope .mt-m-lg { margin: var(--mt-spacing-lg); }
+
+/* 快速背景色工具 */
+.mt-scope .mt-bg-primary-light { background-color: var(--mt-primary-light); }
+.mt-scope .mt-bg-success-light { background-color: var(--mt-success-light); }
+.mt-scope .mt-bg-warning-light { background-color: var(--mt-warning-light); }
+.mt-scope .mt-bg-danger-light { background-color: var(--mt-danger-light); }
+
+/* 快速圓角工具 */
+.mt-scope .mt-rounded-sm { border-radius: var(--mt-radius-sm); }
+.mt-scope .mt-rounded-md { border-radius: var(--mt-radius-md); }
+.mt-scope .mt-rounded-lg { border-radius: var(--mt-radius-lg); }
+
+/* 快速陰影工具 */
+.mt-scope .mt-shadow-sm { box-shadow: var(--mt-shadow-sm); }
+.mt-scope .mt-shadow-md { box-shadow: var(--mt-shadow-md); }
+.mt-scope .mt-shadow-lg { box-shadow: var(--mt-shadow-lg); }

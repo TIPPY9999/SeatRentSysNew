@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import maintenanceApi from '@/api/modules/maintenance'
-import Swal from 'sweetalert2'
+// UI: replace individual Swal.fire with unified mtSwal helpers
+import { mtSwal, mtSwalSuccess, mtSwalError, mtSwalConfirmDanger } from '@/utils/maintenance/swal'
 import { useRouter } from 'vue-router'
 import { usePagination } from '@/composables/maintenance/usePagination'
 import { InfoFilled, Right, Delete, Check } from '@element-plus/icons-vue'
@@ -41,7 +42,7 @@ const fetchStaff = async () => {
 
 // ====== 刪除人員（含防呆轉移邏輯）======
 const handleDelete = async (row) => {
-  const result = await Swal.fire({
+  const result = await mtSwalConfirmDanger({
     title: '確定要停用此人員嗎？',
     html: `
       <div style="text-align: center;">
@@ -52,40 +53,28 @@ const handleDelete = async (row) => {
         <p style="color: #909399; font-size: 13px;">刪除的資料可在歷史紀錄中查看並恢復</p>
       </div>
     `,
-    icon: null,
-    showCancelButton: true,
-    confirmButtonColor: '#f56c6c',
-    cancelButtonColor: '#909399',
     confirmButtonText: '<i class="fas fa-user-slash mr-1"></i> 確認停用',
-    cancelButtonText: '取消',
-    showClass: { popup: 'animate__animated animate__fadeInDown animate__faster' },
-    hideClass: { popup: 'animate__animated animate__fadeOutUp animate__faster' },
-    customClass: { popup: 'custom-swal-popup' },
     didRender: (popup) => {
       // Task 1 & 2: 為統計卡片添加點擊事件
       const cards = popup.querySelectorAll('[data-card-type]')
-      cards.forEach(card => {
+      cards.forEach((card) => {
         card.addEventListener('click', () => {
           const cardType = card.getAttribute('data-card-type')
           showHistoryModal(row.staffId, cardType, row.staffName)
         })
       })
-    }
+    },
   })
 
   if (result.isConfirmed) {
     try {
       await maintenanceApi.deleteStaff(row.staffId)
       fetchStaff()
-      await Swal.fire({
-        icon: 'success',
-        title: '停用成功',
-        html: `<span><b>${row.staffName}</b> 已移至歷史紀錄</span>`,
-        timer: 1000,
-        timerProgressBar: true,
-        showConfirmButton: false,
-        showClass: { popup: 'animate__animated animate__bounceIn' },
-      })
+      await mtSwalSuccess(
+        `<span><b>${row.staffName}</b> 已移至歷史紀錄</span>`,
+        '停用成功',
+        { timer: 1000 }
+      )
     } catch (error) {
       // 檢查是否有未完成工單（根據後端錯誤訊息）
       const errorMsg = error?.response?.data?.message || error?.message || ''
@@ -115,7 +104,7 @@ const showHistoryModal = async (staffId, cardType, staffName) => {
     let title = ''
     let iconClass = ''
     let colorClass = ''
-    
+
     switch (cardType) {
       case 'repair-pending':
         statuses = ['REPORTED', 'ASSIGNED', 'UNDER_MAINTENANCE']
@@ -173,13 +162,18 @@ const showHistoryModal = async (staffId, cardType, staffName) => {
             </thead>
             <tbody>
       `
-      
-      displayTickets.forEach(ticket => {
-        const date = ticket.reportedAt ? new Date(ticket.reportedAt).toLocaleDateString('zh-TW') : '-'
-        const target = ticket.spotId ? `機台 #${ticket.spotId}${ticket.seatsId ? ` - 座位 #${ticket.seatsId}` : ''}` : '未指定'
+
+      displayTickets.forEach((ticket) => {
+        const date = ticket.reportedAt
+          ? new Date(ticket.reportedAt).toLocaleDateString('zh-TW')
+          : '-'
+        const target = ticket.spotId
+          ? `機台 #${ticket.spotId}${ticket.seatsId ? ` - 座位 #${ticket.seatsId}` : ''}`
+          : '未指定'
         const description = ticket.issueDesc || '無描述'
-        const result = ticket.resolveNote || (ticket.issueStatus === 'RESOLVED' ? '已完成' : '處理中')
-        
+        const result =
+          ticket.resolveNote || (ticket.issueStatus === 'RESOLVED' ? '已完成' : '處理中')
+
         tableHtml += `
           <tr>
             <td><span class="badge badge-secondary">#${ticket.ticketId}</span></td>
@@ -190,13 +184,13 @@ const showHistoryModal = async (staffId, cardType, staffName) => {
           </tr>
         `
       })
-      
+
       tableHtml += `
             </tbody>
           </table>
         </div>
       `
-      
+
       if (tickets.length > 10) {
         tableHtml += `
           <div style="text-align: center; margin-top: 12px; color: #909399; font-size: 12px;">
@@ -207,31 +201,26 @@ const showHistoryModal = async (staffId, cardType, staffName) => {
       }
     }
 
-    await Swal.fire({
+    // TODO: 原本使用 Swal.fire，已改為 mtSwal
+    await mtSwal({
       title: `<div style="display: flex; align-items: center; gap: 12px; justify-content: center;">
         <i class="${iconClass} ${colorClass}" style="font-size: 24px;"></i>
         <span>${staffName} - ${title}</span>
       </div>`,
       html: tableHtml,
       width: '90%',
-      maxWidth: '1000px',
-      showConfirmButton: true,
       confirmButtonText: '<i class="fas fa-times mr-1"></i>關閉',
       customClass: {
-        popup: 'custom-swal-popup',
-        confirmButton: 'btn btn-secondary'
-      },
-      showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
-      hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' }
+        popup: 'mt-swal-popup',
+        confirmButton: 'mt-swal-cancel'
+      }
     })
   } catch (error) {
     console.error('查詢工單歷史失敗:', error)
-    await Swal.fire({
-      icon: 'error',
+    // TODO: 原本使用 Swal.fire，已改為 mtSwalError
+    await mtSwalError({
       title: '查詢失敗',
-      text: '無法載入工單歷史記錄',
-      timer: 2000,
-      showConfirmButton: false
+      text: '無法載入工單歷史記錄'
     })
   }
 }
@@ -239,11 +228,10 @@ const showHistoryModal = async (staffId, cardType, staffName) => {
 // ====== 執行轉移並刪除 ======
 const handleTransferAndDelete = async () => {
   if (!transferForm.value.targetStaffId) {
-    await Swal.fire({
-      icon: 'warning',
+    // TODO: 原本使用 Swal.fire，已改為 mtSwalError
+    await mtSwalError({
       title: '請選擇接手人員',
-      text: '必須指定一位接手人員來接收未完成的工單',
-      confirmButtonColor: '#409eff',
+      text: '必須指定一位接手人員來接收未完成的工單'
     })
     return
   }
@@ -260,19 +248,11 @@ const handleTransferAndDelete = async () => {
 
     const targetStaff = staffList.value.find((s) => s.staffId === transferForm.value.targetStaffId)
 
-    await Swal.fire({
-      icon: 'success',
+    // TODO: 原本使用 Swal.fire，已改為 mtSwalSuccess
+    await mtSwalSuccess({
       title: '轉移成功！',
-      html: `
-        <div style="text-align: center;">
-          <p>工單已轉移給 <b style="color: #67c23a;">${targetStaff?.staffName || '接手人員'}</b></p>
-          <p style="color: #909399; font-size: 13px;"><b>${transferForm.value.deleteStaffName}</b> 已停用</p>
-        </div>
-      `,
-      timer: 2000,
-      timerProgressBar: true,
-      showConfirmButton: false,
-      showClass: { popup: 'animate__animated animate__bounceIn' },
+      text: `工單已轉移給 ${targetStaff?.staffName || '接手人員'}，${transferForm.value.deleteStaffName} 已停用`,
+      timer: 2000
     })
   } catch {
     // 錯誤已由 http.js 攔截器處理
@@ -328,16 +308,16 @@ const formatDate = (row, column, cellValue) => {
 // ★ 任務3：快速檢視人員詳情（增強版 - 區分維修與保養）
 const viewDetail = async (row) => {
   // ★ 任務3：拆分為維修與保養統計
-  let repairCurrent = 0    // 維修 + 未完成
-  let maintainCurrent = 0  // 保養 + 未完成
-  let repairDone = 0       // 維修 + 已完成
-  let maintainDone = 0     // 保養 + 已完成
+  let repairCurrent = 0 // 維修 + 未完成
+  let maintainCurrent = 0 // 保養 + 未完成
+  let repairDone = 0 // 維修 + 已完成
+  let maintainDone = 0 // 保養 + 已完成
 
   // ★ 任務3：判斷是否為保養任務
   const isMaintenance = (issueType) => {
     if (!issueType) return false
     const keywords = ['保養', '例行', '檢查']
-    return keywords.some(keyword => issueType.includes(keyword))
+    return keywords.some((keyword) => issueType.includes(keyword))
   }
 
   // ★ 任務3：判斷是否已完成
@@ -350,12 +330,12 @@ const viewDetail = async (row) => {
     const allTickets = res.data || []
 
     // ★ 任務3：分類統計該人員的工單
-    const staffTickets = allTickets.filter(t => t.assignedStaffId === row.staffId)
-    
-    staffTickets.forEach(ticket => {
+    const staffTickets = allTickets.filter((t) => t.assignedStaffId === row.staffId)
+
+    staffTickets.forEach((ticket) => {
       const isMaintenanceTask = isMaintenance(ticket.issueType)
       const isDone = isCompleted(ticket.issueStatus)
-      
+
       if (isMaintenanceTask) {
         // 保養類任務
         if (isDone) {
@@ -376,7 +356,7 @@ const viewDetail = async (row) => {
     // 統計失敗時保持為 0
   }
 
-  Swal.fire({
+  mtSwal({
     title: `<div style="display: flex; align-items: center; gap: 12px;">
       <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; font-weight: bold;">
         ${row.staffName?.charAt(0) || '?'}
@@ -461,18 +441,17 @@ const viewDetail = async (row) => {
   })
 }
 
-const handleAddNew = () => {
-  Swal.fire({
+const handleAddNew = async () => {
+  await mtSwal({
     title: '新增維護人員',
     text: '即將前往新增人員表單',
     icon: 'info',
     timer: 600,
     timerProgressBar: true,
     showConfirmButton: false,
-    showClass: { popup: 'animate__animated animate__fadeInRight animate__faster' },
-  }).then(() => {
-    router.push('/admin/staff-form')
   })
+
+  router.push('/admin/staff-form')
 }
 
 onMounted(() => {
@@ -482,7 +461,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="staff-list-container">
+  <div class="staff-list-container mt-scope">
     <!-- 頁面標題區 -->
     <section class="content-header">
       <div class="container-fluid">
@@ -827,6 +806,8 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 導入 maintenance 設計系統 */
+@import '@/styles/maintenance/index.css';
 .staff-list-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);

@@ -116,7 +116,7 @@ const handleCancel = async () => {
 </script>
 
 <template>
-  <div class="staff-form-container">
+  <div class="staff-form-container mt-scope">
     <section class="content-header">
       <div class="container-fluid">
         <transition name="slide-fade" appear>
@@ -313,6 +313,8 @@ const handleCancel = async () => {
 </template>
 
 <style scoped>
+/* 導入 maintenance 設計系統 */
+@import '@/styles/maintenance/index.css';
 .staff-form-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);

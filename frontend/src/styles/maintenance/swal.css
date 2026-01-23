@@ -1,0 +1,251 @@
+/**
+ * Maintenance 設計系統 - SweetAlert2 樣式
+ * 用途: 統一 SweetAlert2 彈窗的外觀設計，確保與 maintenance 設計系統一致
+ * 範圍: 僅限 maintenance 模組使用 (避免影響其他模組的 Swal)
+ * 使用方式: 在 Swal.fire() 中使用 customClass 指定這些 class
+ */
+
+/* ==================== 彈窗容器樣式 ==================== */
+.mt-swal-popup {
+  border-radius: var(--mt-radius-lg) !important;
+  box-shadow: var(--mt-shadow-lg) !important;
+  font-family: inherit !important;
+  padding: var(--mt-spacing-xl) !important;
+  max-width: 500px !important;
+}
+
+.mt-swal-popup .swal2-title {
+  color: var(--mt-text-primary) !important;
+  font-size: var(--mt-text-xl) !important;
+  font-weight: 600 !important;
+  margin-bottom: var(--mt-spacing-lg) !important;
+}
+
+.mt-swal-popup .swal2-content {
+  color: var(--mt-text-regular) !important;
+  font-size: var(--mt-text-base) !important;
+  line-height: var(--mt-leading-normal) !important;
+  margin: 0 !important;
+}
+
+/* ==================== 按鈕樣式 ==================== */
+.mt-swal-confirm {
+  background: var(--mt-gradient-primary) !important;
+  border: none !important;
+  border-radius: var(--mt-radius-md) !important;
+  padding: var(--mt-spacing-md) var(--mt-spacing-xl) !important;
+  font-size: var(--mt-text-base) !important;
+  font-weight: 600 !important;
+  color: white !important;
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint) !important;
+  box-shadow: var(--mt-shadow-sm) !important;
+}
+
+.mt-swal-confirm:hover {
+  background: linear-gradient(135deg, #69c0ff 0%, #409eff 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--mt-shadow-md) !important;
+}
+
+.mt-swal-confirm:active {
+  transform: translateY(0) !important;
+  box-shadow: var(--mt-shadow-sm) !important;
+}
+
+.mt-swal-cancel {
+  background: linear-gradient(135deg, #f4f4f5 0%, #e9e9eb 100%) !important;
+  border: 1px solid var(--mt-border-base) !important;
+  border-radius: var(--mt-radius-md) !important;
+  padding: var(--mt-spacing-md) var(--mt-spacing-xl) !important;
+  font-size: var(--mt-text-base) !important;
+  font-weight: 600 !important;
+  color: var(--mt-text-regular) !important;
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint) !important;
+  box-shadow: var(--mt-shadow-sm) !important;
+}
+
+.mt-swal-cancel:hover {
+  background: linear-gradient(135deg, #e9e9eb 0%, #d4d4d8 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--mt-shadow-md) !important;
+}
+
+.mt-swal-cancel:active {
+  transform: translateY(0) !important;
+  box-shadow: var(--mt-shadow-sm) !important;
+}
+
+/* ==================== 危險操作按鈕 ==================== */
+.mt-swal-confirm-danger {
+  background: var(--mt-gradient-danger) !important;
+  border: none !important;
+  border-radius: var(--mt-radius-md) !important;
+  padding: var(--mt-spacing-md) var(--mt-spacing-xl) !important;
+  font-size: var(--mt-text-base) !important;
+  font-weight: 600 !important;
+  color: white !important;
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint) !important;
+  box-shadow: var(--mt-shadow-sm) !important;
+}
+
+.mt-swal-confirm-danger:hover {
+  background: linear-gradient(135deg, #f78989 0%, #f56c6c 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--mt-shadow-md) !important;
+}
+
+/* 成功操作按鈕 */
+.mt-swal-confirm-success {
+  background: var(--mt-gradient-success) !important;
+  border: none !important;
+  border-radius: var(--mt-radius-md) !important;
+  padding: var(--mt-spacing-md) var(--mt-spacing-xl) !important;
+  font-size: var(--mt-text-base) !important;
+  font-weight: 600 !important;
+  color: white !important;
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint) !important;
+  box-shadow: var(--mt-shadow-sm) !important;
+}
+
+.mt-swal-confirm-success:hover {
+  background: linear-gradient(135deg, #85ce61 0%, #67c23a 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--mt-shadow-md) !important;
+}
+
+/* 警告操作按鈕 */
+.mt-swal-confirm-warning {
+  background: var(--mt-gradient-warning) !important;
+  border: none !important;
+  border-radius: var(--mt-radius-md) !important;
+  padding: var(--mt-spacing-md) var(--mt-spacing-xl) !important;
+  font-size: var(--mt-text-base) !important;
+  font-weight: 600 !important;
+  color: white !important;
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint) !important;
+  box-shadow: var(--mt-shadow-sm) !important;
+}
+
+.mt-swal-confirm-warning:hover {
+  background: linear-gradient(135deg, #ebb563 0%, #e6a23c 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--mt-shadow-md) !important;
+}
+
+/* ==================== 圖標容器 ==================== */
+.mt-swal-popup .swal2-icon {
+  margin: var(--mt-spacing-md) auto var(--mt-spacing-lg) auto !important;
+  border: none !important;
+}
+
+.mt-swal-popup .swal2-icon.swal2-success {
+  border-color: var(--mt-success) !important;
+}
+
+.mt-swal-popup .swal2-icon.swal2-error {
+  border-color: var(--mt-danger) !important;
+}
+
+.mt-swal-popup .swal2-icon.swal2-warning {
+  border-color: var(--mt-warning) !important;
+  color: var(--mt-warning) !important;
+}
+
+.mt-swal-popup .swal2-icon.swal2-info {
+  border-color: var(--mt-primary) !important;
+  color: var(--mt-primary) !important;
+}
+
+/* ==================== 輸入框樣式 ==================== */
+.mt-swal-popup .swal2-input,
+.mt-swal-popup .swal2-textarea {
+  border: 2px solid var(--mt-border-light) !important;
+  border-radius: var(--mt-radius-md) !important;
+  padding: var(--mt-spacing-md) !important;
+  font-size: var(--mt-text-base) !important;
+  transition: all var(--mt-duration-normal) var(--mt-ease-smooth) !important;
+}
+
+.mt-swal-popup .swal2-input:focus,
+.mt-swal-popup .swal2-textarea:focus {
+  border-color: var(--mt-primary) !important;
+  box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1) !important;
+  outline: none !important;
+}
+
+/* ==================== 進度條樣式 ==================== */
+.mt-swal-popup .swal2-timer-progress-bar {
+  background: var(--mt-gradient-primary) !important;
+  height: 4px !important;
+  border-radius: 2px !important;
+}
+
+/* ==================== 關閉按鈕 ==================== */
+.mt-swal-popup .swal2-close {
+  color: var(--mt-text-secondary) !important;
+  font-size: var(--mt-text-xl) !important;
+  transition: all var(--mt-duration-fast) var(--mt-ease-smooth) !important;
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.mt-swal-popup .swal2-close:hover {
+  color: var(--mt-danger) !important;
+  background: var(--mt-danger-light) !important;
+}
+
+/* ==================== 載入狀態 ==================== */
+.mt-swal-loading .swal2-loader {
+  border-color: var(--mt-primary) transparent var(--mt-primary) transparent !important;
+}
+
+/* ==================== 響應式設計 ==================== */
+@media (max-width: 768px) {
+  .mt-swal-popup {
+    margin: var(--mt-spacing-md) !important;
+    max-width: calc(100vw - 32px) !important;
+    padding: var(--mt-spacing-lg) !important;
+  }
+
+  .mt-swal-confirm,
+  .mt-swal-cancel,
+  .mt-swal-confirm-danger,
+  .mt-swal-confirm-success,
+  .mt-swal-confirm-warning {
+    padding: var(--mt-spacing-sm) var(--mt-spacing-lg) !important;
+    font-size: var(--mt-text-sm) !important;
+  }
+}
+
+/* ==================== 特殊佈局支援 ==================== */
+/* 支援自定義 HTML 內容的樣式 */
+.mt-swal-popup .mt-swal-content-grid {
+  display: grid;
+  gap: var(--mt-spacing-md);
+  text-align: left;
+}
+
+.mt-swal-popup .mt-swal-info-card {
+  padding: var(--mt-spacing-md);
+  background: var(--mt-bg-light);
+  border-radius: var(--mt-radius-sm);
+  border-left: 4px solid var(--mt-primary);
+}
+
+.mt-swal-popup .mt-swal-warning-card {
+  padding: var(--mt-spacing-md);
+  background: var(--mt-warning-light);
+  border-radius: var(--mt-radius-sm);
+  border-left: 4px solid var(--mt-warning);
+}
+
+.mt-swal-popup .mt-swal-danger-card {
+  padding: var(--mt-spacing-md);
+  background: var(--mt-danger-light);
+  border-radius: var(--mt-radius-sm);
+  border-left: 4px solid var(--mt-danger);
+}

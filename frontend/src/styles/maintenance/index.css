@@ -1,0 +1,220 @@
+/**
+ * Maintenance 設計系統 - 主入口
+ * 用途: 集中導入所有 maintenance 設計系統的樣式檔
+ * 範圍: 僅限 maintenance 模組使用
+ * 
+ * 使用方式:
+ * 1. 在 maintenance 頁面的 <style> 中 @import 此檔案
+ * 2. 在最外層容器加上 class="mt-scope" 來啟用作用域
+ * 
+ * 注意: 不要在全域 App.vue 或 AdminLayout.vue 中引入，避免影響其他模組
+ */
+
+/* 按順序導入所有設計系統檔案 */
+@import './tokens.css';
+@import './transitions.css';
+@import './motion.css';
+@import './swal.css';
+
+/* ==================== 通用佈局工具 ==================== */
+.mt-scope {
+  /* 確保變數可用 */
+  font-family: inherit;
+}
+
+/* 卡片基礎樣式 */
+.mt-scope .mt-card {
+  background: var(--mt-bg-card);
+  border: 1px solid var(--mt-border-light);
+  border-radius: var(--mt-radius-md);
+  box-shadow: var(--mt-shadow-sm);
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+}
+
+.mt-scope .mt-card:hover {
+  box-shadow: var(--mt-shadow-md);
+}
+
+/* 表格行 hover 效果 */
+.mt-scope .mt-table-row-hover {
+  transition: background-color var(--mt-duration-fast) var(--mt-ease-smooth);
+}
+
+.mt-scope .mt-table-row-hover:hover {
+  background-color: var(--mt-primary-light);
+}
+
+/* 按鈕組合 */
+.mt-scope .mt-btn-group {
+  display: flex;
+  gap: var(--mt-spacing-sm);
+}
+
+.mt-scope .mt-btn-group .mt-btn {
+  flex: 1;
+}
+
+/* 統計卡片 */
+.mt-scope .mt-stat-card {
+  padding: var(--mt-spacing-lg);
+  background: var(--mt-bg-card);
+  border-radius: var(--mt-radius-lg);
+  box-shadow: var(--mt-shadow-sm);
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+  cursor: pointer;
+}
+
+.mt-scope .mt-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mt-shadow-lg);
+}
+
+.mt-scope .mt-stat-card .number {
+  font-size: var(--mt-text-2xl);
+  font-weight: 700;
+  margin-bottom: var(--mt-spacing-xs);
+}
+
+.mt-scope .mt-stat-card .label {
+  font-size: var(--mt-text-sm);
+  color: var(--mt-text-secondary);
+  font-weight: 500;
+}
+
+/* 表單區塊 */
+.mt-scope .mt-form-section {
+  margin-bottom: var(--mt-spacing-xl);
+  padding: var(--mt-spacing-lg);
+  background: var(--mt-bg-card);
+  border-radius: var(--mt-radius-md);
+  border: 1px solid var(--mt-border-light);
+}
+
+.mt-scope .mt-form-section h3 {
+  margin: 0 0 var(--mt-spacing-lg) 0;
+  font-size: var(--mt-text-lg);
+  font-weight: 600;
+  color: var(--mt-text-primary);
+}
+
+/* 過濾器工具列 */
+.mt-scope .mt-filter-bar {
+  display: flex;
+  gap: var(--mt-spacing-md);
+  align-items: center;
+  margin-bottom: var(--mt-spacing-lg);
+  padding: var(--mt-spacing-md);
+  background: var(--mt-bg-light);
+  border-radius: var(--mt-radius-md);
+  border: 1px solid var(--mt-border-light);
+}
+
+/* 頁面頭部 */
+.mt-scope .mt-page-header {
+  margin-bottom: var(--mt-spacing-xl);
+  padding-bottom: var(--mt-spacing-lg);
+  border-bottom: 1px solid var(--mt-border-light);
+}
+
+.mt-scope .mt-page-title {
+  font-size: var(--mt-text-2xl);
+  font-weight: 600;
+  color: var(--mt-text-primary);
+  margin: 0 0 var(--mt-spacing-sm) 0;
+}
+
+.mt-scope .mt-page-subtitle {
+  font-size: var(--mt-text-base);
+  color: var(--mt-text-secondary);
+  margin: 0;
+}
+
+/* 空狀態 */
+.mt-scope .mt-empty-state {
+  text-align: center;
+  padding: var(--mt-spacing-xxl);
+  color: var(--mt-text-secondary);
+}
+
+.mt-scope .mt-empty-state .icon {
+  font-size: 48px;
+  margin-bottom: var(--mt-spacing-lg);
+  opacity: 0.5;
+}
+
+/* 載入狀態 */
+.mt-scope .mt-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--mt-spacing-xl);
+  color: var(--mt-text-secondary);
+}
+
+/* 狀態標籤 */
+.mt-scope .mt-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mt-spacing-xs);
+  padding: var(--mt-spacing-xs) var(--mt-spacing-sm);
+  border-radius: var(--mt-radius-sm);
+  font-size: var(--mt-text-sm);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.mt-scope .mt-priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mt-spacing-xs);
+  padding: var(--mt-spacing-xs) var(--mt-spacing-sm);
+  border-radius: var(--mt-radius-sm);
+  font-size: var(--mt-text-sm);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* ==================== 響應式設計 ==================== */
+@media (max-width: 768px) {
+  .mt-scope .mt-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mt-scope .mt-btn-group {
+    flex-direction: column;
+  }
+
+  .mt-scope .mt-stat-card {
+    text-align: center;
+  }
+}
+
+/* ==================== 向後相容 (TODO: 待確認後移除) ==================== */
+/* 保留一些常用的 class 名稱，避免立即破壞現有頁面 */
+.mt-scope .card-hover-effect {
+  @apply mt-card-lift;
+}
+
+.mt-scope .btn-hover-effect {
+  @apply mt-btn-hover;
+}
+
+.mt-scope .table-row-hover {
+  @apply mt-table-row-hover;
+}
+
+/* 如果專案未使用 Tailwind CSS，則使用原始 CSS 定義 */
+/* TODO: 確認專案是否使用 Tailwind，若無則啟用以下區塊 */
+/*
+.mt-scope .card-hover-effect {
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+  transform: translateY(0);
+  box-shadow: var(--mt-shadow-sm);
+}
+
+.mt-scope .card-hover-effect:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--mt-shadow-hover);
+}
+*/

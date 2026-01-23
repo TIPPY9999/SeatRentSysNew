@@ -1,7 +1,15 @@
 <script setup>
 import { ref, onMounted, computed, reactive, watch } from 'vue'
 import maintenanceApi from '@/api/modules/maintenance'
-import Swal from 'sweetalert2'
+// UI: replace individual Swal.fire with unified mtSwal helpers
+import {
+  mtSwal,
+  mtSwalSuccess,
+  mtSwalError,
+  mtSwalConfirmDanger,
+  mtSwalTextarea,
+  mtSwalDetail,
+} from '@/utils/maintenance/swal'
 import { useTicketConfig } from '@/composables/maintenance/useTicketConfig'
 import { usePagination } from '@/composables/maintenance/usePagination'
 import TicketCharts from '@/components/maintenance/TicketCharts.vue'
@@ -27,12 +35,10 @@ const fetchAssetStats = async () => {
   } catch (err) {
     console.error('取得資產統計失敗:', err)
     assetStats.value = []
-    Swal.fire({
-      icon: 'error',
+    // UI: replace Swal.fire with mtSwalError for consistency
+    mtSwalError({
       title: '載入失敗',
       text: '無法取得資產健康度統計',
-      timer: 2000,
-      showConfirmButton: false
     })
   } finally {
     assetStatsLoading.value = false
@@ -99,7 +105,9 @@ const {
   getPriorityText,
   getStatusText,
   getPriorityIcon,
+  getPriorityIconClass, // UI: new function for icon classes
   getStatusIcon,
+  getStatusIconClass, // UI: new function for icon classes
   getResultText,
   getResultIcon,
 } = useTicketConfig()
@@ -170,10 +178,11 @@ const {
 
 // 開始維修
 const startTicket = async (row) => {
-  const result = await Swal.fire({
+  // UI: replace Swal.fire with mtSwal for consistency
+  const result = await mtSwal({
     title: '開始維修？',
     html: `
-      <div style="text-align: center; padding: 10px 0;">
+      <div class="mt-swal-content-grid" style="text-align: center; padding: 10px 0;">
         <div style="font-size: 48px; margin-bottom: 12px;"><i class="fas fa-wrench" style="color: #e6a23c;"></i></div>
         <p>工單 <b>#${row.ticketId}</b> 即將進入維修狀態</p>
         <p style="color: #909399; font-size: 13px;">問題類型：${row.issueType}</p>
@@ -181,25 +190,20 @@ const startTicket = async (row) => {
     `,
     icon: null,
     showCancelButton: true,
-    confirmButtonColor: '#409eff',
-    cancelButtonColor: '#909399',
     confirmButtonText: '<i class="fas fa-play mr-1"></i> 開始維修',
     cancelButtonText: '稍後再說',
-    showClass: { popup: 'animate__animated animate__bounceIn' },
   })
 
   if (result.isConfirmed) {
     try {
       await maintenanceApi.startTicket(row.ticketId)
-      await Swal.fire({
-        icon: 'success',
+      // UI: replace Swal.fire with mtSwalSuccess for consistency
+      await mtSwalSuccess({
         title: '維修開始！',
-        html: '<span class="text-primary">工單狀態已更新為「維修中」</span>',
-        timer: 1000,
-        timerProgressBar: true,
-        showConfirmButton: false,
-        showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
+        text: '工單狀態已更新為「維修中」',
+        timer: 1500,
       })
+
       fetchTickets()
     } catch {
       // 錯誤已由攔截器處理
@@ -209,38 +213,33 @@ const startTicket = async (row) => {
 
 // 取消工單
 const cancelTicket = async (row) => {
-  const { value: reason } = await Swal.fire({
+  // UI: replace Swal.fire with mtSwalTextarea for consistency
+  const { value: reason } = await mtSwalTextarea({
     title: '取消工單',
+    inputPlaceholder: '請輸入取消原因...',
+    rows: 3,
+    confirmButtonText: '<i class="fas fa-times mr-1"></i> 確認取消',
+    cancelButtonText: '返回',
+    customClass: {
+      popup: 'mt-swal-popup',
+      confirmButton: 'mt-swal-confirm-danger',
+      cancelButton: 'mt-swal-cancel',
+    },
     html: `
-      <div style="text-align: center; padding: 10px 0;">
+      <div class="mt-swal-content-grid" style="text-align: center; padding: 10px 0; margin-bottom: 16px;">
         <div style="font-size: 48px; margin-bottom: 12px;"><i class="fas fa-exclamation-triangle" style="color: #f56c6c;"></i></div>
         <p style="margin-bottom: 16px;">工單 <b>#${row.ticketId}</b> - ${row.issueType}</p>
       </div>
     `,
-    input: 'textarea',
-    inputPlaceholder: '請輸入取消原因...',
-    inputAttributes: { rows: 3 },
-    showCancelButton: true,
-    confirmButtonColor: '#f56c6c',
-    cancelButtonColor: '#909399',
-    confirmButtonText: '<i class="fas fa-times mr-1"></i> 確認取消',
-    cancelButtonText: '返回',
-    showClass: { popup: 'animate__animated animate__fadeInDown animate__faster' },
-    inputValidator: (value) => {
-      if (!value) return '請輸入取消原因！'
-    },
   })
 
   if (reason) {
     try {
       await maintenanceApi.cancelTicket(row.ticketId, reason)
-      await Swal.fire({
-        icon: 'success',
+      // UI: replace Swal.fire with mtSwalSuccess for consistency
+      await mtSwalSuccess({
         title: '工單已取消',
-        timer: 1000,
-        timerProgressBar: true,
-        showConfirmButton: false,
-        showClass: { popup: 'animate__animated animate__bounceIn' },
+        timer: 1500,
       })
       fetchTickets()
     } catch {
@@ -268,19 +267,11 @@ const submitResolve = async () => {
     showResolveDialog.value = false
 
     const config = resultConfig[resolveForm.resultType]
-    await Swal.fire({
-      icon: 'success',
+    // UI: replace Swal.fire with mtSwalSuccess for consistency
+    await mtSwalSuccess({
       title: '結案成功！',
-      html: `
-        <div style="text-align: center;">
-          <div style="font-size: 48px; margin-bottom: 12px;">${config.icon}</div>
-          <p>結案結果：<b style="color: ${config.color};">${config.text}</b></p>
-        </div>
-      `,
-      timer: 1200,
-      timerProgressBar: true,
-      showConfirmButton: false,
-      showClass: { popup: 'animate__animated animate__tada' },
+      text: `結案結果：${config.text}`,
+      timer: 1500,
     })
     fetchTickets()
   } catch {
@@ -290,7 +281,16 @@ const submitResolve = async () => {
 
 // 查看工單詳情
 const viewTicketDetail = (row) => {
-  Swal.fire({
+  // UI: replace emoji icons with consistent Font Awesome icons
+  const priorityIconClass = getPriorityIconClass
+    ? getPriorityIconClass(row.issuePriority)
+    : 'fas fa-question-circle'
+  const statusIconClass = getStatusIconClass
+    ? getStatusIconClass(row.issueStatus)
+    : 'fas fa-question-circle'
+
+  // UI: replace Swal.fire with mtSwalDetail for consistency
+  mtSwalDetail({
     title: `<span style="font-size: 18px;">工單 #${row.ticketId}</span>`,
     html: `
       <div style="text-align: left; padding: 16px 0;">
@@ -306,18 +306,18 @@ const viewTicketDetail = (row) => {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div style="padding: 14px; background: #ecf5ff; border-radius: 10px; text-align: center;">
               <p style="margin: 0 0 4px; color: #909399; font-size: 12px;">優先級</p>
-              <p style="margin: 0; font-size: 20px;">${getPriorityIcon(row.issuePriority)} ${getPriorityText(row.issuePriority)}</p>
+              <p style="margin: 0; font-size: 20px;"><i class="${priorityIconClass}"></i> ${getPriorityText(row.issuePriority)}</p>
             </div>
             <div style="padding: 14px; background: #f0f9eb; border-radius: 10px; text-align: center;">
               <p style="margin: 0 0 4px; color: #909399; font-size: 12px;">狀態</p>
-              <p style="margin: 0; font-size: 20px;">${getStatusIcon(row.issueStatus)} ${getStatusText(row.issueStatus)}</p>
+              <p style="margin: 0; font-size: 20px;"><i class="${statusIconClass}"></i> ${getStatusText(row.issueStatus)}</p>
             </div>
           </div>
           
           <!-- ★ B) 新增：LOG 指示區 -->
           <div style="margin-top: 8px; padding: 14px; background: linear-gradient(135deg, #fff5e6 0%, #ffe8cc 100%); border-radius: 10px; border-left: 4px solid #e6a23c;">
             <p style="margin: 0 0 8px; color: #606266; font-size: 13px; display: flex; align-items: center;">
-              <span style="font-size: 18px; margin-right: 6px;">📜</span>
+              <i class="fas fa-scroll" style="margin-right: 6px; color: #e6a23c;"></i>
               <strong>歷程記錄</strong>
             </p>
             <p style="margin: 0 0 10px; color: #909399; font-size: 12px;">查看工單的操作紀錄</p>
@@ -333,9 +333,6 @@ const viewTicketDetail = (row) => {
         </div>
       </div>
     `,
-    confirmButtonText: '關閉',
-    confirmButtonColor: '#909399',
-    showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
     hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' },
     width: 480,
     // ★ B) 綁定按鈕事件
@@ -356,19 +353,24 @@ const viewTicketDetail = (row) => {
 const showLocationMap = async (stationName, lat, lng) => {
   // 檢查經緯度是否有效
   if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-    await Swal.fire({
+    // UI: replace Swal.fire with mtSwal for consistency
+    await mtSwal({
       icon: 'warning',
       title: '位置資訊不完整',
       text: `站點「${stationName}」暫無準確的地理位置資訊`,
       confirmButtonText: '了解',
-      confirmButtonColor: '#e6a23c'
+      customClass: {
+        popup: 'mt-swal-popup',
+        confirmButton: 'mt-swal-confirm-warning',
+      },
     })
     return
   }
 
   const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`
-  
-  await Swal.fire({
+
+  // UI: replace Swal.fire with mtSwalDetail for consistency
+  await mtSwalDetail({
     title: `<div style="display: flex; align-items: center; gap: 12px; justify-content: center;">
       <i class="fas fa-map-marker-alt" style="color: #e6a23c; font-size: 24px;"></i>
       <span>${stationName}</span>
@@ -401,10 +403,10 @@ const showLocationMap = async (stationName, lat, lng) => {
     confirmButtonText: '<i class="fas fa-times mr-1"></i>關閉',
     confirmButtonColor: '#909399',
     customClass: {
-      popup: 'custom-map-popup'
+      popup: 'custom-map-popup',
     },
     showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
-    hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' }
+    hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' },
   })
 }
 
@@ -426,7 +428,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="ticket-list-container">
+  <div class="ticket-list-container mt-scope">
     <section class="content-header">
       <div class="container-fluid">
         <transition name="slide-down" appear>
@@ -523,7 +525,10 @@ onMounted(() => {
               <template #header>
                 <div class="card-header-content">
                   <div class="header-left">
-                    <span class="header-icon" style="background: linear-gradient(135deg, #67c23a, #95d475);">
+                    <span
+                      class="header-icon"
+                      style="background: linear-gradient(135deg, #67c23a, #95d475)"
+                    >
                       <i class="fas fa-heartbeat"></i>
                     </span>
                     <span class="header-text">資產健康度統計</span>
@@ -548,21 +553,17 @@ onMounted(() => {
               </template>
 
               <el-skeleton :rows="4" animated v-if="assetStatsLoading" />
-              
+
               <el-empty v-else-if="assetStats.length === 0" description="暫無統計資料" />
 
-              <el-table
-                v-else
-                :data="assetStats"
-                stripe
-                style="width: 100%"
-                max-height="400"
-              >
+              <el-table v-else :data="assetStats" stripe style="width: 100%" max-height="400">
                 <el-table-column prop="assetName" label="資產名稱" min-width="150" fixed>
                   <template #default="{ row }">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <i :class="row.assetType === 'SPOT' ? 'fas fa-desktop' : 'fas fa-chair'" 
-                         :style="{ color: row.assetType === 'SPOT' ? '#409eff' : '#e6a23c' }"></i>
+                    <div style="display: flex; align-items: center; gap: 8px">
+                      <i
+                        :class="row.assetType === 'SPOT' ? 'fas fa-desktop' : 'fas fa-chair'"
+                        :style="{ color: row.assetType === 'SPOT' ? '#409eff' : '#e6a23c' }"
+                      ></i>
                       <span>{{ row.assetName || '未知資產#' + row.assetId }}</span>
                     </div>
                   </template>
@@ -570,7 +571,11 @@ onMounted(() => {
 
                 <el-table-column label="維修次數" width="100" align="center">
                   <template #default="{ row }">
-                    <el-tag :type="row.repairCount > 0 ? 'danger' : 'info'" effect="light" size="small">
+                    <el-tag
+                      :type="row.repairCount > 0 ? 'danger' : 'info'"
+                      effect="light"
+                      size="small"
+                    >
                       {{ row.repairCount || 0 }}
                     </el-tag>
                   </template>
@@ -586,7 +591,11 @@ onMounted(() => {
 
                 <el-table-column label="未結案" width="90" align="center">
                   <template #default="{ row }">
-                    <el-tag :type="row.openCount > 0 ? 'warning' : 'success'" effect="plain" size="small">
+                    <el-tag
+                      :type="row.openCount > 0 ? 'warning' : 'success'"
+                      effect="plain"
+                      size="small"
+                    >
                       {{ row.openCount || 0 }}
                     </el-tag>
                   </template>
@@ -594,13 +603,13 @@ onMounted(() => {
 
                 <el-table-column label="妥善率" width="140" align="center">
                   <template #default="{ row }">
-                    <el-progress 
-                      :percentage="Math.round((row.availability || 0) * 100)" 
+                    <el-progress
+                      :percentage="Math.round((row.availability || 0) * 100)"
                       :status="getAvailabilityStatus(row.availability)"
                       :stroke-width="10"
-                      style="width: 100px; display: inline-block;"
+                      style="width: 100px; display: inline-block"
                     />
-                    <span style="margin-left: 8px; font-size: 12px; color: #606266;">
+                    <span style="margin-left: 8px; font-size: 12px; color: #606266">
                       {{ formatPercent(row.availability) }}
                     </span>
                   </template>
@@ -608,7 +617,12 @@ onMounted(() => {
 
                 <el-table-column label="故障率(/天)" width="110" align="center">
                   <template #default="{ row }">
-                    <span :style="{ color: row.failureRatePerDay > 0.5 ? '#f56c6c' : '#67c23a', fontWeight: 'bold' }">
+                    <span
+                      :style="{
+                        color: row.failureRatePerDay > 0.5 ? '#f56c6c' : '#67c23a',
+                        fontWeight: 'bold',
+                      }"
+                    >
                       {{ formatRate(row.failureRatePerDay) }}
                     </span>
                   </template>
@@ -616,8 +630,13 @@ onMounted(() => {
 
                 <el-table-column label="維修率" width="100" align="center">
                   <template #default="{ row }">
-                    <el-tag :type="row.repairRate >= 1 ? 'success' : row.repairRate > 0 ? 'warning' : 'info'" 
-                            effect="plain" size="small">
+                    <el-tag
+                      :type="
+                        row.repairRate >= 1 ? 'success' : row.repairRate > 0 ? 'warning' : 'info'
+                      "
+                      effect="plain"
+                      size="small"
+                    >
                       {{ formatPercent(row.repairRate) }}
                     </el-tag>
                   </template>
@@ -625,7 +644,7 @@ onMounted(() => {
 
                 <el-table-column label="停機時間" width="100" align="center">
                   <template #default="{ row }">
-                    <span style="color: #909399; font-size: 12px;">
+                    <span style="color: #909399; font-size: 12px">
                       {{ row.downtimeMinutes || 0 }} 分鐘
                     </span>
                   </template>
@@ -707,37 +726,43 @@ onMounted(() => {
                     <!-- 椅子維修 -->
                     <div v-if="row.seatsId" class="target-cell">
                       <div class="target-main">
-                        <i class="fas fa-chair" style="color: #e6a23c;"></i>
+                        <i class="fas fa-chair" style="color: #e6a23c"></i>
                         <span>椅子 #{{ row.seatsId }}</span>
                       </div>
                       <div v-if="row.seat && row.seat.spotId" class="target-station">
-                        <span 
-                          class="station-link" 
-                          @click="showLocationMap(
-                            row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`,
-                            row.rentalSpot ? row.rentalSpot.latitude : null,
-                            row.rentalSpot ? row.rentalSpot.longitude : null
-                          )"
+                        <span
+                          class="station-link"
+                          @click="
+                            showLocationMap(
+                              row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`,
+                              row.rentalSpot ? row.rentalSpot.latitude : null,
+                              row.rentalSpot ? row.rentalSpot.longitude : null,
+                            )
+                          "
                         >
                           <i class="fas fa-map-marker-alt mr-1"></i>
-                          {{ row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}` }}
+                          {{
+                            row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`
+                          }}
                         </span>
                       </div>
                     </div>
                     <!-- 機台維修 -->
                     <div v-else class="target-cell">
                       <div class="target-main">
-                        <i class="fas fa-desktop" style="color: #409eff;"></i>
+                        <i class="fas fa-desktop" style="color: #409eff"></i>
                         <span>機台 #{{ row.spotId }}</span>
                       </div>
                       <div v-if="row.rentalSpot" class="target-station">
-                        <span 
-                          class="station-link" 
-                          @click="showLocationMap(
-                            row.rentalSpot.spotName,
-                            row.rentalSpot.latitude,
-                            row.rentalSpot.longitude
-                          )"
+                        <span
+                          class="station-link"
+                          @click="
+                            showLocationMap(
+                              row.rentalSpot.spotName,
+                              row.rentalSpot.latitude,
+                              row.rentalSpot.longitude,
+                            )
+                          "
                         >
                           <i class="fas fa-map-marker-alt mr-1"></i>
                           {{ row.rentalSpot.spotName }}
@@ -959,7 +984,9 @@ onMounted(() => {
     >
       <template #header>
         <div class="dialog-header">
-          <span class="dialog-icon"><i class="fas fa-check-circle" style="color: #67c23a; font-size: 24px;"></i></span>
+          <span class="dialog-icon"
+            ><i class="fas fa-check-circle" style="color: #67c23a; font-size: 24px"></i
+          ></span>
           <span class="dialog-title">工單結案確認</span>
         </div>
       </template>
@@ -1003,6 +1030,9 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 導入 maintenance 設計系統 */
+@import '@/styles/maintenance/index.css';
+
 .ticket-list-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);

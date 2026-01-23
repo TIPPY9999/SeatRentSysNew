@@ -1,0 +1,244 @@
+/**
+ * Maintenance 設計系統 - Motion 動態效果
+ * 用途: 統一 maintenance 模組的卡片 hover、按鈕動畫等效果
+ * 範圍: 僅限 maintenance 模組使用 (避免影響其他模組)
+ * 命名規則: 使用 mt- 前綴確保命名空間隔離，並與 animate.css 共存
+ */
+
+/* ==================== 卡片 Hover 效果 ==================== */
+.mt-scope .mt-card-lift {
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+  transform: translateY(0);
+  box-shadow: var(--mt-shadow-sm);
+}
+
+.mt-scope .mt-card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--mt-shadow-hover);
+}
+
+.mt-scope .mt-card-lift:active {
+  transform: translateY(-2px);
+  box-shadow: var(--mt-shadow-md);
+}
+
+/* 卡片內容懸浮效果 */
+.mt-scope .mt-card-float {
+  transition: all var(--mt-duration-normal) var(--mt-ease-smooth);
+  transform: scale(1);
+}
+
+.mt-scope .mt-card-float:hover {
+  transform: scale(1.02);
+  box-shadow: var(--mt-shadow-lg);
+}
+
+/* ==================== 按鈕動態效果 ==================== */
+.mt-scope .mt-btn-hover {
+  position: relative;
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+  transform: translateY(0);
+  overflow: hidden;
+}
+
+.mt-scope .mt-btn-hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left var(--mt-duration-slow) var(--mt-ease-smooth);
+}
+
+.mt-scope .mt-btn-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mt-shadow-md);
+}
+
+.mt-scope .mt-btn-hover:hover::before {
+  left: 100%;
+}
+
+.mt-scope .mt-btn-hover:active {
+  transform: translateY(0);
+}
+
+/* 漸層按鈕效果 */
+.mt-scope .mt-btn-gradient-primary {
+  background: var(--mt-gradient-primary);
+  border: none;
+  color: white;
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+}
+
+.mt-scope .mt-btn-gradient-primary:hover {
+  background: linear-gradient(135deg, #69c0ff 0%, #409eff 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--mt-shadow-md);
+}
+
+.mt-scope .mt-btn-gradient-success {
+  background: var(--mt-gradient-success);
+  border: none;
+  color: white;
+  transition: all var(--mt-duration-normal) var(--mt-ease-out-quint);
+}
+
+.mt-scope .mt-btn-gradient-success:hover {
+  background: linear-gradient(135deg, #85ce61 0%, #67c23a 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--mt-shadow-md);
+}
+
+/* ==================== 自定義動畫 Keyframes ==================== */
+/* 小彈跳效果 */
+@keyframes mt-bounce-small {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.mt-scope .mt-bounce-small {
+  animation: mt-bounce-small 0.6s var(--mt-ease-bounce);
+}
+
+/* 柔和脈衝效果 */
+@keyframes mt-soft-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.mt-scope .mt-soft-pulse {
+  animation: mt-soft-pulse 2s infinite var(--mt-ease-smooth);
+}
+
+/* 彈出效果 */
+@keyframes mt-pop {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.mt-scope .mt-pop {
+  animation: mt-pop 0.4s var(--mt-ease-bounce);
+}
+
+/* 旋轉淡入效果 */
+@keyframes mt-rotate-fade-in {
+  0% {
+    opacity: 0;
+    transform: rotate(-10deg) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+.mt-scope .mt-rotate-fade-in {
+  animation: mt-rotate-fade-in 0.5s var(--mt-ease-out-quint);
+}
+
+/* ==================== Animate.css 共存機制 ==================== */
+/* 如果專案已全域引入 animate.css，提供 fallback 機制 */
+.mt-scope .mt-animate-fallback {
+  /* 當 animate.css 不可用時的備用動畫 */
+}
+
+/* 檢測是否有 animate.css，若無則啟用備用動畫 */
+.mt-scope .animate__animated {
+  /* 如果有 animate.css 則保持原樣 */
+}
+
+/* 備用動畫定義 (當 animate.css 不存在時) */
+.mt-scope .animate__bounceIn:not(.animate__animated) {
+  animation: mt-bounce-in 0.75s var(--mt-ease-bounce);
+}
+
+.mt-scope .animate__fadeIn:not(.animate__animated) {
+  animation: mt-fade-in 0.5s var(--mt-ease-smooth);
+}
+
+.mt-scope .animate__zoomIn:not(.animate__animated) {
+  animation: mt-zoom-in 0.5s var(--mt-ease-out-quint);
+}
+
+@keyframes mt-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mt-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale3d(0.3, 0.3, 0.3);
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ==================== 載入動畫 ==================== */
+.mt-scope .mt-loading-pulse {
+  animation: mt-loading-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mt-loading-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+/* ==================== 成功/錯誤指示動畫 ==================== */
+.mt-scope .mt-success-bounce {
+  animation: mt-success-bounce 0.6s var(--mt-ease-bounce);
+}
+
+@keyframes mt-success-bounce {
+  0% {
+    transform: scale(0.8);
+    background-color: var(--mt-success-light);
+  }
+  50% {
+    transform: scale(1.1);
+    background-color: var(--mt-success);
+  }
+  100% {
+    transform: scale(1);
+    background-color: var(--mt-success-light);
+  }
+}
+
+.mt-scope .mt-error-shake {
+  animation: mt-error-shake 0.5s ease-in-out;
+}
+
+@keyframes mt-error-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}

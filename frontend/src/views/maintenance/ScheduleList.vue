@@ -2,7 +2,8 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import maintenanceApi from '@/api/modules/maintenance'
-import Swal from 'sweetalert2'
+// UI: replace individual Swal.fire with unified mtSwal helpers
+import { mtSwal, mtSwalSuccess, mtSwalError, mtSwalConfirmDanger } from '@/utils/maintenance/swal'
 import { usePagination } from '@/composables/maintenance/usePagination'
 import { useScheduleConfig } from '@/composables/maintenance/useScheduleConfig'
 import ScheduleCalendar from '@/components/maintenance/ScheduleCalendar.vue'

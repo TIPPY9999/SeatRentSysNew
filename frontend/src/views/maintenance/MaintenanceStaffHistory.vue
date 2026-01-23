@@ -330,6 +330,8 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 導入 maintenance 設計系統 */
+@import '@/styles/maintenance/index.css';
 .history-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f0f2f5 0%, #e2e6ea 100%);
