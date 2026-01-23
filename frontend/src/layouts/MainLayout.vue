@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useMemberAuthStore } from '@/stores/memberAuth'
+import { useAdminAuthStore } from '@/stores/adminAuth'
 
 // --- 版面狀態 ---
 const isSidebarCollapsed = ref(false); // 控制側邊欄是否收合
@@ -13,6 +14,23 @@ const toggleSidebar = () => {
 };
 
 const memberAuthStore = useMemberAuthStore()
+const adminAuthStore = useAdminAuthStore()
+
+/**
+ * UID 顯示邏輯：
+ * - 管理員優先
+ * - 再來會員
+ * - 都沒有就尚未登入
+ */
+const displayUID = computed(() => {
+  if (memberAuthStore.isLogin) {
+    return memberAuthStore.member.memUsername
+  }
+  if (adminAuthStore.isLogin) {
+    return adminAuthStore.admin.username
+  }
+  return null
+})
 </script>
 
 <template>
@@ -31,15 +49,15 @@ const memberAuthStore = useMemberAuthStore()
         </li>
         <li class="menu-item">
           <span class="menu-text">
-            UID:
-            <span v-if="memberAuthStore.isLogin">
-              {{ memberAuthStore.member.memName }}
+            UID：
+            <span v-if="displayUID">
+              {{ displayUID }}
             </span>
             <span v-else>
               尚未登入
             </span>
           </span>
-        </li> 
+        </li>
         <li class="menu-item">
           <router-link to="/rent" class="member-info">
             <span class="icon-wrapper">

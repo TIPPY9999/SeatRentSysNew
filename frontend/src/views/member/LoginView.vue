@@ -64,13 +64,19 @@ const login = async () => {
       const token = res.data?.token || 'login-ok'
       localStorage.setItem('token', token)
 
+      adminAuthStore.clearAdmin()
+      localStorage.removeItem('admin')
+
       //  [+] 將登入狀態存入 Pinia，讓整個 App 保持同步
       memberAuthStore.setMemberLogin({
         memId: res.data.memId,
+        memUsername: res.data.memUsername,
         memName: res.data.memName,
         memPoints: res.data.memPoints,
         memInvoice: res.data.memInvoice,
       })
+
+
       //  [+] 將會員資料存入 localStorage，實現持久化登入
       localStorage.setItem('member_user', JSON.stringify(res.data))
 
@@ -126,6 +132,7 @@ const login = async () => {
     }
 
     memberAuthStore.clearMemberLogin()
+    localStorage.removeItem('member_user')
 
     adminAuthStore.setAdmin(adminData)
     localStorage.setItem('admin', JSON.stringify(adminData))

@@ -12,6 +12,7 @@ export const useMemberAuthStore = defineStore('memberAuth', {
      * ===================== */
     member: {
       memId: null,
+      memUsername: '',
       memName: '',
       memPoints: 0,
       memInvoice: '',
@@ -24,6 +25,7 @@ export const useMemberAuthStore = defineStore('memberAuth', {
       this.isLogin = true
       this.member = {
         memId: memberData.memId,
+        memUsername: memberData.memUsername,
         memName: memberData.memName,
         memPoints: memberData.memPoints,
         memInvoice: memberData.memInvoice,
@@ -35,6 +37,7 @@ export const useMemberAuthStore = defineStore('memberAuth', {
       this.isLogin = false
       this.member = {
         memId: null,
+        memUsername: '',
         memName: '',
         memPoints: 0,
         memInvoice: '',
