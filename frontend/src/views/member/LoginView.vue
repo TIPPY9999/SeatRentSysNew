@@ -8,10 +8,10 @@ import Swal from 'sweetalert2'
 
 //  Pinia：引入兩種 store
 import { useAdminAuthStore } from '@/stores/adminAuth'
-import { useAuthStore } from '@/stores/auth'
+import { useMemberAuthStore } from '@/stores/memberAuth'
 
 const adminAuthStore = useAdminAuthStore()
-const authStore = useAuthStore() // 引入會員 store
+const memberAuthStore = useMemberAuthStore()
 const router = useRouter()
 const route = useRoute() // 建立 route 實例
 
@@ -64,8 +64,19 @@ const login = async () => {
       const token = res.data?.token || 'login-ok'
       localStorage.setItem('token', token)
 
+      adminAuthStore.clearAdmin()
+      localStorage.removeItem('admin')
+
       //  [+] 將登入狀態存入 Pinia，讓整個 App 保持同步
-      authStore.login(res.data, 'member')
+      memberAuthStore.setMemberLogin({
+        memId: res.data.memId,
+        memUsername: res.data.memUsername,
+        memName: res.data.memName,
+        memPoints: res.data.memPoints,
+        memInvoice: res.data.memInvoice,
+      })
+
+
       //  [+] 將會員資料存入 localStorage，實現持久化登入
       localStorage.setItem('member_user', JSON.stringify(res.data))
 
@@ -82,7 +93,7 @@ const login = async () => {
       if (route.query.redirect) {
         router.push(route.query.redirect)
       } else {
-        router.push('/member/profile')
+        router.push('/')
       }
       return
     }
@@ -120,6 +131,9 @@ const login = async () => {
       role: res.data?.admRole,
     }
 
+    memberAuthStore.clearMemberLogin()
+    localStorage.removeItem('member_user')
+
     adminAuthStore.setAdmin(adminData)
     localStorage.setItem('admin', JSON.stringify(adminData))
 
@@ -127,13 +141,13 @@ const login = async () => {
     await Swal.fire({
       icon: 'success',
       title: '管理員登入成功',
-      text: '正在進入後台...',
+      text: '歡迎回來！',
       showConfirmButton: false,
       timer: 1200,
     })
 
     //  進後台（replace 避免回上一頁又回到登入頁）
-    router.replace('/admin')
+    router.push('/')
   } catch (err) {
     console.error(err)
 
