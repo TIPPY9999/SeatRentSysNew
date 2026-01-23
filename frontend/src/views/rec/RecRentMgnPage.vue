@@ -9,7 +9,7 @@ import RecRentEdit from "@/components/rec/RecRentEdit.vue"; // 1. 引入 Edit �
 const activeView = ref("list"); // 'list', 'add', 'edit'
 const editingRent = ref(null); // Holds the data for the rent being edited
 const searchComponent = ref(null); // Ref to access the search component instance
-const API_URL = "http://localhost:8080/api/rec-rents";
+const API_URL = "http://localhost:8080/rec-rent";
 
 // --- 2. 核心邏輯 ---
 

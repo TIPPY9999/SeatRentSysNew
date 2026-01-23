@@ -3,6 +3,8 @@ package com.example.backend.model.rec;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -40,6 +42,7 @@ public class RecRent {
     @Column(name = "spotIdReturn")
     private Integer spotIdReturn;
 
+    @JsonProperty("recRentDT") // 將傳入的 JSON 欄位 recRentDT 映射到此 Java 欄位
     @Column(name = "recRentDT2", nullable = false)
     private LocalDateTime recRentDT2;
 
