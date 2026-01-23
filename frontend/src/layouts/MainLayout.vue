@@ -1,7 +1,61 @@
 <script setup>
+<<<<<<< HEAD
 import { ref, computed } from "vue";
 import { useMemberAuthStore } from '@/stores/memberAuth'
 import { useAdminAuthStore } from '@/stores/adminAuth'
+=======
+import { onMounted, ref } from "vue";
+
+import { useAuthStore } from "@/stores/auth";
+import { useAdminAuthStore } from "@/stores/adminAuth";
+
+onMounted(() => {
+  const authStore = useAuthStore();
+  const adminAuthStore = useAdminAuthStore();
+
+  // 1. 恢復一般會員的登入狀態
+  // if (!authStore.isLogin) {
+  //   const storedUser = localStorage.getItem("member_user");
+  //   if (storedUser) {
+  //     try {
+  //       const userData = JSON.parse(storedUser);
+  //       authStore.login(userData, "member");
+  //       console.log("member login"+userData);
+  //     } catch (e) {
+  //       console.error("恢復會員狀態失敗:", e);
+  //       // 如果解析失敗，清除損壞的資料
+  //       localStorage.removeItem("member_user");
+  //     }
+  //   }
+  // }
+
+  // 2. 恢復管理員的登入狀態
+  if (!adminAuthStore.admin) {
+    const storedAdmin = localStorage.getItem("admin");
+    if (storedAdmin) {
+      try {
+        const adminData = JSON.parse(storedAdmin);
+        adminAuthStore.setAdmin(adminData);
+        console.log("admin login");
+      } catch (e) {
+        console.error("恢復管理員狀態失敗:", e);
+        localStorage.removeItem("admin");
+      }
+    }
+  }
+});
+
+const logout = () => {
+  if (!adminAuthStore.admin) {
+    localStorage.removeItem("admin");
+
+    console.log("admin logout");
+  } else if (!authStore.isLogin) {
+    localStorage.removeItem("member_user");
+    console.log("user logout");
+  }
+};
+>>>>>>> main
 
 // --- 版面狀態 ---
 const isSidebarCollapsed = ref(false); // 控制側邊欄是否收合
@@ -47,6 +101,7 @@ const displayUID = computed(() => {
             <span class="menu-text" style="padding: 2px">會員登入</span>
           </router-link>
         </li>
+<<<<<<< HEAD
         <li class="menu-item">
           <span class="menu-text">
             UID：
@@ -57,15 +112,22 @@ const displayUID = computed(() => {
               尚未登入
             </span>
           </span>
+=======
+        <li class="menuu-text">
+          <!-- <span class="icon-wrapper">
+            <el-icon><CircleCheckFilled /></el-icon>
+          </span> -->
+          <span class="menu-text">UID:</span>
+>>>>>>> main
         </li>
-        <li class="menu-item">
+        <!-- <li class="menu-item">
           <router-link to="/rent" class="member-info">
             <span class="icon-wrapper">
               <el-icon><Search /></el-icon>
             </span>
             <span class="menu-text">站點查詢</span>
           </router-link>
-        </li>
+        </li> -->
         <li class="menu-item">
           <router-link to="/rent" class="member-info">
             <span class="icon-wrapper">
@@ -80,6 +142,14 @@ const displayUID = computed(() => {
               <el-icon><Ticket /></el-icon>
             </span>
             <span class="menu-text">商家優惠</span>
+          </router-link>
+        </li>
+        <li class="menu-item">
+          <router-link to="/snake" class="member-info">
+            <span class="icon-wrapper">
+              <el-icon><SwitchFilled /></el-icon>
+            </span>
+            <span class="menu-text">小遊戲</span>
           </router-link>
         </li>
         <li class="menu-item">
@@ -101,12 +171,18 @@ const displayUID = computed(() => {
           <span class="menu-text">客服支援</span>
         </li>
         <li class="menu-item">
-          <router-link to="/snake" class="member-info">
+          <router-link to="/payment" class="member-info">
             <span class="icon-wrapper">
               <el-icon><StarFilled /></el-icon>
             </span>
             <span class="menu-text">支持我們</span>
           </router-link>
+        </li>
+        <li class="menu-item">
+          <span class="icon-wrapper" @click="logout">
+            <el-icon><TopLeft /></el-icon>
+          </span>
+          <span class="menu-text">登出</span>
         </li>
       </ul>
 
@@ -122,6 +198,14 @@ const displayUID = computed(() => {
             <DArrowRight v-if="isSidebarCollapsed" />
           </el-icon>
         </button>
+      </div>
+      <div class="menu-admin">
+        <router-link to="/admin" class="member-info">
+          <span class="icon-wrapper">
+            <el-icon><Tools /></el-icon>
+          </span>
+          <span class="menu-text">後台管理</span>
+        </router-link>
       </div>
     </aside>
 
@@ -204,6 +288,15 @@ const displayUID = computed(() => {
   background-color: #f5f7fa;
 }
 
+.menu-admin {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  gap: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
 .menu-text {
   font-size: 20px;
   font-family: fantasy;

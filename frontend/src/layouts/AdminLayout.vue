@@ -92,6 +92,9 @@ const logout = async () => {
         <li class="nav-item d-none d-sm-inline-block">
           <RouterLink to="/admin" class="nav-link">後台首頁</RouterLink>
         </li>
+        <li class="nav-item d-none d-sm-inline-block">
+          <RouterLink to="/" class="nav-link">前台首頁</RouterLink>
+        </li>
       </ul>
 
       <ul class="navbar-nav ml-auto">

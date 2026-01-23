@@ -2,7 +2,7 @@
   <div class="mall-page">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm sticky-top">
       <div class="container">
-        <router-link class="navbar-brand fw-bold" to="/">
+        <router-link class="navbar-brand fw-bold" to="/mall"@click="scrollToTop">
           <i class="bi bi-shop me-2"></i> 點數商城
         </router-link>
         <div class="ms-auto d-flex align-items-center">
@@ -14,7 +14,9 @@
           <router-link to="/snake" class="btn btn-warning btn-sm ms-3 fw-bold">
     <i class="bi bi-controller me-1"></i> 玩遊戲賺點數
   </router-link>
-          <button @click="goBack" class="btn btn-outline-light btn-sm ms-3">返回</button>
+  <router-link class="navbar-brand fw-bold" to="/">
+          <button @click="goBack" class="btn btn-outline-light btn-sm ms-3">返回首頁</button>
+          </router-link>
         </div>
       </div>
     </nav>
@@ -86,6 +88,12 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Swal from 'sweetalert2'
 
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth' // 平滑捲動
+  });
+};
 const router = useRouter()
 const coupons = ref([])
 const currentPoints = ref(0)
@@ -122,7 +130,7 @@ const canAfford = (points) => {
 
 // 3. 執行核銷 (在此處才檢查登入)
 const handleRedeem = (coupon) => {
-  const mid = getMemberId()
+  const mid = localStorage.getItem('memberId');
 
   // --- 重點：未登入攔截 ---
   if (!mid) {
@@ -152,12 +160,12 @@ const handleRedeem = (coupon) => {
   Swal.fire({
     title: '確認現場核銷',
     html: `兌換項目：<b>${coupon.couponName}</b><br>消耗點數：<b>${coupon.pointsRequired} Pts</b>`,
-    input: 'text',
+    input: 'password',
     inputPlaceholder: '請輸入店家核銷碼',
     showCancelButton: true,
     confirmButtonText: '確定核銷',
     preConfirm: (passcode) => {
-      if (!passcode) return Swal.showValidationMessage('請輸入核銷碼')
+      if (!passcode) return Swal.showValidationMessage('請輸入正確核銷碼')
       return passcode
     }
   }).then(async (result) => {

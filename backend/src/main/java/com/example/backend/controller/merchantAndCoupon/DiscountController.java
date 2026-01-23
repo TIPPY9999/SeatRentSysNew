@@ -123,7 +123,7 @@ public class DiscountController {
 
             // 2. 驗證核銷碼
             if (!"1234".equals(inputPasscode))
-                return Result.error("核銷碼錯誤");
+                return Result.error("核銷失敗：核銷碼錯誤");
 
             // 3. 檢查會員點數
             Member member = memberRepository.findById(memberId)

@@ -5,7 +5,18 @@
         <div class="card shadow-lg border-0">
           <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
             <h5 class="mb-0"><i class="bi bi-controller me-2"></i>蛇蛇賺點數 (100分 = 1點)</h5>
-            <span class="badge bg-warning text-dark">會員ID: {{ memberId || '未登入' }}</span>
+       <span class="badge bg-warning text-dark">
+          <template v-if="memberId">會員ID: {{ memberId }}</template>
+          <template v-else>
+          <router-link to="/login" class="text-dark text-decoration-none">⚠️ 未登入 (點我登入)</router-link>
+          </template>
+        </span>
+        <nav aria-label="breadcrumb" class="mb-3">
+          <router-link to="/mall" class="text-decoration-none text-secondary">
+            <h5 class="mb-0"><i class="bi bi-house-door"></i> 回點數商城</h5>
+          </router-link>
+        </nav>
+
           </div>
 
           <div class="card-body text-center bg-light">
@@ -64,8 +75,10 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 
+const router = useRouter();
 const gameCanvas = ref(null);
 const score = ref(0);
 const gameSpeed = ref(150);
@@ -73,6 +86,12 @@ const isGameRunning = ref(false);
 const gameOver = ref(false);
 const isUploaded = ref(false);
 const memberId = ref(localStorage.getItem('memberId'));
+// 增加一個更新會員資訊的方法
+const updateMemberInfo = () => {
+  const storedId = localStorage.getItem('memberId');
+  memberId.value = storedId;
+  console.log("當前登入會員:", storedId);
+};
 
 let ctx = null;
 let snake = [];
@@ -162,7 +181,7 @@ const uploadScore = async () => {
     
     if (confirm(`您目前獲得 ${score.value} 分！登入後即可換取點數，是否前往登入？`)) {
       // 跳轉到登入頁，並帶上一個「回傳路徑」參數，方便登入後跳回來
-      router.push({ path: '/login', query: { redirect: '/admin/snake' } });
+      router.push({ path: '/login', query: { redirect: '/snake' } });
     }
     return;
   }
@@ -197,6 +216,10 @@ onMounted(() => {
   }
   
   draw();
+});
+onMounted(() => {
+  updateMemberInfo(); // 組件掛載時執行一次
+  ctx = gameCanvas.value.getContext('2d');
 });
 onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 </script>
