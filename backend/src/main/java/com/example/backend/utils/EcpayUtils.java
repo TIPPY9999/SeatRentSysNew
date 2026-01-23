@@ -3,13 +3,46 @@ package com.example.backend.utils;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class EcpayUtils {
     // 綠界測試金鑰
     private static final String HASH_KEY = "pwFHCqoQZGmho4w6";
     private static final String HASH_IV = "EkRm7iFT261dpevs";
+    private static final String MERCHANT_ID = "2000132"; // 綠界測試特店編號
+
+    public String genCheckOutForm(String tradeNo, String totalAmount, String itemName) {
+        Map<String, String> params = new TreeMap<>();
+        params.put("MerchantID", "2000132"); // 綠界測試 ID
+        params.put("MerchantTradeNo", tradeNo);
+        params.put("MerchantTradeDate", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+        params.put("PaymentType", "aio");
+        params.put("TotalAmount", totalAmount);
+        params.put("TradeDesc", "RentPayment");
+        params.put("ItemName", itemName);
+        // 重要：這裏要改成你 ngrok 的網址，綠界才打得進來
+        params.put("ReturnURL", "https://your-ngrok-url.ngrok-free.app/api/payment/callback");
+        params.put("ChoosePayment", "ALL");
+        params.put("EncryptType", "1");
+        params.put("CheckMacValue", generateCheckMacValue(params));
+
+        StringBuilder form = new StringBuilder();
+        form.append(
+                "<form id='ecpayForm' action='https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5' method='post'>");
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            form.append("<input type='hidden' name='").append(entry.getKey()).append("' value='")
+                    .append(entry.getValue()).append("'>");
+        }
+        form.append("</form><script>document.getElementById('ecpayForm').submit();</script>");
+        return form.toString();
+    }
 
     public static String generateCheckMacValue(Map<String, String> params) {
         // 1. 確保使用 TreeMap 進行 A-Z 排序，並過濾掉 CheckMacValue 本身

@@ -5,21 +5,21 @@
         <div class="card shadow-lg border-0">
           <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
             <h5 class="mb-0"><i class="bi bi-controller me-2"></i>蛇蛇賺點數 (100分 = 1點)</h5>
-       <span class="badge bg-warning text-dark">
-          <template v-if="memberId">會員ID: {{ memberId }}</template>
-          <template v-else>
-          <router-link to="/login" class="text-dark text-decoration-none">⚠️ 未登入 (點我登入)</router-link>
-          </template>
-        </span>
-        <nav aria-label="breadcrumb" class="mb-3">
-          <router-link to="/mall" class="text-decoration-none text-secondary">
-            <h5 class="mb-0"><i class="bi bi-house-door"></i> 回點數商城</h5>
-          </router-link>
-        </nav>
-
+            <span class="badge bg-warning text-dark">
+              <template v-if="memberId">會員 ID: {{ memberId }}</template>
+              <template v-else>
+                <router-link to="/login" class="text-dark text-decoration-none">⚠️ 未登入 (點我登入)</router-link>
+              </template>
+            </span>
           </div>
 
           <div class="card-body text-center bg-light">
+            <nav aria-label="breadcrumb" class="mb-3 text-start">
+              <router-link to="/mall" class="text-decoration-none text-secondary small">
+                <i class="bi bi-arrow-left"></i> 回點數商城
+              </router-link>
+            </nav>
+
             <div class="row mb-3">
               <div class="col-6">
                 <div class="p-2 border rounded bg-white shadow-sm">
@@ -39,7 +39,7 @@
               <canvas ref="gameCanvas" width="400" height="400" class="rounded"></canvas>
               
               <div v-if="!isGameRunning && !gameOver" class="game-overlay d-flex flex-column justify-content-center align-items-center">
-                <button @click="startGame" class="btn btn-success btn-lg px-5 rounded-pill shadow">開始挑戰</button>
+                <button @click="startGame" class="btn btn-success btn-lg px-5 rounded-pill shadow-lg">開始挑戰</button>
               </div>
 
               <div v-if="gameOver" class="game-overlay d-flex flex-column justify-content-center align-items-center text-white p-4">
@@ -47,23 +47,24 @@
                 <p class="mb-4">本次得分 {{ score }}，可換取 <span class="text-warning fw-bold">{{ Math.floor(score / 100) }}</span> 點數</p>
                 
                 <div class="d-grid gap-2 col-10 mx-auto">
-                  <button @click="uploadScore" class="btn btn-warning btn-lg" :disabled="isUploaded || Math.floor(score / 100) < 1">
-                    {{ isUploaded ? '點數已入帳' : (Math.floor(score / 100) < 1 ? '分數不足兌換' : '領取點數') }}
+                  <button 
+                    @click="uploadScore" 
+                    class="btn btn-warning btn-lg fw-bold" 
+                    :disabled="isUploaded || Math.floor(score / 100) < 1"
+                  >
+                    {{ isUploaded ? '✅ 點數已入帳' : (Math.floor(score / 100) < 1 ? '分數不足兌換' : '🎁 領取點數') }}
                   </button>
-                  <button @click="startGame" class="btn btn-outline-light btn-sm">重新開始</button>
+                  <button @click="startGame" class="btn btn-outline-light btn-sm mt-2">重新開始</button>
                 </div>
               </div>
             </div>
 
             <div class="mt-4 p-3 bg-white rounded border text-start">
               <h6 class="small fw-bold text-primary"><i class="bi bi-info-circle me-1"></i> 遊戲規則：</h6>
-              <ul class="list-unstyled mb-0 x-small text-muted" style="font-size: 0.8rem;">
-                <li>• 使用鍵盤 <b>方向鍵</b> 控制蛇移動</li>
-                <li>• 每得 50 分蛇的移動速度會加快</li>
-                <li>• 撞到牆壁或自己則遊戲結束</li>
-                <li>• 遊戲得分達到 <b>100 分</b> 即可兌換 <b>1 點</b> 會員點數。</li>
-                <li>• 點數採無條件捨去（例：190 分兌換 1 點）。</li>
-                <li>• 撞牆或吃到自己時遊戲結束，結算當前分數。</li>
+              <ul class="list-unstyled mb-0 text-muted" style="font-size: 0.8rem;">
+                <li>• 方向鍵控制移動，撞牆或撞到自己即結束。</li>
+                <li>• <b>100 分 = 1 點</b> 會員點數（採無條件捨去）。</li>
+                <li>• 領取點數前請確保已登入會員帳號。</li>
               </ul>
             </div>
           </div>
@@ -75,24 +76,25 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const router = useRouter();
+const route = useRoute();
+
+// 狀態變數
 const gameCanvas = ref(null);
 const score = ref(0);
 const gameSpeed = ref(150);
 const isGameRunning = ref(false);
 const gameOver = ref(false);
 const isUploaded = ref(false);
-const memberId = ref(localStorage.getItem('memberId'));
-// 增加一個更新會員資訊的方法
-const updateMemberInfo = () => {
-  const storedId = localStorage.getItem('memberId');
-  memberId.value = storedId;
-  console.log("當前登入會員:", storedId);
-};
 
+// 會員資料：同時支援兩種常見的 Key
+const memberId = ref(localStorage.getItem('memberId') || localStorage.getItem('memId'));
+
+// 遊戲邏輯變數
 let ctx = null;
 let snake = [];
 let food = { x: 5, y: 5 };
@@ -100,6 +102,13 @@ let direction = { x: 1, y: 0 };
 let nextDirection = { x: 1, y: 0 };
 const gridSize = 20;
 
+// 更新會員資訊
+const checkLoginStatus = () => {
+  const id = localStorage.getItem('memberId') || localStorage.getItem('memId');
+  memberId.value = id;
+};
+
+// 遊戲主迴圈
 const startGame = () => {
   score.value = 0;
   gameSpeed.value = 150;
@@ -126,6 +135,7 @@ const update = () => {
   direction = nextDirection;
   const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
 
+  // 碰撞偵測
   if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 ||
       snake.some(s => s.x === head.x && s.y === head.y)) {
     isGameRunning.value = false;
@@ -135,8 +145,9 @@ const update = () => {
 
   snake.unshift(head);
   if (head.x === food.x && head.y === food.y) {
-    score.value += 20; // 吃到一個食物加 20 分
-    if (score.value % 50 === 0 && gameSpeed.value > 50) gameSpeed.value -= 15;
+    score.value += 20;
+    // 每 100 分加速一次
+    if (score.value % 100 === 0 && gameSpeed.value > 60) gameSpeed.value -= 15;
     spawnFood();
   } else {
     snake.pop();
@@ -145,12 +156,14 @@ const update = () => {
 
 const draw = () => {
   if (!ctx) return;
-  ctx.fillStyle = "#1e272e";
+  ctx.fillStyle = "#1e272e"; // 背景色
   ctx.fillRect(0, 0, 400, 400);
 
   // 食物
   ctx.fillStyle = "#ff4757";
-  ctx.fillRect(food.x * gridSize + 2, food.y * gridSize + 2, gridSize - 4, gridSize - 4);
+  ctx.beginPath();
+  ctx.arc(food.x * gridSize + 10, food.y * gridSize + 10, 8, 0, Math.PI * 2);
+  ctx.fill();
 
   // 蛇
   snake.forEach((p, i) => {
@@ -165,73 +178,94 @@ const spawnFood = () => {
 };
 
 const handleKeyDown = (e) => {
-  if (e.key === 'ArrowUp' && direction.y === 0) nextDirection = { x: 0, y: -1 };
-  if (e.key === 'ArrowDown' && direction.y === 0) nextDirection = { x: 0, y: 1 };
-  if (e.key === 'ArrowLeft' && direction.x === 0) nextDirection = { x: -1, y: 0 };
-  if (e.key === 'ArrowRight' && direction.x === 0) nextDirection = { x: 1, y: 0 };
+  const key = e.key;
+  if (key === 'ArrowUp' && direction.y === 0) nextDirection = { x: 0, y: -1 };
+  if (key === 'ArrowDown' && direction.y === 0) nextDirection = { x: 0, y: 1 };
+  if (key === 'ArrowLeft' && direction.x === 0) nextDirection = { x: -1, y: 0 };
+  if (key === 'ArrowRight' && direction.x === 0) nextDirection = { x: 1, y: 0 };
 };
 
+// 核心：領取點數對接後端
 const uploadScore = async () => {
-  // 1. 檢查是否有登入
-  const currentMemberId = localStorage.getItem('memberId');
+  checkLoginStatus();
 
-  if (!currentMemberId) {
-    // 未登入：將分數存入 SessionStorage (瀏覽器關閉前都在)
+  if (!memberId.value) {
+    // 儲存目前分數到 Session，登入後可恢復
     sessionStorage.setItem('pendingSnakeScore', score.value);
     
-    if (confirm(`您目前獲得 ${score.value} 分！登入後即可換取點數，是否前往登入？`)) {
-      // 跳轉到登入頁，並帶上一個「回傳路徑」參數，方便登入後跳回來
+    const result = await Swal.fire({
+      title: '請先登入',
+      text: `您獲得了 ${score.value} 分，登入後即可換取點數！`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '去登入',
+      cancelButtonText: '下次再說'
+    });
+
+    if (result.isConfirmed) {
       router.push({ path: '/login', query: { redirect: '/snake' } });
     }
     return;
   }
 
-  // 2. 已登入：正常執行上傳
-  const pointsToDeliver = Math.floor(score.value / 100);
+  const points = Math.floor(score.value / 100);
+  
   try {
     const res = await axios.post('http://localhost:8080/api/game/add-points', {
-      memberId: currentMemberId,
-      points: pointsToDeliver
+      memberId: memberId.value,
+      points: points
     });
+
     isUploaded.value = true;
-    alert(`兌換成功！目前帳戶點數：${res.data.currentPoints}`);
-    sessionStorage.removeItem('pendingSnakeScore'); // 上傳完就清除暫存
-  } catch (e) {
-    alert("存檔失敗，請確認後端連線。");
+    sessionStorage.removeItem('pendingSnakeScore');
+
+    Swal.fire({
+      title: '兌換成功！',
+      text: `已入帳 ${res.data.addPoints} 點，目前帳戶總點數：${res.data.currentPoints}`,
+      icon: 'success'
+    });
+  } catch (err) {
+    console.error("上傳失敗", err);
+    Swal.fire('系統錯誤', '無法連接到伺服器，請稍後再試', 'error');
   }
 };
+
 onMounted(() => {
   ctx = gameCanvas.value.getContext('2d');
   window.addEventListener('keydown', handleKeyDown);
-  
+  checkLoginStatus();
+
   // 檢查是否有登入後跳回來的暫存分數
   const savedScore = sessionStorage.getItem('pendingSnakeScore');
-  const currentMemberId = localStorage.getItem('memberId');
-
-  if (savedScore && currentMemberId) {
+  if (savedScore && memberId.value) {
     score.value = parseInt(savedScore);
-    gameOver.value = true; // 直接進入結算畫面
+    gameOver.value = true;
     isGameRunning.value = false;
-    alert(`歡迎回來！您剛才獲得的 ${score.value} 分現在可以領取了！`);
+    Swal.fire('歡迎回來', `已偵測到您剛才獲得的 ${score.value} 分，快領取點數吧！`, 'info');
   }
   
   draw();
 });
-onMounted(() => {
-  updateMemberInfo(); // 組件掛載時執行一次
-  ctx = gameCanvas.value.getContext('2d');
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
 });
-onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 </script>
 
 <style scoped>
 .game-overlay {
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
   z-index: 5;
+  border-radius: 8px;
 }
-canvas { background: #1e272e; display: block; }
-.shadow { box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important; }
+canvas { 
+  background: #1e272e; 
+  display: block; 
+  border: 4px solid #34495e;
+}
+.shadow { box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important; }
+.card { overflow: hidden; }
 </style>

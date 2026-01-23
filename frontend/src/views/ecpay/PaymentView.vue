@@ -1,25 +1,26 @@
 <template>
   <div class="payment-container">
     <div class="payment-card">
-      <h2>訂單結帳</h2>
+      <h2>租借訂單結帳</h2>
       <hr />
       
       <div class="order-info">
         <div class="info-item">
-          <span>商品名稱：</span>
-          <strong>{{ order.itemName }}</strong>
+          <span>訂單編號：</span>
+          <strong>{{ recId }}</strong>
         </div>
         <div class="info-item">
-          <span>應付總額：</span>
-          <span class="amount">NT$ {{ order.totalAmount }}</span>
+          <span>服務項目：</span>
+          <strong>機台/座位租借</strong>
         </div>
+        <p class="warning-text">※ 請確認金額後再前往付款</p>
       </div>
 
       <div class="payment-methods">
-        <p>選擇付款方式：</p>
+        <p>支付平台：</p>
         <label class="method-option">
           <input type="radio" checked /> 
-          <span class="radio-label">綠界全功能支付 (信用卡/ATM/超商)</span>
+          <span class="radio-label">綠界科技 ECPay 安全支付</span>
         </label>
       </div>
 
@@ -28,55 +29,73 @@
         :disabled="isLoading" 
         class="checkout-btn"
       >
-        {{ isLoading ? '處理中...' : '前往付款' }}
+        <span v-if="isLoading" class="loader"></span>
+        {{ isLoading ? '導向支付頁面中...' : '前往付款' }}
       </button>
 
-      <p class="note">※ 點擊按鈕後將導向綠界安全支付頁面</p>
+      <p class="note">※ 點擊按鈕後將離開本站，導向至綠界金流加密頁面</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
+const route = useRoute();
 const isLoading = ref(false);
-const order = ref({
-  itemName: "商家會員方案 - 進階版",
-  totalAmount: 1000
+const recId = ref('');
+
+onMounted(() => {
+  recId.value = route.params.recId;
+  if (!recId.value) {
+    Swal.fire('錯誤', '無效的訂單編號', 'error');
+  }
 });
 
 const handleCheckout = async () => {
+  if (!recId.value) return;
+
   isLoading.value = true;
   try {
-    // 1. 呼叫你的 Java Servlet API 取得加密參數
-    // 請確認後端 Servlet URL 正確
-    const response = await axios.post('http://localhost:8080/api/payment/checkout');
-    const paymentData = response.data;
+    // 1. 呼叫後端 API
+    const response = await axios.post(`http://localhost:8080/api/payment/checkout?recId=${recId.value}`);
+    
+    // 2. 處理後端回傳的 HTML 字串
+    const payHtml = response.data;
 
-    // 2. 建立一個隱藏的 Form 並動態填入參數
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5';
+    if (!payHtml || (typeof payHtml === 'string' && payHtml.includes('Error'))) {
+      throw new Error('訂單資訊有誤，無法付款');
+    }
 
-    // 3. 將 API 回傳的所有參數轉為 hidden input
-    Object.keys(paymentData).forEach(key => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = key;
-      input.value = paymentData[key];
-      form.appendChild(input);
-    });
+    // 3. 建立一個臨時容器並插入 HTML
+    const div = document.createElement('div');
+    div.style.display = 'none'; 
+    div.innerHTML = payHtml;
+    document.body.appendChild(div);
 
-    // 4. 加入表單到頁面並執行提交
-    document.body.appendChild(form);
-    form.submit();
-
+    // 4. 自動提交表單
+    const form = div.querySelector('form');
+    if (form) {
+      form.submit();
+    } else {
+      // 如果 form 沒自動提交，嘗試手動觸發
+      const scriptTag = div.querySelector('script');
+      if (scriptTag) {
+        eval(scriptTag.innerHTML);
+      }
+    }
   } catch (error) {
-    console.error("支付失敗：", error);
-    alert("無法啟動支付流程，請稍後再試。");
+    console.error('付款啟動失敗', error);
+    Swal.fire({
+      icon: 'error',
+      title: '啟動支付失敗',
+      text: error.message || '請檢查網路連線或聯絡客服。',
+    });
   } finally {
-    isLoading.value = false;
+    setTimeout(() => { isLoading.value = false; }, 2000);
   }
 };
 </script>
@@ -86,46 +105,68 @@ const handleCheckout = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 80vh;
-  background-color: #f5f7fa;
+  min-height: 85vh;
+  background-color: #f0f2f5;
 }
 .payment-card {
   background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
+}
+.warning-text {
+  font-size: 0.85rem;
+  color: #856404;
+  background-color: #fff3cd;
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 10px;
 }
 .order-info {
-  margin: 1.5rem 0;
+  margin: 2rem 0;
 }
 .info-item {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.8rem;
-}
-.amount {
-  color: #e63946;
-  font-size: 1.2rem;
-  font-weight: bold;
+  margin-bottom: 1rem;
 }
 .checkout-btn {
   width: 100%;
-  padding: 1rem;
-  background-color: #1d3557;
+  padding: 1.2rem;
+  background-color: #2a9d8f;
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 1.1rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: all 0.3s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
 }
 .checkout-btn:hover {
-  background-color: #457b9d;
+  background-color: #21867a;
+  transform: translateY(-2px);
 }
 .checkout-btn:disabled {
-  background-color: #ccc;
+  background-color: #a8dadc;
+  cursor: not-allowed;
+}
+.loader {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1d3557;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 .note {
   font-size: 0.8rem;
