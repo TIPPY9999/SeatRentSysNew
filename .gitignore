@@ -56,3 +56,8 @@ frontend/dist/
 # 5. 忽略本地端的敏感設定檔
 # =====================================
 **/application-local.yml
+
+# AI Context Tool Output
+repomix-output.xml
+repomix-output.txt
+repomix-output.md

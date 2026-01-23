@@ -79,8 +79,8 @@ app.use(ElementPlus)
 // --- 啟用 vue-google-maps 並設定 API 金鑰 ---
 app.use(VueGoogleMaps, {
   load: {
-    key: 'AIzaSyCu6YRYdgvvOg2aLI6K5L3R0GtnyyfRe_M', //BY zax
-    libraries: ['marker'], // 載入 marker 函式庫
+    key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries: ['marker', 'places'], // 載入 marker 和 places 函式庫
     v: 'quarterly', // 指定載入穩定的 API 版本
   },
 })
