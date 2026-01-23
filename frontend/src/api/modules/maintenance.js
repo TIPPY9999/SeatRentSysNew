@@ -307,4 +307,9 @@ export default {
   toggleSchedule,
   // Stats
   getAssetStats,
+  // Task 2: 歷史工單查詢支援
+  getTicketsByStaff: (staffId, statuses = null) => {
+    const params = statuses ? { statuses: statuses.join(',') } : {}
+    return api.get(`/api/maintenance/staff/${staffId}/tickets`, { params })
+  },
 }

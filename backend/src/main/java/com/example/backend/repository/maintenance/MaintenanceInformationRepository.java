@@ -27,6 +27,18 @@ List<MaintenanceInformation> findByAssignedStaffIdAndIssueStatusIn(Integer assig
 
 boolean existsByAssignedStaffIdAndIssueStatusIn(Integer assignedStaffId, List<String> statuses);
 
+    // ========== 新增：Task 2 歷史工單查詢支援 ==========
+    
+    /**
+     * 查詢指定人員的工單（依狀態篩選）
+     */
+    List<MaintenanceInformation> findByAssignedStaffIdOrderByReportedAtDescTicketIdAsc(Integer assignedStaffId);
+    
+    /**
+     * 查詢指定人員的特定狀態工單
+     */
+    List<MaintenanceInformation> findByAssignedStaffIdAndIssueStatusInOrderByReportedAtDescTicketIdAsc(Integer assignedStaffId, List<String> issueStatuses);
+
     // ========== 防爆單檢查 (排程自動開單用) ==========
     
     /**

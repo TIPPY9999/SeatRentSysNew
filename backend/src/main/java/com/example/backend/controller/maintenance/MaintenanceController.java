@@ -195,4 +195,17 @@ public List<MaintenanceStaffResponseDto> getAllStaff() {
         return mtifService.getTicketLogs(id);
     }
 
+    // ================== Task 2: 歷史工單查詢支援 ==================
+    
+    /**
+     * 查詢指定人員的工單（可依狀態篩選）
+     * GET /api/maintenance/staff/{staffId}/tickets?statuses=REPORTED,ASSIGNED
+     */
+    @GetMapping("/staff/{staffId}/tickets")
+    public List<MaintenanceInformation> getTicketsByStaff(
+            @PathVariable Integer staffId,
+            @RequestParam(required = false) List<String> statuses) {
+        return mtifService.getTicketsByStaff(staffId, statuses);
+    }
+
 }

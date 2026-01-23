@@ -174,7 +174,7 @@ const startTicket = async (row) => {
     title: '開始維修？',
     html: `
       <div style="text-align: center; padding: 10px 0;">
-        <div style="font-size: 48px; margin-bottom: 12px;">🔧</div>
+        <div style="font-size: 48px; margin-bottom: 12px;"><i class="fas fa-wrench" style="color: #e6a23c;"></i></div>
         <p>工單 <b>#${row.ticketId}</b> 即將進入維修狀態</p>
         <p style="color: #909399; font-size: 13px;">問題類型：${row.issueType}</p>
       </div>
@@ -213,7 +213,7 @@ const cancelTicket = async (row) => {
     title: '取消工單',
     html: `
       <div style="text-align: center; padding: 10px 0;">
-        <div style="font-size: 48px; margin-bottom: 12px;">⚠️</div>
+        <div style="font-size: 48px; margin-bottom: 12px;"><i class="fas fa-exclamation-triangle" style="color: #f56c6c;"></i></div>
         <p style="margin-bottom: 16px;">工單 <b>#${row.ticketId}</b> - ${row.issueType}</p>
       </div>
     `,
@@ -352,6 +352,62 @@ const viewTicketDetail = (row) => {
 }
 
 // 切換模式時重新抓資料
+// ====== Task 4: 地圖小視窗功能 ======
+const showLocationMap = async (stationName, lat, lng) => {
+  // 檢查經緯度是否有效
+  if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+    await Swal.fire({
+      icon: 'warning',
+      title: '位置資訊不完整',
+      text: `站點「${stationName}」暫無準確的地理位置資訊`,
+      confirmButtonText: '了解',
+      confirmButtonColor: '#e6a23c'
+    })
+    return
+  }
+
+  const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`
+  
+  await Swal.fire({
+    title: `<div style="display: flex; align-items: center; gap: 12px; justify-content: center;">
+      <i class="fas fa-map-marker-alt" style="color: #e6a23c; font-size: 24px;"></i>
+      <span>${stationName}</span>
+    </div>`,
+    html: `
+      <div style="text-align: center;">
+        <div style="margin-bottom: 16px; padding: 12px; background: #f0f9eb; border-radius: 8px; border-left: 4px solid #67c23a;">
+          <p style="margin: 0; color: #606266; font-size: 13px;">
+            <i class="fas fa-info-circle mr-1" style="color: #67c23a;"></i>
+            經度：${lng}° | 緯度：${lat}°
+          </p>
+        </div>
+        <iframe 
+          src="${mapUrl}"
+          width="100%" 
+          height="300" 
+          style="border: none; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);"
+          allowfullscreen=""
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+        <p style="margin: 12px 0 0; color: #909399; font-size: 11px;">
+          <i class="fas fa-external-link-alt mr-1"></i>
+          點擊地圖可在新視窗中開啟 Google Maps
+        </p>
+      </div>
+    `,
+    width: '600px',
+    showConfirmButton: true,
+    confirmButtonText: '<i class="fas fa-times mr-1"></i>關閉',
+    confirmButtonColor: '#909399',
+    customClass: {
+      popup: 'custom-map-popup'
+    },
+    showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
+    hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' }
+  })
+}
+
 // [修正] 移除舊的 destroy 邏輯，只負責重抓資料
 watch(
   () => props.historyMode,
@@ -646,17 +702,47 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column label="維修目標" width="130" align="center">
+                <el-table-column label="維修目標" width="180" align="center">
                   <template #default="{ row }">
                     <!-- 椅子維修 -->
-                    <div v-if="row.seatsId" class="target-cell seat-target">
-                      <i class="fas fa-chair"></i>
-                      <span>椅子 #{{ row.seatsId }}</span>
+                    <div v-if="row.seatsId" class="target-cell">
+                      <div class="target-main">
+                        <i class="fas fa-chair" style="color: #e6a23c;"></i>
+                        <span>椅子 #{{ row.seatsId }}</span>
+                      </div>
+                      <div v-if="row.seat && row.seat.spotId" class="target-station">
+                        <span 
+                          class="station-link" 
+                          @click="showLocationMap(
+                            row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`,
+                            row.rentalSpot ? row.rentalSpot.latitude : null,
+                            row.rentalSpot ? row.rentalSpot.longitude : null
+                          )"
+                        >
+                          <i class="fas fa-map-marker-alt mr-1"></i>
+                          {{ row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}` }}
+                        </span>
+                      </div>
                     </div>
                     <!-- 機台維修 -->
-                    <div v-else class="target-cell spot-target">
-                      <i class="fas fa-desktop"></i>
-                      <span>機台 #{{ row.spotId }}</span>
+                    <div v-else class="target-cell">
+                      <div class="target-main">
+                        <i class="fas fa-desktop" style="color: #409eff;"></i>
+                        <span>機台 #{{ row.spotId }}</span>
+                      </div>
+                      <div v-if="row.rentalSpot" class="target-station">
+                        <span 
+                          class="station-link" 
+                          @click="showLocationMap(
+                            row.rentalSpot.spotName,
+                            row.rentalSpot.latitude,
+                            row.rentalSpot.longitude
+                          )"
+                        >
+                          <i class="fas fa-map-marker-alt mr-1"></i>
+                          {{ row.rentalSpot.spotName }}
+                        </span>
+                      </div>
                     </div>
                   </template>
                 </el-table-column>
@@ -873,7 +959,7 @@ onMounted(() => {
     >
       <template #header>
         <div class="dialog-header">
-          <span class="dialog-icon">✅</span>
+          <span class="dialog-icon"><i class="fas fa-check-circle" style="color: #67c23a; font-size: 24px;"></i></span>
           <span class="dialog-title">工單結案確認</span>
         </div>
       </template>
@@ -1385,5 +1471,110 @@ onMounted(() => {
 }
 .w-100 {
   width: 100%;
+}
+
+/* Task 4: 新增樣式 */
+.target-cell {
+  text-align: center;
+}
+
+.target-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.target-station {
+  font-size: 11px;
+}
+
+.station-link {
+  color: #409eff;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.station-link:hover {
+  color: #66b1ff;
+  background: #ecf5ff;
+  transform: translateY(-1px);
+}
+
+.type-cell {
+  cursor: pointer;
+  transition: color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.type-cell:hover {
+  color: #409eff;
+}
+
+.type-icon {
+  margin-right: 6px;
+  color: #f56c6c;
+}
+
+.desc-cell {
+  color: #606266;
+  font-size: 13px;
+}
+
+.priority-tag {
+  font-weight: 500;
+}
+
+.status-tag {
+  font-weight: 500;
+}
+
+.id-tag {
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-btn-item {
+  transition: all 0.3s ease;
+}
+
+.action-btn-item:hover {
+  transform: translateY(-2px);
+}
+
+.empty-icon {
+  font-size: 64px;
+  color: #c0c4cc;
+}
+
+.pagination-wrapper {
+  padding: 20px;
+  text-align: center;
+  border-top: 1px solid #ebeef5;
+  background: #fafafa;
+  margin-top: 20px;
+}
+
+/* 地圖彈窗樣式 */
+:global(.custom-map-popup) {
+  border-radius: 16px !important;
+  overflow: hidden !important;
 }
 </style>
