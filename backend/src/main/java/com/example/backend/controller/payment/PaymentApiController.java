@@ -11,16 +11,17 @@ import com.example.backend.utils.EcpayUtils;
 
 import org.springframework.web.bind.annotation.*;
 
-@RestController // 改用 Spring 的註解
+@RestController
 @RequestMapping("/api/payment") // 定義路徑前綴
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") // 直接在這裡解決跨域問題
 public class PaymentApiController {
 
     @PostMapping("/checkout") // 對應原本的 doPost
-    public String checkout() {
+    public String checkout(@RequestBody Map<String, String> requestData) {
         // 1. 設定訂單基本參數
-        String merchantTradeNo = "TC" + System.currentTimeMillis();
-        String totalAmount = "1000";
+        String merchantTradeNo = requestData.getOrDefault("merchantTradeNo", "TC" + System.currentTimeMillis());
+        String totalAmount = requestData.getOrDefault("totalAmount", "1000");
+        String itemName = requestData.getOrDefault("itemName", "Seat Rental Service");
 
         Map<String, String> params = new TreeMap<>();
         params.put("MerchantID", "3002607");
@@ -29,7 +30,7 @@ public class PaymentApiController {
         params.put("PaymentType", "aio");
         params.put("TotalAmount", totalAmount);
         params.put("TradeDesc", "SeatRent_Order");
-        params.put("ItemName", "Seat Rental Service");
+        params.put("ItemName", itemName);
         params.put("ReturnURL", "https://lightweight-combat-com-lecture.trycloudflare.com/api/payment/callback");
         // 建議也加上這個，付款完點擊「回到商店」才會回到你的 Vue 畫面
         params.put("ClientBackURL", "http://localhost:5173/");

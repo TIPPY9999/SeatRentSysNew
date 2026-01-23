@@ -30,8 +30,15 @@ public class PaymentCallback {
                 String orderId = params.get("MerchantTradeNo");
 
                 // TODO: 這裡寫你的資料庫更新邏輯
-                // 例如: merchantService.updatePaymentStatus(orderId, "PAID");
+                // 1. 查詢資料庫中的訂單 (使用 orderId)
+                // 2. 比對金額是否正確 (注意：綠界回傳金額欄位為 TradeAmt，需與資料庫訂單金額比對)
+                // 3. 檢查訂單狀態是否已經是「已付款」(避免綠界重複通知導致邏輯錯誤)
+                // 4. 更新訂單狀態為「已付款」
+                // 5. 記錄綠界回傳的交易編號 (params.get("TradeNo"))
 
+                // 範例程式碼：
+                // orderService.completePayment(orderId,
+                // Integer.parseInt(params.get("TradeAmt")));
                 System.out.println(">>> 綠界通知：訂單 " + orderId + " 付款成功！");
             }
 
