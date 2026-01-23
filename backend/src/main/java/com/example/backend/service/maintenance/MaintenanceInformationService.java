@@ -582,5 +582,17 @@ public class MaintenanceInformationService {
                    .toList();
     }
 
+    // ================== Task 2: 歷史工單查詢支援 ==================
+    
+    /**
+     * 查詢指定人員的工單（可依狀態篩選）
+     */
+    public List<MaintenanceInformation> getTicketsByStaff(Integer staffId, List<String> statuses) {
+        if (statuses != null && !statuses.isEmpty()) {
+            return mtifRepo.findByAssignedStaffIdAndIssueStatusInOrderByReportedAtDescTicketIdAsc(staffId, statuses);
+        } else {
+            return mtifRepo.findByAssignedStaffIdOrderByReportedAtDescTicketIdAsc(staffId);
+        }
+    }
     
 }

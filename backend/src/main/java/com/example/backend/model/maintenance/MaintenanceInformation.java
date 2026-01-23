@@ -46,6 +46,22 @@ public class MaintenanceInformation {
     @JsonIgnoreProperties({"maintenanceInformations", "hibernateLazyInitializer", "handler"})
     private MaintenanceStaff assignedStaff;
 
+    // ================== Task 4: 新增站點與座位關聯 ==================
+    
+    // 關聯到據點資料，用於顯示站點名稱
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "spotId", insertable = false, updatable = false)
+    @NotFound(action = NotFoundAction.IGNORE)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private com.example.backend.model.spot.RentalSpot rentalSpot;
+
+    // 關聯到座位資料，用於顯示座位名稱
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "seatsId", insertable = false, updatable = false)
+    @NotFound(action = NotFoundAction.IGNORE)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private com.example.backend.model.spot.Seat seat;
+
 
 
 
@@ -115,5 +131,23 @@ public class MaintenanceInformation {
 
     public void setAssignedStaff(MaintenanceStaff assignedStaff) {
         this.assignedStaff = assignedStaff;
+    }
+
+    // ================== Task 4: 新增關聯的 Getter/Setter ==================
+    
+    public com.example.backend.model.spot.RentalSpot getRentalSpot() {
+        return rentalSpot;
+    }
+
+    public void setRentalSpot(com.example.backend.model.spot.RentalSpot rentalSpot) {
+        this.rentalSpot = rentalSpot;
+    }
+
+    public com.example.backend.model.spot.Seat getSeat() {
+        return seat;
+    }
+
+    public void setSeat(com.example.backend.model.spot.Seat seat) {
+        this.seat = seat;
     }
 }

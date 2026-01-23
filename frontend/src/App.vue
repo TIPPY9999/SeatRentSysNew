@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted } from 'vue';
 import { RouterView } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+import { useMemberAuthStore } from '@/stores/memberAuth';
 import { useAdminAuthStore } from '@/stores/adminAuth';
 
 /**
@@ -14,17 +14,17 @@ import { useAdminAuthStore } from '@/stores/adminAuth';
  * 這可以確保用戶在重新整理頁面後，登入狀態得以保持。
  */
 onMounted(() => {
-  const authStore = useAuthStore();
+  const memberAuthStore = useMemberAuthStore();
   const adminAuthStore = useAdminAuthStore();
 
   // 1. 恢復一般會員的登入狀態
-  if (!authStore.isLogin) {
+  if (!memberAuthStore.isLogin) {
     const storedUser = localStorage.getItem('member_user');
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        authStore.login(userData, 'member');
-        console.log('member login');
+        memberAuthStore.setMemberLogin(userData);
+        console.log('App.vue: 會員登入狀態已從 localStorage 恢復。');
       } catch (e) {
         console.error('恢復會員狀態失敗:', e);
         // 如果解析失敗，清除損壞的資料
@@ -34,7 +34,7 @@ onMounted(() => {
   }
 
   // 2. 恢復管理員的登入狀態
-  if (!adminAuthStore.admin) {
+  if (!adminAuthStore.isLogin) {
     const storedAdmin = localStorage.getItem('admin');
     if (storedAdmin) {
       try {

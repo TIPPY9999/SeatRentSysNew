@@ -61,6 +61,16 @@ const handleDelete = async (row) => {
     showClass: { popup: 'animate__animated animate__fadeInDown animate__faster' },
     hideClass: { popup: 'animate__animated animate__fadeOutUp animate__faster' },
     customClass: { popup: 'custom-swal-popup' },
+    didRender: (popup) => {
+      // Task 1 & 2: 為統計卡片添加點擊事件
+      const cards = popup.querySelectorAll('[data-card-type]')
+      cards.forEach(card => {
+        card.addEventListener('click', () => {
+          const cardType = card.getAttribute('data-card-type')
+          showHistoryModal(row.staffId, cardType, row.staffName)
+        })
+      })
+    }
   })
 
   if (result.isConfirmed) {
@@ -94,6 +104,135 @@ const handleDelete = async (row) => {
       }
       // 其他錯誤已由 http.js 攔截器處理
     }
+  }
+}
+
+// ====== Task 2: 歷史工單查詢 Modal ======
+const showHistoryModal = async (staffId, cardType, staffName) => {
+  try {
+    // 根據卡片類型決定查詢的狀態
+    let statuses = []
+    let title = ''
+    let iconClass = ''
+    let colorClass = ''
+    
+    switch (cardType) {
+      case 'repair-pending':
+        statuses = ['REPORTED', 'ASSIGNED', 'UNDER_MAINTENANCE']
+        title = '待修任務'
+        iconClass = 'fas fa-wrench'
+        colorClass = 'text-warning'
+        break
+      case 'maintenance-pending':
+        statuses = ['SCHEDULED'] // 根據你的系統調整
+        title = '待保養任務'
+        iconClass = 'fas fa-clipboard-list'
+        colorClass = 'text-info'
+        break
+      case 'repair-completed':
+        statuses = ['RESOLVED']
+        title = '已完成維修'
+        iconClass = 'fas fa-check-circle'
+        colorClass = 'text-success'
+        break
+      case 'maintenance-completed':
+        statuses = ['COMPLETED'] // 根據你的系統調整
+        title = '已完成保養'
+        iconClass = 'fas fa-flag-checkered'
+        colorClass = 'text-secondary'
+        break
+    }
+
+    // 呼叫 API 查詢工單
+    const response = await maintenanceApi.getTicketsByStaff(staffId, statuses)
+    const tickets = response.data || []
+
+    // 限制顯示最近 10 筆避免過多資料
+    const displayTickets = tickets.slice(0, 10)
+
+    let tableHtml = ''
+    if (displayTickets.length === 0) {
+      tableHtml = `
+        <div style="text-align: center; padding: 40px; color: #909399;">
+          <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+          <p>暫無${title}記錄</p>
+        </div>
+      `
+    } else {
+      tableHtml = `
+        <div style="max-height: 400px; overflow-y: auto;">
+          <table class="table table-hover table-sm">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 15%;"><i class="fas fa-ticket-alt mr-1"></i>工單編號</th>
+                <th style="width: 20%;"><i class="fas fa-calendar mr-1"></i>日期</th>
+                <th style="width: 25%;"><i class="fas fa-map-marker-alt mr-1"></i>維修目標</th>
+                <th style="width: 25%;"><i class="fas fa-exclamation-triangle mr-1"></i>問題描述</th>
+                <th style="width: 15%;"><i class="fas fa-clipboard-check mr-1"></i>處理結果</th>
+              </tr>
+            </thead>
+            <tbody>
+      `
+      
+      displayTickets.forEach(ticket => {
+        const date = ticket.reportedAt ? new Date(ticket.reportedAt).toLocaleDateString('zh-TW') : '-'
+        const target = ticket.spotId ? `機台 #${ticket.spotId}${ticket.seatsId ? ` - 座位 #${ticket.seatsId}` : ''}` : '未指定'
+        const description = ticket.issueDesc || '無描述'
+        const result = ticket.resolveNote || (ticket.issueStatus === 'RESOLVED' ? '已完成' : '處理中')
+        
+        tableHtml += `
+          <tr>
+            <td><span class="badge badge-secondary">#${ticket.ticketId}</span></td>
+            <td><small>${date}</small></td>
+            <td><small>${target}</small></td>
+            <td><small title="${description}">${description.length > 20 ? description.substring(0, 20) + '...' : description}</small></td>
+            <td><small>${result.length > 15 ? result.substring(0, 15) + '...' : result}</small></td>
+          </tr>
+        `
+      })
+      
+      tableHtml += `
+            </tbody>
+          </table>
+        </div>
+      `
+      
+      if (tickets.length > 10) {
+        tableHtml += `
+          <div style="text-align: center; margin-top: 12px; color: #909399; font-size: 12px;">
+            <i class="fas fa-info-circle mr-1"></i>
+            顯示最近 10 筆，共 ${tickets.length} 筆記錄
+          </div>
+        `
+      }
+    }
+
+    await Swal.fire({
+      title: `<div style="display: flex; align-items: center; gap: 12px; justify-content: center;">
+        <i class="${iconClass} ${colorClass}" style="font-size: 24px;"></i>
+        <span>${staffName} - ${title}</span>
+      </div>`,
+      html: tableHtml,
+      width: '90%',
+      maxWidth: '1000px',
+      showConfirmButton: true,
+      confirmButtonText: '<i class="fas fa-times mr-1"></i>關閉',
+      customClass: {
+        popup: 'custom-swal-popup',
+        confirmButton: 'btn btn-secondary'
+      },
+      showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
+      hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' }
+    })
+  } catch (error) {
+    console.error('查詢工單歷史失敗:', error)
+    await Swal.fire({
+      icon: 'error',
+      title: '查詢失敗',
+      text: '無法載入工單歷史記錄',
+      timer: 2000,
+      showConfirmButton: false
+    })
   }
 }
 
@@ -250,23 +389,31 @@ const viewDetail = async (row) => {
           <!-- ★ 任務3：2x2 Grid 統計卡片 -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
             <!-- 左上：待修任務 -->
-            <div style="padding: 16px; background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%); border-radius: 10px; text-align: center; color: white;">
-              <p style="margin: 0; font-size: 12px; opacity: 0.9;">🔧 待修任務</p>
+            <div data-card-type="repair-pending" style="padding: 16px; background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%); border-radius: 10px; text-align: center; color: white; cursor: pointer; transition: all 0.3s ease;" 
+                 onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 25px rgba(230, 162, 60, 0.3)';" 
+                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;"><i class="fas fa-wrench mr-1"></i>待修任務</p>
               <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${repairCurrent}</p>
             </div>
             <!-- 右上：待保養 -->
-            <div style="padding: 16px; background: linear-gradient(135deg, #409eff 0%, #79bbff 100%); border-radius: 10px; text-align: center; color: white;">
-              <p style="margin: 0; font-size: 12px; opacity: 0.9;">📋 待保養</p>
+            <div data-card-type="maintenance-pending" style="padding: 16px; background: linear-gradient(135deg, #409eff 0%, #79bbff 100%); border-radius: 10px; text-align: center; color: white; cursor: pointer; transition: all 0.3s ease;"
+                 onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 25px rgba(64, 158, 255, 0.3)';" 
+                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;"><i class="fas fa-clipboard-list mr-1"></i>待保養</p>
               <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${maintainCurrent}</p>
             </div>
             <!-- 左下：維修完成 -->
-            <div style="padding: 16px; background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); border-radius: 10px; text-align: center; color: white;">
-              <p style="margin: 0; font-size: 12px; opacity: 0.9;">✅ 維修完成</p>
+            <div data-card-type="repair-completed" style="padding: 16px; background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); border-radius: 10px; text-align: center; color: white; cursor: pointer; transition: all 0.3s ease;"
+                 onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 25px rgba(103, 194, 58, 0.3)';" 
+                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;"><i class="fas fa-check-circle mr-1"></i>維修完成</p>
               <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${repairDone}</p>
             </div>
             <!-- 右下：保養完成 -->
-            <div style="padding: 16px; background: linear-gradient(135deg, #909399 0%, #c0c4cc 100%); border-radius: 10px; text-align: center; color: white;">
-              <p style="margin: 0; font-size: 12px; opacity: 0.9;">🏁 保養完成</p>
+            <div data-card-type="maintenance-completed" style="padding: 16px; background: linear-gradient(135deg, #909399 0%, #c0c4cc 100%); border-radius: 10px; text-align: center; color: white; cursor: pointer; transition: all 0.3s ease;"
+                 onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 25px rgba(144, 147, 153, 0.3)';" 
+                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;"><i class="fas fa-flag-checkered mr-1"></i>保養完成</p>
               <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${maintainDone}</p>
             </div>
           </div>
