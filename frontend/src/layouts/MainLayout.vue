@@ -72,7 +72,7 @@ const logout = () => {
             <span class="icon-wrapper">
               <el-icon><Avatar /></el-icon>
             </span>
-            <span class="menu-text" style="padding: 2px">會員登入</span>
+            <span class="menu-text">會員登入</span>
           </router-link>
         </li>
         <li class="menu-item">
@@ -190,7 +190,7 @@ const logout = () => {
 }
 .page-wrapper {
   display: flex;
-  height: 107vh; /* 改為 100vh 佔滿整個視窗高度 */
+  height: 100vh; /* 改為 100vh 佔滿整個視窗高度 */
   width: 100%;
   background-color: #f4f6f9;
 }
@@ -204,7 +204,6 @@ const logout = () => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .page-wrapper.sidebar-collapsed .sidebar {
@@ -236,6 +235,9 @@ const logout = () => {
   list-style: none;
   padding: 0;
   margin: 10px 0;
+  flex-grow: 1;
+  overflow-y: auto;
+  overflow-x: hidden; /* 新增：防止水平滾動條 */
 }
 
 .menu-item {
