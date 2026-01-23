@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from "vue";
+import { useMemberAuthStore } from '@/stores/memberAuth'
 
 // --- 版面狀態 ---
 const isSidebarCollapsed = ref(false); // 控制側邊欄是否收合
@@ -10,6 +11,8 @@ const isSidebarCollapsed = ref(false); // 控制側邊欄是否收合
 const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
+
+const memberAuthStore = useMemberAuthStore()
 </script>
 
 <template>
@@ -27,11 +30,16 @@ const toggleSidebar = () => {
           </router-link>
         </li>
         <li class="menu-item">
-          <!-- <span class="icon-wrapper">
-            <el-icon><CircleCheckFilled /></el-icon>
-          </span> -->
-          <span class="menu-text">UID:</span>
-        </li>
+          <span class="menu-text">
+            UID:
+            <span v-if="memberAuthStore.isLogin">
+              {{ memberAuthStore.member.memName }}
+            </span>
+            <span v-else>
+              尚未登入
+            </span>
+          </span>
+        </li> 
         <li class="menu-item">
           <router-link to="/rent" class="member-info">
             <span class="icon-wrapper">

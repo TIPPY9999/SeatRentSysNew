@@ -58,7 +58,7 @@ const deleteMember = (memId) => {
 
 const formatDateTime = (dt) => {
   if (!dt) return ''
-  return dt.replace('T', ' ')
+  return dt.replace('T', ' ').substring(0, 19)
 }
 
 onMounted(() => {

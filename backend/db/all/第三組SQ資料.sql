@@ -1,10 +1,6 @@
 --重置資料庫 
 --Version Log: 2026/01/21
-<<<<<<< HEAD
 --===========CLEAR=================
-=======
---==============DB CLEAR==================
->>>>>>> rec
 USE SeatRentSys
 DROP TABLE recRent;
 DROP TABLE maintenanceLog;
@@ -18,7 +14,7 @@ DROP TABLE discount;
 DROP TABLE merchant;
 DROP TABLE member;
 DROP TABLE admin;
-<<<<<<< HEAD
+DROP VIEW V_RentDetails
 --============BUILD TABLE==============
 --===========奕穎  ver 2026/1/21 ==============
 /** =========================================================
@@ -464,6 +460,7 @@ INSERT INTO member
     (memUsername, memPassword, memName, memEmail, memPhone,
     memStatus, memPoints, memViolation, memLevel, memInvoice)
 VALUES
+    ('zzz', 'zzz', N'zzz', 'zzz@gmail.com', '0999888777', 1, 120, 0, 1, '/zzz9999'),
     ('alan123', 'pass123!', N'林小安', 'alan123@gmail.com', '0912345678', 1, 120, 0, 1, '/HH8U3V9'),
     ('betty5566', 'pass5566!', N'吳小美', 'betty5566@gmail.com', '0922666888', 1, 450, 1, 2, NULL),
     ('chung999', 'pass999!', N'張大中', 'chung999@gmail.com', '0933123456', 1, 80, 0, 1, '/ABCD123'),
@@ -478,6 +475,8 @@ VALUES
 INSERT INTO admin
     (admUsername, admPassword, admName, admEmail, admRole)
 VALUES
+
+    ('aaa', 'aaa', N'系統管理員', 'aaa@system.com', 9),
     ('admin001', 'Root001!', N'系統管理員', 'admin001@system.com', 9),
     ('staff01', 'Staff01@', N'王芳儀', 'staff01@system.com', 1),
     ('staff02', 'Staff02@', N'林建宏', 'staff02@system.com', 1),
@@ -546,21 +545,21 @@ VALUES
 INSERT INTO dbo.seats
     (seatsName, seatsType, spotId, updatedAt, serialNumber, createdAt)
 VALUES
-    (N'按摩椅-A01', N'T椅', 1, SYSDATETIME(), 'SN-2025001', DEFAULT),
-    (N'按摩椅-A02', N'T椅', 1, SYSDATETIME(), 'SN-2025002', DEFAULT),
-    (N'充電椅-B01', N'E椅', 2, SYSDATETIME(), 'SN-2025003', DEFAULT),
-    (N'充電椅-B02', N'E椅', 2, SYSDATETIME(), 'SN-2025004', DEFAULT),
-    (N'按摩椅-C01', N'H椅', 3, SYSDATETIME(), 'SN-2025005', DEFAULT),
-    (N'按摩椅-C02', N'T椅', 3, SYSDATETIME(), 'SN-2025006', DEFAULT),
-    (N'置物椅-D01', N'T椅', 4, SYSDATETIME(), 'SN-2025007', DEFAULT),
-    (N'置物椅-D02', N'H椅', 4, SYSDATETIME(), 'SN-2025008', DEFAULT),
-    (N'KTV椅-E01', N'F椅', 5, SYSDATETIME(), 'SN-2025009', DEFAULT),
-    (N'按摩椅-F01', N'T椅', 6, SYSDATETIME(), 'SN-2025010', DEFAULT),
-    (N'充電椅-G01', N'E椅', 7, SYSDATETIME(), 'SN-2025011', DEFAULT),
-    (N'按摩椅-H01', N'T椅', 8, SYSDATETIME(), 'SN-2025012', DEFAULT),
-    (N'按摩椅-I01', N'H椅', 9, SYSDATETIME(), 'SN-2025013', DEFAULT),
-    (N'按摩椅-J01', N'T椅', 10, SYSDATETIME(), 'SN-2025014', DEFAULT),
-    (N'備用設備-Z99', N'H椅', NULL, SYSDATETIME(), 'SN-2025999', DEFAULT);
+    (N'置物椅-A01', N'E椅', 1, SYSDATETIME(), 'SN-2025001', DEFAULT),
+    (N'置物椅-A02', N'E椅', 1, SYSDATETIME(), 'SN-2025002', DEFAULT),
+    (N'置物椅-B01', N'E椅', 2, SYSDATETIME(), 'SN-2025003', DEFAULT),
+    (N'置物椅-B02', N'E椅', 2, SYSDATETIME(), 'SN-2025004', DEFAULT),
+    (N'基本椅-C01', N'B椅', 3, SYSDATETIME(), 'SN-2025005', DEFAULT),
+    (N'基本椅-C02', N'B椅', 3, SYSDATETIME(), 'SN-2025006', DEFAULT),
+    (N'置物椅-D01', N'E椅', 4, SYSDATETIME(), 'SN-2025007', DEFAULT),
+    (N'置物椅-D02', N'E椅', 4, SYSDATETIME(), 'SN-2025008', DEFAULT),
+    (N'基本椅-E01', N'E椅', 5, SYSDATETIME(), 'SN-2025009', DEFAULT),
+    (N'基本椅-F01', N'B椅', 6, SYSDATETIME(), 'SN-2025010', DEFAULT),
+    (N'基本椅-G01', N'B椅', 7, SYSDATETIME(), 'SN-2025011', DEFAULT),
+    (N'置物椅-H01', N'E椅', 8, SYSDATETIME(), 'SN-2025012', DEFAULT),
+    (N'置物椅-I01', N'E椅', 9, SYSDATETIME(), 'SN-2025013', DEFAULT),
+    (N'置物椅-J01', N'E椅', 10, SYSDATETIME(), 'SN-2025014', DEFAULT),
+    (N'備用設備-Z99', N'S椅', NULL, SYSDATETIME(), 'SN-2025999', DEFAULT);
 --=========================================光宇 TEST DATA  END===================================
 
 --================翊庭 DATA ver.20260121==============
@@ -577,9 +576,6 @@ VALUES
     ('阿美水果行', N'0988-888-888', N'fruitamei@mail.com', N'桃園市中壢區中正路120號', 1),
     ('新味壽司', N'0999-999-999', N'newtaste@mail.com', N'新竹市東區光明路66號', 1),
     ('樂町火鍋', N'0910-010-010', N'hotpotjoy@mail.com', N'嘉義市西區文化路45號', 1);
-=======
---===============BUILD TABLE===============
->>>>>>> rec
 
 INSERT INTO discount
     (couponName,couponDescription, pointsRequired, startDate, endDate, merchantId, couponStatus,couponImg)
@@ -663,25 +659,22 @@ VALUES
     (9, NULL, 'SN-2025002', 1, 3, '2024-10-28 20:00:00', '2024-10-08 22:00:00', 4, N'已完成', 200, 200, 200, 'JKOPay', 'AB-12345686', NULL, 0, NULL),
     (10, NULL, 'SN-2025004', 2, 4, '2024-11-09 13:00:00', '2024-10-09 13:45:00', 34, N'已完成', 80, 80, 80, 'ApplePay', 'AB-12345687', '/KL77889', 0, NULL);
 --SQL VIEWS
--- CREATE VIEW V_RentDetails
--- AS
---     SELECT
---         r.recId, r.memId, m.memName, r.couponId, d.couponDescription couponDesc, r.seatsId, r.spotIdRent,
---         s1.spotName AS RentSpotName, r.spotIdReturn, s2.spotName AS ReturnSpotName,
---         r.recRentDT2, r.recReturnDT2, r.recUsageDT2, r.recPrice, r.recRequestPay, r.recPayment, r.recPayBy,
---         r.recInvoice, r.recCarrier, r.recViolatInt, r.recNote, r.recStatus
---     FROM recRent r
---         -- 1. 關聯會員 (必定存在，使用 INNER JOIN)
---         INNER JOIN member m ON r.memId = m.memId
---         LEFT JOIN discount d ON r.couponId = d.couponId
---         -- 2. 關聯租借點 (必定存在，使用 INNER JOIN)
---         INNER JOIN renting_Spot s1 ON r.spotIdRent = s1.spotId
---         -- 3. 關聯歸還點 (可能未還，使用 LEFT JOIN)
---         LEFT JOIN renting_Spot s2 ON r.spotIdReturn = s2.spotId;
-
-<<<<<<< HEAD
+USE [SeatRentSys];
+GO
+CREATE VIEW V_RentDetails
+AS
+    SELECT
+        r.recId, r.memId, m.memName, r.couponId, d.couponDescription couponDesc, r.seatsId, r.spotIdRent,
+        s1.spotName AS RentSpotName, r.spotIdReturn, s2.spotName AS ReturnSpotName,
+        r.recRentDT2, r.recReturnDT2, r.recUsageDT2, r.recPrice, r.recRequestPay, r.recPayment, r.recPayBy,
+        r.recInvoice, r.recCarrier, r.recViolatInt, r.recNote, r.recStatus
+    FROM recRent r
+        -- 1. 關聯會員 (必定存在，使用 INNER JOIN)
+        INNER JOIN member m ON r.memId = m.memId
+        LEFT JOIN discount d ON r.couponId = d.couponId
+        -- 2. 關聯租借點 (必定存在，使用 INNER JOIN)
+        INNER JOIN renting_Spot s1 ON r.spotIdRent = s1.spotId
+        -- 3. 關聯歸還點 (可能未還，使用 LEFT JOIN)
+        LEFT JOIN renting_Spot s2 ON r.spotIdReturn = s2.spotId;
 --==================子桓 DATA END====================
 --=================DB BUILD END====================
-=======
---=============== TEST DATA END=================
->>>>>>> rec
