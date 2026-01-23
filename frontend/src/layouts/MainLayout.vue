@@ -1,17 +1,17 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed } from 'vue'
 import { useMemberAuthStore } from '@/stores/memberAuth'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 
 // --- 版面狀態 ---
-const isSidebarCollapsed = ref(false); // 控制側邊欄是否收合
+const isSidebarCollapsed = ref(false) // 控制側邊欄是否收合
 
 /**
  * 切換側邊欄的收合狀態
  */
 const toggleSidebar = () => {
-  isSidebarCollapsed.value = !isSidebarCollapsed.value;
-};
+  isSidebarCollapsed.value = !isSidebarCollapsed.value
+}
 
 const memberAuthStore = useMemberAuthStore()
 const adminAuthStore = useAdminAuthStore()
@@ -61,7 +61,7 @@ const logout = () => {
       <ul class="menu-list">
         <li class="menu-item">
           <router-link to="/" class="member-info">
-          <span class="icon-wrapper">
+            <span class="icon-wrapper">
               <el-icon><House /></el-icon>
             </span>
             <span class="logo">Take@Seat</span>
@@ -75,21 +75,14 @@ const logout = () => {
             <span class="menu-text" style="padding: 2px">會員登入</span>
           </router-link>
         </li>
-<<<<<<< HEAD
         <li class="menu-item">
           <span class="menu-text">
             UID：
             <span v-if="displayUID">
               {{ displayUID }}
             </span>
-            <span v-else>
-              尚未登入
-            </span>
+            <span v-else> 尚未登入 </span>
           </span>
-=======
-        <li class="menu-text">
-          <span class="menu-text"> UID:</span>
->>>>>>> rec
         </li>
 
         <li class="menu-item">
@@ -163,10 +156,7 @@ const logout = () => {
           </el-icon>
         </button>
       </div>
-      <div 
-      class="menu-admin"
-      v-if="adminAuthStore.isLogin"
-      >
+      <div class="menu-admin" v-if="adminAuthStore.isLogin">
         <router-link to="/admin" class="member-info">
           <span class="icon-wrapper">
             <el-icon><Tools /></el-icon>
@@ -276,7 +266,9 @@ const logout = () => {
   font-size: 20px;
   font-family: fantasy;
   opacity: 1;
-  transition: opacity 0.2s ease, width 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    width 0.2s ease;
 }
 
 .page-wrapper.sidebar-collapsed .menu-text {
@@ -304,7 +296,9 @@ const logout = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .toggle-btn:hover {
