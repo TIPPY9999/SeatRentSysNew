@@ -60,6 +60,14 @@ const logout = () => {
       <!-- 可收合的功能選單 -->
       <ul class="menu-list">
         <li class="menu-item">
+          <router-link to="/" class="member-info">
+          <span class="icon-wrapper">
+              <el-icon><House /></el-icon>
+            </span>
+            <span class="logo">Take@Seat</span>
+          </router-link>
+        </li>
+        <li class="menu-item">
           <router-link to="/login" class="member-info">
             <span class="icon-wrapper">
               <el-icon><Avatar /></el-icon>
@@ -67,6 +75,7 @@ const logout = () => {
             <span class="menu-text" style="padding: 2px">會員登入</span>
           </router-link>
         </li>
+<<<<<<< HEAD
         <li class="menu-item">
           <span class="menu-text">
             UID：
@@ -77,17 +86,14 @@ const logout = () => {
               尚未登入
             </span>
           </span>
+=======
+        <li class="menu-text">
+          <span class="menu-text"> UID:</span>
+>>>>>>> rec
         </li>
-        <!-- <li class="menu-item">
-          <router-link to="/rent" class="member-info">
-            <span class="icon-wrapper">
-              <el-icon><Search /></el-icon>
-            </span>
-            <span class="menu-text">站點查詢</span>
-          </router-link>
-        </li> -->
+
         <li class="menu-item">
-          <router-link to="/rent" class="member-info">
+          <router-link to="/SearchSpot" class="member-info">
             <span class="icon-wrapper">
               <el-icon><Pointer /></el-icon>
             </span>
@@ -172,7 +178,7 @@ const logout = () => {
 
     <!-- 右側主內容容器 -->
     <main class="main-content-area">
-      <slot></slot>
+      <router-view />
     </main>
   </div>
 </template>
@@ -180,14 +186,21 @@ const logout = () => {
 <style scoped>
 /* --- 1. CSS 變數 --- */
 :root {
-  --sidebar-width-expanded: 250px;
-  --sidebar-width-collapsed: 80px;
+  --sidebar-width-expanded: 200px;
+  --sidebar-width-collapsed: 70px;
 }
 
 /* --- 2. 主佈局 --- */
+
+.logo {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 10px;
+  padding: 0;
+}
 .page-wrapper {
   display: flex;
-  height: 100vh; /* 改為 100vh 佔滿整個視窗高度 */
+  height: 107vh; /* 改為 100vh 佔滿整個視窗高度 */
   width: 100%;
   background-color: #f4f6f9;
 }
@@ -195,9 +208,9 @@ const logout = () => {
 /* --- 3. 側邊欄 --- */
 .sidebar {
   width: var(--sidebar-width-expanded);
-  background-color: #99ff99;
+  background-color: #b9f8b9;
   border-right: 1px solid #dee2e6;
-  transition: width 0.3s ease;
+  transition: width 0.2s ease;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;

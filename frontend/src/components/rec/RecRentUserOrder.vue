@@ -81,43 +81,71 @@ const closeModal = () => {
 }
 
 const proceedWithRent = async () => {
-  if (!memberId.value) {
-    errorMessage.value = '無法獲取會員資訊，請重新登入。'
-    closeModal()
-    return
+  // 檢查是否同意條款
+  if (!agreedToTerms.value) {
+    alert('請同意使用條款。');
+    return;
   }
-  if (!isReadyToRent.value || !agreedToTerms.value) {
-    alert('請完成所有租借步驟並同意使用條款。')
-    return
+  // 檢查所有步驟是否完成
+  if (!isReadyToRent.value) {
+    alert('請完成所有租借步驟並同意使用條款。');
+    return;
   }
-  const rentalData = {
-    memId: memberId.value, // 使用從 store 獲取的會員 ID
-    spotIdRent: selectedSpot.value.spotId,
+
+  // 從下拉選單中找到選擇的付款方式的文字
+  const paymentMethodText = paymentMethods.find(
+    (method) => method.value === selectedPaymentMethod.value
+  )?.text;
+
+  // 根據使用者要求組合新的訂單資料
+  const newOrderData = {
+    memId: memberId.value || 1, // 優先使用登入的會員ID，否則依要求使用 1
     seatsId: selectedSeat.value.seatsId,
-    paymentMethod: selectedPaymentMethod.value,
-  }
-  isLoading.value.rent = true
+    spotIdRent: selectedSpot.value.spotId,
+    recRentDT: new Date().toISOString(), // 紀錄當下時間 (ISO 8601 格式)
+    recStatus: "租借中",
+    recPrice: 30,
+    recRequestPay: 30,
+    recPayment: 30,
+    recPayBy: paymentMethodText, // 使用者選擇的付款方式文字
+    recInvoice: "INVOICExxx",
+    recCarrier: "/xxxTEST",
+    recViolatInt: 0, // 為不可為空的欄位提供預設值 0
+  };
+
+  isLoading.value.rent = true;
+  errorMessage.value = ''; // 清除舊的錯誤訊息
+
   try {
-    const response = await axios.post(`http://localhost:8080/api/rec-rents`, rentalData)
+    // 呼叫後端 API 以產生新的訂單紀錄
+    // 注意: API 端點 `/rec-rent/new` 需要在後端建立
+    const response = await axios.post('http://localhost:8080/rec-rent/new', newOrderData);
+
     if (response.status === 201 || response.status === 200) {
+      // 在瀏覽器 CONSOLE 中顯示後端返回的完整訂單資料
+      console.log("新的訂單紀錄已成功產生:", response.data);
+
       alert(
-        `租借成功！\n站點：${selectedSpot.value.spotName}\n座位：${
-          selectedSeat.value.seatsId
-        }\n付款方式：${paymentMethods.find((p) => p.value === selectedPaymentMethod.value).text}`,
-      )
+        `租借成功！\n訂單ID：${response.data.recId}\n站點：${selectedSpot.value.spotName}\n座位：${selectedSeat.value.seatsId}`
+      );
       // 重置流程
-      selectedSpot.value = null
+      selectedSpot.value = null;
+      selectedSeat.value = null;
+      selectedPaymentMethod.value = null;
+      agreedToTerms.value = false;
     } else {
-      errorMessage.value = '租借失敗，請稍後再試。'
+      errorMessage.value = `租借失敗，伺服器回應狀態碼: ${response.status}`;
     }
   } catch (error) {
-    console.error('租借請求失敗:', error)
-    errorMessage.value = `租借失敗: ${error.response?.data?.message || error.message}`
+    console.error("租借請求失敗:", error);
+    const apiError = error.response?.data?.message || error.message;
+    errorMessage.value = `租借請求失敗: ${apiError}`;
+    alert(`租借失敗: ${apiError}`); // 直接彈出錯誤給使用者
   } finally {
-    isLoading.value.rent = false
-    closeModal() // 無論成功失敗都關閉對話框
+    isLoading.value.rent = false;
+    closeModal(); // 無論成功失敗都關閉對話框
   }
-}
+};
 
 // --- Computed ---
 
@@ -301,8 +329,8 @@ onMounted(() => {
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
 
 .user-order-container {
-  padding: 20px;
-  max-width: 800px;
+  padding: 0px;
+  max-width: 600px;
   margin: auto;
   font-family: 'Microsoft JhengHei', sans-serif;
 }
