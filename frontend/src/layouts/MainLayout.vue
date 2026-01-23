@@ -1,61 +1,7 @@
 <script setup>
-<<<<<<< HEAD
 import { ref, computed } from "vue";
 import { useMemberAuthStore } from '@/stores/memberAuth'
 import { useAdminAuthStore } from '@/stores/adminAuth'
-=======
-import { onMounted, ref } from "vue";
-
-import { useAuthStore } from "@/stores/auth";
-import { useAdminAuthStore } from "@/stores/adminAuth";
-
-onMounted(() => {
-  const authStore = useAuthStore();
-  const adminAuthStore = useAdminAuthStore();
-
-  // 1. 恢復一般會員的登入狀態
-  // if (!authStore.isLogin) {
-  //   const storedUser = localStorage.getItem("member_user");
-  //   if (storedUser) {
-  //     try {
-  //       const userData = JSON.parse(storedUser);
-  //       authStore.login(userData, "member");
-  //       console.log("member login"+userData);
-  //     } catch (e) {
-  //       console.error("恢復會員狀態失敗:", e);
-  //       // 如果解析失敗，清除損壞的資料
-  //       localStorage.removeItem("member_user");
-  //     }
-  //   }
-  // }
-
-  // 2. 恢復管理員的登入狀態
-  if (!adminAuthStore.admin) {
-    const storedAdmin = localStorage.getItem("admin");
-    if (storedAdmin) {
-      try {
-        const adminData = JSON.parse(storedAdmin);
-        adminAuthStore.setAdmin(adminData);
-        console.log("admin login");
-      } catch (e) {
-        console.error("恢復管理員狀態失敗:", e);
-        localStorage.removeItem("admin");
-      }
-    }
-  }
-});
-
-const logout = () => {
-  if (!adminAuthStore.admin) {
-    localStorage.removeItem("admin");
-
-    console.log("admin logout");
-  } else if (!authStore.isLogin) {
-    localStorage.removeItem("member_user");
-    console.log("user logout");
-  }
-};
->>>>>>> main
 
 // --- 版面狀態 ---
 const isSidebarCollapsed = ref(false); // 控制側邊欄是否收合
@@ -85,6 +31,26 @@ const displayUID = computed(() => {
   }
   return null
 })
+
+/**
+ * 登出：
+ * - 清空 Pinia（會員 / 管理員）
+ * - 清空 localStorage
+ * - 停留在首頁
+ */
+const logout = () => {
+  // 清空 Pinia
+  memberAuthStore.clearMemberLogin()
+  adminAuthStore.clearAdmin()
+
+  // 清空 localStorage
+  localStorage.removeItem('member_user')
+  localStorage.removeItem('admin')
+  localStorage.removeItem('token')
+
+  // 留在首頁（刷新一次確保畫面同步）
+  window.location.href = '/'
+}
 </script>
 
 <template>
@@ -101,7 +67,6 @@ const displayUID = computed(() => {
             <span class="menu-text" style="padding: 2px">會員登入</span>
           </router-link>
         </li>
-<<<<<<< HEAD
         <li class="menu-item">
           <span class="menu-text">
             UID：
@@ -112,13 +77,6 @@ const displayUID = computed(() => {
               尚未登入
             </span>
           </span>
-=======
-        <li class="menuu-text">
-          <!-- <span class="icon-wrapper">
-            <el-icon><CircleCheckFilled /></el-icon>
-          </span> -->
-          <span class="menu-text">UID:</span>
->>>>>>> main
         </li>
         <!-- <li class="menu-item">
           <router-link to="/rent" class="member-info">
@@ -178,8 +136,8 @@ const displayUID = computed(() => {
             <span class="menu-text">支持我們</span>
           </router-link>
         </li>
-        <li class="menu-item">
-          <span class="icon-wrapper" @click="logout">
+        <li class="menu-item" @click="logout">
+          <span class="icon-wrapper">
             <el-icon><TopLeft /></el-icon>
           </span>
           <span class="menu-text">登出</span>
@@ -199,7 +157,10 @@ const displayUID = computed(() => {
           </el-icon>
         </button>
       </div>
-      <div class="menu-admin">
+      <div 
+      class="menu-admin"
+      v-if="adminAuthStore.isLogin"
+      >
         <router-link to="/admin" class="member-info">
           <span class="icon-wrapper">
             <el-icon><Tools /></el-icon>
@@ -284,7 +245,8 @@ const displayUID = computed(() => {
   transition: background-color 0.2s;
 }
 
-.menu-item:hover {
+.menu-item:hover,
+.menu-admin:hover {
   background-color: #f5f7fa;
 }
 
