@@ -90,7 +90,19 @@ const routes = [
         name: 'rec-rent-user',
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
+      {
+        path: '/snake', // 方便用戶記憶的短網址
+        name: 'user-snake-game',
+        component: SnakeGame,
+      },
     ],
+  },
+
+  {
+    path: '/payment-checkout/:recId',
+    name: 'payment-checkout',
+    // 確保路徑指向您真正存在的檔案 (ecpay 或 payment 資料夾)
+    component: () => import('@/views/ecpay/PaymentView.vue'),
   },
 
   /**
@@ -175,12 +187,6 @@ const routes = [
         component: RedemptionLogList,
       },
 
-      // [功能] 金流與遊戲 (後台也可以進入遊戲)
-      {
-        path: 'payment',
-        name: 'Payment',
-        component: PaymentView,
-      },
       {
         path: 'snake-game',
         name: 'admin-snake-game',

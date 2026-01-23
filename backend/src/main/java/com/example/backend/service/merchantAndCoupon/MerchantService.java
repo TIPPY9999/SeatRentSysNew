@@ -1,6 +1,7 @@
 package com.example.backend.service.merchantAndCoupon;
 
 import com.example.backend.model.merchantAndCoupon.MerchantBean;
+import com.example.backend.repository.merchantAndCoupon.DiscountRepository;
 import com.example.backend.repository.merchantAndCoupon.MerchantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,9 +16,8 @@ public class MerchantService {
     @Autowired
     private MerchantRepository merchantRepository;
 
-    public void saveOrUpdate(MerchantBean m) {
-        merchantRepository.save(m); 
-    }
+    @Autowired
+    private DiscountRepository discountRepository;
 
     public void deleteMerchant(int id) {
         merchantRepository.deleteById(id);
@@ -37,5 +37,22 @@ public class MerchantService {
             return merchantRepository.findAll();
         }
         return merchantRepository.findByKeyword(kw.trim());
+    }
+
+    public void saveOrUpdate(MerchantBean m) {
+        // 1. 執行商家儲存
+        merchantRepository.save(m);
+
+        // 2. 核心邏輯：如果商家狀態被設為 0 (停用)
+        if (m.getMerchantId() != null) {
+            if (m.getMerchantStatus() == 0) {
+                // 商家停用：強制所有優惠券下架 (狀態 3)
+                discountRepository.disableAllByMerchantId(m.getMerchantId());
+            } else if (m.getMerchantStatus() == 1) {
+                // 商家啟用：觸發該商家優惠券的「狀態重算」
+                // 這樣原本被強制下架(3)的優惠券，若還在有效日期內，就會變回 1
+                discountRepository.relistAllByMerchantId(m.getMerchantId());
+            }
+        }
     }
 }

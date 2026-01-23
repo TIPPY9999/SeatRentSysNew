@@ -19,19 +19,37 @@ public interface DiscountRepository extends JpaRepository<DiscountBean, Integer>
     List<DiscountBean> findAll();
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query(value = "UPDATE discount SET couponStatus = CASE " +
-                   "WHEN endDate < CAST(GETDATE() AS DATE) THEN 2 " +
-                   "WHEN startDate > CAST(GETDATE() AS DATE) THEN 0 " +
-                   "ELSE 1 END " +
-                   "WHERE couponStatus IS NULL OR couponStatus != 3", nativeQuery = true)
+    @Query(value = "UPDATE d SET d.couponStatus = CASE " +
+            "WHEN m.merchantStatus = 0 THEN 3 " + // 商家停用優先權最高，強制下架
+            "WHEN d.endDate < CAST(GETDATE() AS DATE) THEN 2 " +
+            "WHEN d.startDate > CAST(GETDATE() AS DATE) THEN 0 " +
+            "ELSE 1 END " +
+            "FROM discount d " +
+            "JOIN merchant m ON d.merchantId = m.merchantId " + // 關聯商家表
+            "WHERE d.couponStatus != 3 OR m.merchantStatus = 0", nativeQuery = true)
     int autoUpdateStatus();
 
     // [重點] 這裡也要有
     @EntityGraph(attributePaths = "merchant")
-    @Query("SELECT d FROM DiscountBean d WHERE d.couponName LIKE %:keyword% OR d.couponDescription LIKE %:keyword%")
+    @Query("SELECT d FROM DiscountBean d LEFT JOIN d.merchant m " +
+            "WHERE d.couponName LIKE %:keyword% " +
+            "OR d.couponDescription LIKE %:keyword% " +
+            "OR m.merchantName LIKE %:keyword%") // 加上商家名稱搜尋，更符合直覺
     List<DiscountBean> findByKeyword(@Param("keyword") String keyword);
 
     // [重點] 這裡也要有
     @EntityGraph(attributePaths = "merchant")
     List<DiscountBean> findByMerchantId(Integer merchantId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE DiscountBean d SET d.couponStatus = 3 WHERE d.merchantId = :merchantId AND d.couponStatus != 3")
+    void disableAllByMerchantId(@Param("merchantId") Integer merchantId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "UPDATE discount SET couponStatus = CASE " +
+            "WHEN endDate < CAST(GETDATE() AS DATE) THEN 2 " +
+            "WHEN startDate > CAST(GETDATE() AS DATE) THEN 0 " +
+            "ELSE 1 END " +
+            "WHERE merchantId = :merchantId AND couponStatus = 3", nativeQuery = true)
+    void relistAllByMerchantId(@Param("merchantId") Integer merchantId);
 }

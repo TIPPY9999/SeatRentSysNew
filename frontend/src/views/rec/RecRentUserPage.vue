@@ -48,6 +48,22 @@ const goToAddView = () => {
 const backToList = () => {
   setActiveView("list");
 };
+const handlePayment = async (recId) => {
+  try {
+    // 呼叫您的後端 API
+    // 注意：因為後端回傳的是 HTML 表單字串，所以不能用一般的 json 處理
+    const response = await axios.post(`/api/payment/checkout?recId=${recId}`);
+    
+    // 將後端傳回的自動跳轉表單插入頁面並執行
+    const div = document.createElement('div');
+    div.innerHTML = response.data; // 這是 EcpayUtils 產生的 <form>...<script>
+    document.body.appendChild(div);
+    document.forms[0].submit(); // 觸發跳轉至綠界
+    
+  } catch (error) {
+    console.error("付款發起失敗", error);
+  }
+};
 
 // --- 4. 路由監聽 (Route Listener from UserPage) ---
 onMounted(() => {
