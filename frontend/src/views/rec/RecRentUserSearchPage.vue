@@ -178,14 +178,20 @@ const closeInfoWindow = () => {
 
 // 處理導航至租借或歸還頁面
 const handleNavigation = (action) => {
-  if (authStore.isLogin) {
-    router.push({ name: "rec-rent-user", params: { action } });
-  } else {
-    const redirectPath = router.resolve({ name: "rec-rent-user", params: { action } })
-      .path;
-    router.push({ name: "login", query: { redirect: redirectPath } });
+  const spotId = infoWindow.value.spot?.id
+  let routeParams = { name: 'rec-rent-user', params: { action } }
+
+  if (action === 'order' && spotId) {
+    routeParams.query = { spotId }
   }
-};
+
+  if (authStore.isLogin) {
+    router.push(routeParams)
+  } else {
+    const redirectPath = router.resolve(routeParams).path
+    router.push({ name: 'login', query: { redirect: redirectPath } })
+  }
+}
 
 // Vue 組件掛載時執行的初始化
 onMounted(() => {

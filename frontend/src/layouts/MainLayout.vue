@@ -70,10 +70,7 @@ const toggleSidebar = () => {
       <ul class="menu-list">
         <li class="menu-item">
           <router-link to="/" class="member-info">
-          <span class="icon-wrapper">
-              <el-icon><House /></el-icon>
-            </span>
-            <span class="logo">Take@Seat</span>
+            <span class="menu-text" style="padding: 2px">Take@Seat</span>
           </router-link>
         </li>
         <li class="menu-item">
@@ -81,11 +78,13 @@ const toggleSidebar = () => {
             <span class="icon-wrapper">
               <el-icon><Avatar /></el-icon>
             </span>
-            <span class="menu-text" style="padding: 2px">會員登入</span>
+            <span class="menu-text" >會員登入</span>
           </router-link>
         </li>
         <li class="menu-text">
-          <span class="menu-text"> UID:</span>
+          <router-link to="/profile" class="member-info">
+            <span class="menu-text" style="font-size:medium;"> UID: 123e4rtyu</span>
+          </router-link>
         </li>
 
         <li class="menu-item">
@@ -193,7 +192,7 @@ const toggleSidebar = () => {
 }
 .page-wrapper {
   display: flex;
-  height: 107vh; /* 改為 100vh 佔滿整個視窗高度 */
+  height: 100vh; /* 改為 100vh 佔滿整個視窗高度 */
   width: 100%;
   background-color: #f4f6f9;
 }
@@ -207,7 +206,6 @@ const toggleSidebar = () => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .page-wrapper.sidebar-collapsed .sidebar {
@@ -239,6 +237,9 @@ const toggleSidebar = () => {
   list-style: none;
   padding: 0;
   margin: 10px 0;
+  flex-grow: 1;
+  overflow-y: auto;
+  overflow-x: hidden; /* 新增：防止水平滾動條 */
 }
 
 .menu-item {
