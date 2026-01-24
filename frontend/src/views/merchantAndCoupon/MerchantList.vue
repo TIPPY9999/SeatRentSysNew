@@ -1,113 +1,158 @@
 <script setup>
-/**
- * MerchantList.vue：商家管理系統
- * [修正] 移除 TypeScript 語法，回歸純 JS 邏輯
- * [修正] 移除 catch 區塊中未使用的錯誤變數 e，解決 ESLint 警告
- */
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Swal from 'sweetalert2'
+import { Search } from '@element-plus/icons-vue'
 
-const merchants = ref([])
-const keyword = ref('')
+const router = useRouter()
+
+// 狀態管理
+const merchantList = ref([])
 const loading = ref(false)
-const isEditModalOpen = ref(false)
+const searchQuery = ref('')
+const dialogVisible = ref(false)
+const isEdit = ref(false)
 
-// 表單初始狀態
-const initialForm = {
+// 分頁狀態
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalItems = ref(0) // 總筆數 (用於分頁)
+
+// 表單狀態
+const form = ref({
   merchantId: null,
   merchantName: '',
   merchantPhone: '',
   merchantEmail: '',
   merchantAddress: '',
   merchantStatus: 1,
-}
+})
 
-// 響應式表單物件
-const editingForm = ref({ ...initialForm })
+// 計算營運中商家 (若後端沒回傳統計數據，可用此前端計算)
+// 若要依賴後端分頁回傳的總數，此處僅能計算「當前頁面」的狀態
+const activeMerchantsCount = computed(() => {
+  return merchantList.value.filter((m) => m.merchantStatus === 1).length
+})
 
-// 1. 取得商家清單
+// 獲取資料
 const fetchMerchants = async () => {
   loading.value = true
   try {
     const res = await axios.get('http://localhost:8080/api/merchants', {
-      params: { keyword: keyword.value },
+      params: {
+        // 如果後端支援分頁，請保留 page/size；若無，後端可能只看 keyword
+        page: currentPage.value,
+        size: pageSize.value,
+        keyword: searchQuery.value,
+      },
     })
-    // 對應後端 Result 結構
-    merchants.value = res.data.data || []
-  } catch {
-    // ✅ 修正：移除未使用的 (e)
-    Swal.fire('錯誤', '連線失敗', 'error')
+
+    // 相容性處理：判斷後端是直接回傳 List 還是 Page 物件
+    if (Array.isArray(res.data)) {
+      // 情況 A: 後端回傳 List (無分頁資訊)
+      merchantList.value = res.data
+      totalItems.value = res.data.length
+    } else {
+      // 情況 B: 後端回傳 Page 物件 { data: [], total: 100 }
+      merchantList.value = res.data.data || []
+      totalItems.value = res.data.total || 0
+    }
+  } catch (error) {
+    console.error('獲取商家失敗:', error)
+    Swal.fire('錯誤', '無法載入商家資料', 'error')
   } finally {
     loading.value = false
   }
 }
 
-// 2. 開啟彈窗 (相容新增與編輯)
-const openEditModal = (m = null) => {
-  if (m) {
-    // 編輯模式：深拷貝資料以免影響列表即時顯示
-    editingForm.value = JSON.parse(JSON.stringify(m))
-  } else {
-    // 新增模式：還原為空表單
-    editingForm.value = { ...initialForm }
-  }
-  isEditModalOpen.value = true
-}
-
-// 3. 儲存商家資料 (新增或修改)
-const handleSave = async () => {
-  const id = editingForm.value.merchantId
-  try {
-    if (id) {
-      // 編輯模式：PUT /api/merchants/{id}
-      await axios.put(`http://localhost:8080/api/merchants/${id}`, editingForm.value)
-    } else {
-      // 新增模式：POST /api/merchants
-      await axios.post('http://localhost:8080/api/merchants', editingForm.value)
-    }
-
-    Swal.fire('成功', '資料已儲存', 'success')
-    isEditModalOpen.value = false
-    fetchMerchants()
-  } catch (e) {
-    // 這裡有用到 e.response 顯示具體錯誤，所以保留
-    Swal.fire('失敗', '操作失敗：' + (e.response?.data?.message || '未知錯誤'), 'error')
-  }
-}
-
-// 4. 刪除商家
-const deleteMerchant = (id, name) => {
-  Swal.fire({
-    title: `確定要刪除「${name}」嗎？`,
-    text: '若此商家有優惠券資料，可能會導致刪除失敗！',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    confirmButtonText: '確定刪除',
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const res = await axios.delete(`http://localhost:8080/api/merchants/${id}`)
-
-        // 檢查後端 Result code (200=成功, 500=失敗)
-        if (res.data.code === 200) {
-          Swal.fire('已刪除', '商家已從系統移除', 'success')
-          fetchMerchants()
-        } else {
-          Swal.fire('失敗', res.data.message, 'error')
-        }
-      } catch {
-        // ✅ 修正：移除未使用的 (e)
-        Swal.fire('失敗', '伺服器拒絕刪除', 'error')
-      }
-    }
+// [關鍵功能] 跳轉至商城並過濾優惠券
+const goToMerchantCoupons = (merchantId) => {
+  if (!merchantId) return
+  router.push({
+    path: '/mall',
+    query: { merchantId: merchantId },
   })
 }
 
-const resetSearch = () => {
-  keyword.value = ''
+// 搜尋與分頁處理
+const handleSearch = () => {
+  currentPage.value = 1
   fetchMerchants()
+}
+
+const resetSearch = () => {
+  searchQuery.value = ''
+  fetchMerchants()
+}
+
+const handleSizeChange = (val) => {
+  pageSize.value = val
+  currentPage.value = 1
+  fetchMerchants()
+}
+
+const handleCurrentChange = (val) => {
+  currentPage.value = val
+  fetchMerchants()
+}
+
+// 彈窗與表單操作
+const openAddModal = () => {
+  isEdit.value = false
+  form.value = {
+    merchantId: null,
+    merchantName: '',
+    merchantPhone: '',
+    merchantEmail: '',
+    merchantAddress: '',
+    merchantStatus: 1,
+  }
+  dialogVisible.value = true
+}
+
+const openEditModal = (row) => {
+  isEdit.value = true
+  // 使用淺拷貝避免直接修改表格資料
+  form.value = { ...row }
+  dialogVisible.value = true
+}
+
+const submitForm = async () => {
+  try {
+    if (isEdit.value) {
+      await axios.put(`http://localhost:8080/api/merchants/${form.value.merchantId}`, form.value)
+    } else {
+      await axios.post('http://localhost:8080/api/merchants', form.value)
+    }
+    dialogVisible.value = false
+    Swal.fire('成功', isEdit.value ? '資料已更新' : '商家已新增', 'success')
+    fetchMerchants()
+  } catch (error) {
+    Swal.fire('錯誤', '操作失敗', 'error')
+  }
+}
+
+const deleteMerchant = (id, name) => {
+  Swal.fire({
+    title: '確定刪除？',
+    text: `將刪除商家：${name}`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    confirmButtonText: '確定',
+    cancelButtonText: '取消',
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        await axios.delete(`http://localhost:8080/api/merchants/${id}`)
+        Swal.fire('已刪除', '', 'success')
+        fetchMerchants()
+      } catch (error) {
+        Swal.fire('錯誤', '刪除失敗', 'error')
+      }
+    }
+  })
 }
 
 onMounted(fetchMerchants)
@@ -115,7 +160,6 @@ onMounted(fetchMerchants)
 
 <template>
   <div class="merchant-list-container">
-    <!-- ========== Header 區域 ========== -->
     <section class="content-header">
       <div class="container-fluid">
         <div class="row align-items-center">
@@ -129,7 +173,7 @@ onMounted(fetchMerchants)
                 <p class="subtitle">管理合作商家資訊與狀態</p>
               </div>
               <div class="title-actions">
-                <el-button type="success" class="action-btn add-btn" @click="openEditModal()">
+                <el-button type="success" class="action-btn add-btn" @click="openAddModal()">
                   <i class="fas fa-plus mr-1"></i> 新增商家
                 </el-button>
               </div>
@@ -139,7 +183,6 @@ onMounted(fetchMerchants)
       </div>
     </section>
 
-    <!-- ========== 統計卡片 ========== -->
     <section class="content">
       <div class="container-fluid">
         <transition name="fade-slide" appear>
@@ -149,8 +192,8 @@ onMounted(fetchMerchants)
                 <div class="stat-card total-card">
                   <div class="stat-icon"><i class="fas fa-store"></i></div>
                   <div class="stat-info">
-                    <h3>{{ merchants.length }}</h3>
-                    <span>總商家數</span>
+                    <h3>{{ merchants ? merchants.length : merchantList.length }}</h3>
+                    <span>目前列表筆數</span>
                   </div>
                 </div>
               </el-col>
@@ -158,7 +201,7 @@ onMounted(fetchMerchants)
                 <div class="stat-card active-card">
                   <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                   <div class="stat-info">
-                    <h3>{{ merchants.filter((m) => m.merchantStatus === 1).length }}</h3>
+                    <h3>{{ activeMerchantsCount }}</h3>
                     <span>營運中</span>
                   </div>
                 </div>
@@ -167,14 +210,13 @@ onMounted(fetchMerchants)
                 <div class="stat-card inactive-card">
                   <div class="stat-icon"><i class="fas fa-pause-circle"></i></div>
                   <div class="stat-info">
-                    <h3>{{ merchants.filter((m) => m.merchantStatus === 0).length }}</h3>
+                    <h3>{{ merchantList.length - activeMerchantsCount }}</h3>
                     <span>停用中</span>
                   </div>
                 </div>
               </el-col>
             </el-row>
 
-            <!-- ========== 主要表格卡片 ========== -->
             <el-card shadow="hover" class="table-card">
               <template #header>
                 <div class="card-header-content">
@@ -182,23 +224,23 @@ onMounted(fetchMerchants)
                     <span class="header-icon"><i class="fas fa-list"></i></span>
                     <span class="header-text">商家列表</span>
                     <el-tag type="primary" effect="light" size="small" round
-                      >{{ merchants.length }} 筆</el-tag
+                      >{{ totalItems }} 筆</el-tag
                     >
                   </div>
                 </div>
               </template>
 
-              <!-- 搜尋區塊 -->
               <div class="filter-bar">
                 <el-input
-                  v-model="keyword"
+                  v-model="searchQuery"
                   placeholder="搜尋名稱或地址..."
-                  prefix-icon="Search"
+                  :prefix-icon="Search"
                   clearable
                   class="filter-input"
-                  @keyup.enter="fetchMerchants"
+                  @keyup.enter="handleSearch"
+                  @clear="handleSearch"
                 />
-                <el-button type="primary" @click="fetchMerchants" class="search-btn">
+                <el-button type="primary" @click="handleSearch" class="search-btn">
                   <i class="fas fa-search mr-1"></i> 搜尋
                 </el-button>
                 <el-button @click="resetSearch" class="reset-btn">
@@ -206,9 +248,8 @@ onMounted(fetchMerchants)
                 </el-button>
               </div>
 
-              <!-- 表格 -->
               <el-table
-                :data="merchants"
+                :data="merchantList"
                 v-loading="loading"
                 stripe
                 highlight-current-row
@@ -221,14 +262,20 @@ onMounted(fetchMerchants)
                     <span class="id-tag">#{{ row.merchantId }}</span>
                   </template>
                 </el-table-column>
+
                 <el-table-column prop="merchantName" label="商家名稱" min-width="150">
                   <template #default="{ row }">
-                    <div class="merchant-name-cell">
+                    <div
+                      class="merchant-name-cell click-link"
+                      @click="goToMerchantCoupons(row.merchantId)"
+                      title="點擊前往商城查看優惠券"
+                    >
                       <i class="fas fa-store text-primary mr-2"></i>
                       <span class="name-text">{{ row.merchantName }}</span>
                     </div>
                   </template>
                 </el-table-column>
+
                 <el-table-column prop="merchantAddress" label="地址" min-width="200">
                   <template #default="{ row }">
                     <div class="address-cell">
@@ -239,16 +286,16 @@ onMounted(fetchMerchants)
                 </el-table-column>
                 <el-table-column prop="merchantPhone" label="電話" width="140">
                   <template #default="{ row }">
-                    <span class="phone-text"
-                      ><i class="fas fa-phone mr-1"></i>{{ row.merchantPhone || '-' }}</span
-                    >
+                    <span class="phone-text">
+                      <i class="fas fa-phone mr-1"></i>{{ row.merchantPhone || '-' }}
+                    </span>
                   </template>
                 </el-table-column>
                 <el-table-column prop="merchantEmail" label="Gmail" min-width="180">
                   <template #default="{ row }">
-                    <span class="email-text"
-                      ><i class="fas fa-envelope mr-1"></i>{{ row.merchantEmail || '-' }}</span
-                    >
+                    <span class="email-text">
+                      <i class="fas fa-envelope mr-1"></i>{{ row.merchantEmail || '-' }}
+                    </span>
                   </template>
                 </el-table-column>
                 <el-table-column prop="merchantStatus" label="狀態" width="120" align="center">
@@ -291,57 +338,67 @@ onMounted(fetchMerchants)
                 </el-table-column>
               </el-table>
 
-              <el-empty v-if="merchants.length === 0 && !loading" description="目前沒有商家資料" />
+              <div class="pagination-wrapper">
+                <el-pagination
+                  v-model:current-page="currentPage"
+                  v-model:page-size="pageSize"
+                  :page-sizes="[10, 20, 50]"
+                  :total="totalItems"
+                  layout="total, sizes, prev, pager, next, jumper"
+                  @size-change="handleSizeChange"
+                  @current-change="handleCurrentChange"
+                />
+              </div>
+
+              <el-empty
+                v-if="merchantList.length === 0 && !loading"
+                description="目前沒有商家資料"
+              />
             </el-card>
           </div>
         </transition>
       </div>
     </section>
 
-    <!-- ========== 編輯彈窗 ========== -->
     <el-dialog
-      v-model="isEditModalOpen"
-      :title="editingForm.merchantId ? `編輯商家 #${editingForm.merchantId}` : '新增商家'"
+      v-model="dialogVisible"
+      :title="isEdit ? `編輯商家 #${form.merchantId}` : '新增商家'"
       width="600px"
       class="modern-dialog"
       :close-on-click-modal="false"
     >
-      <el-form :model="editingForm" label-width="80px" label-position="top" class="modern-form">
+      <el-form :model="form" label-width="80px" label-position="top" class="modern-form">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="商家名稱" required>
-              <el-input v-model="editingForm.merchantName" placeholder="請輸入商家名稱">
+              <el-input v-model="form.merchantName" placeholder="請輸入商家名稱">
                 <template #prefix><i class="fas fa-store"></i></template>
               </el-input>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="聯絡電話">
-              <el-input v-model="editingForm.merchantPhone" placeholder="請輸入聯絡電話">
+              <el-input v-model="form.merchantPhone" placeholder="請輸入聯絡電話">
                 <template #prefix><i class="fas fa-phone"></i></template>
               </el-input>
             </el-form-item>
           </el-col>
         </el-row>
         <el-form-item label="電子信箱">
-          <el-input v-model="editingForm.merchantEmail" placeholder="請輸入電子信箱">
+          <el-input v-model="form.merchantEmail" placeholder="請輸入電子信箱">
             <template #prefix><i class="fas fa-envelope"></i></template>
           </el-input>
         </el-form-item>
         <el-form-item label="商家地址">
           <el-input
-            v-model="editingForm.merchantAddress"
+            v-model="form.merchantAddress"
             type="textarea"
             :rows="2"
             placeholder="請輸入商家地址"
           />
         </el-form-item>
         <el-form-item label="營運狀態">
-          <el-select
-            v-model="editingForm.merchantStatus"
-            placeholder="請選擇狀態"
-            style="width: 100%"
-          >
+          <el-select v-model="form.merchantStatus" placeholder="請選擇狀態" style="width: 100%">
             <el-option :value="1" label="營運中">
               <i class="fas fa-check-circle text-success mr-2"></i>營運中
             </el-option>
@@ -353,10 +410,10 @@ onMounted(fetchMerchants)
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="isEditModalOpen = false">
+          <el-button @click="dialogVisible = false">
             <i class="fas fa-times mr-1"></i> 取消
           </el-button>
-          <el-button type="primary" @click="handleSave" class="save-btn">
+          <el-button type="primary" @click="submitForm" class="save-btn">
             <i class="fas fa-save mr-1"></i> 儲存資料
           </el-button>
         </div>
@@ -597,9 +654,22 @@ onMounted(fetchMerchants)
   align-items: center;
 }
 
+/* [新增] 可點擊的樣式 */
+.click-link {
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 4px 0;
+}
+
+.click-link:hover .name-text {
+  color: #409eff;
+  text-decoration: underline;
+}
+
 .name-text {
   font-weight: 600;
   color: #303133;
+  transition: color 0.2s;
 }
 
 .address-cell {
@@ -621,6 +691,13 @@ onMounted(fetchMerchants)
 .status-tag {
   border-radius: 20px;
   padding: 4px 12px;
+}
+
+.pagination-wrapper {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 20px;
 }
 
 /* ========== 彈窗樣式 ========== */

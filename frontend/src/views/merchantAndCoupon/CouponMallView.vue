@@ -42,16 +42,16 @@
             <p>在店內結帳時出示此頁面，輸入店家核銷碼即可享折扣</p>
           </div>
         </div>
-        
+
         <!-- 搜尋區域 -->
         <div class="search-section">
           <div class="search-box">
             <i class="fas fa-search search-icon"></i>
-            <input 
-              v-model="searchKeyword" 
+            <input
+              v-model="searchKeyword"
               @input="handleSearch"
-              type="text" 
-              class="search-input" 
+              type="text"
+              class="search-input"
               placeholder="搜尋優惠券名稱、描述或商家名稱..."
             />
             <button v-if="searchKeyword" @click="clearSearch" class="clear-btn">
@@ -76,13 +76,20 @@
             <div class="coupon-card">
               <!-- 圖片區 -->
               <div class="card-image">
-                <img 
-                  :src="coupon.couponImg ? `http://localhost:8080/images/${coupon.couponImg}` : 'https://placehold.co/600x400?text=Discount'" 
+                <img
+                  :src="
+                    coupon.couponImg
+                      ? `http://localhost:8080/images/${coupon.couponImg}`
+                      : 'https://placehold.co/600x400?text=Discount'
+                  "
                   :alt="coupon.couponName"
                 />
                 <div class="merchant-badge">
                   <i class="fas fa-store mr-1"></i>
-                  {{ coupon.merchantName || (coupon.merchant ? coupon.merchant.merchantName : '合作商家') }}
+                  {{
+                    coupon.merchantName ||
+                    (coupon.merchant ? coupon.merchant.merchantName : '合作商家')
+                  }}
                 </div>
               </div>
 
@@ -90,7 +97,7 @@
               <div class="card-content">
                 <h3 class="coupon-title">{{ coupon.couponName }}</h3>
                 <p class="coupon-description">{{ coupon.couponDescription }}</p>
-                
+
                 <div class="card-footer">
                   <div class="coupon-info">
                     <div class="points-required">
@@ -102,13 +109,18 @@
                       有效期至 {{ coupon.endDate }}
                     </div>
                   </div>
-                  <button 
+                  <button
                     @click="handleRedeem(coupon)"
                     class="redeem-btn"
-                    :class="{ 'disabled': !canAfford(coupon.pointsRequired) }"
+                    :class="{ disabled: !canAfford(coupon.pointsRequired) }"
                     :disabled="!canAfford(coupon.pointsRequired)"
                   >
-                    <i :class="canAfford(coupon.pointsRequired) ? 'fas fa-shopping-cart' : 'fas fa-lock'" class="mr-1"></i>
+                    <i
+                      :class="
+                        canAfford(coupon.pointsRequired) ? 'fas fa-shopping-cart' : 'fas fa-lock'
+                      "
+                      class="mr-1"
+                    ></i>
                     {{ canAfford(coupon.pointsRequired) ? '現場核銷' : '點數不足' }}
                   </button>
                 </div>
@@ -129,24 +141,24 @@
         <!-- 分頁 -->
         <div v-if="totalPages > 1" class="pagination-wrapper">
           <div class="pagination">
-            <button 
-              class="page-btn" 
+            <button
+              class="page-btn"
               :disabled="currentPage === 1"
               @click="changePage(currentPage - 1)"
             >
               <i class="fas fa-chevron-left"></i>
             </button>
-            <button 
-              v-for="page in totalPages" 
-              :key="page" 
+            <button
+              v-for="page in totalPages"
+              :key="page"
               class="page-btn"
-              :class="{ 'active': currentPage === page }"
+              :class="{ active: currentPage === page }"
               @click="changePage(page)"
             >
               {{ page }}
             </button>
-            <button 
-              class="page-btn" 
+            <button
+              class="page-btn"
               :disabled="currentPage === totalPages"
               @click="changePage(currentPage + 1)"
             >
@@ -160,72 +172,98 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import Swal from 'sweetalert2'
 
 const router = useRouter()
+const route = useRoute()
+
+// 狀態變數
 const currentPoints = ref(0)
 const loading = ref(true)
 const searchKeyword = ref('')
+const allCoupons = ref([])
+const currentPage = ref(1)
+const itemsPerPage = 12
 
-// 分頁與資料邏輯
-const allCoupons = ref([])       // 原始所有資料
-const currentPage = ref(1)       // 當前頁碼
-const itemsPerPage = 12          // 每頁顯示 12 筆
-
-// 計算過濾後的資料
+// 計算屬性：只顯示上架中 (1) 的優惠券
 const filteredCoupons = computed(() => {
-  return allCoupons.value.filter(c => c.couponStatus === 1)
+  return allCoupons.value.filter((c) => c.couponStatus === 1)
 })
 
-// 計算當前分頁應顯示的資料
+// 計算屬性：當前頁面資料
 const pagedCoupons = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   const end = start + itemsPerPage
   return filteredCoupons.value.slice(start, end)
 })
 
-// 計算總頁數
-const totalPages = computed(() => {
-  return Math.ceil(filteredCoupons.value.length / itemsPerPage)
-})
+const totalPages = computed(() => Math.ceil(filteredCoupons.value.length / itemsPerPage))
 
+// 滾動置頂
 const scrollToTop = () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const getMemberId = () => localStorage.getItem('memberId')
 
+// 核心資料獲取邏輯
 const fetchData = async () => {
   loading.value = true
   try {
-    const couponRes = await axios.get('http://localhost:8080/api/discounts', {
-      params: { keyword: searchKeyword.value }
-    })
-    allCoupons.value = couponRes.data.data || []
-    
-    // 搜尋後重置到第一頁
+    const targetMerchantId = route.query.merchantId
+
+    // 一律請求「所有」優惠券的 API (避開會報 500 的路徑)
+    const url = 'http://localhost:8080/api/discounts'
+    const params = { keyword: searchKeyword.value }
+
+    const couponRes = await axios.get(url, { params })
+    let allData = couponRes.data.data || []
+
+    // 如果 URL 帶有商家 ID，我們在前端手動篩選
+    if (targetMerchantId) {
+      console.log('正在進行前端過濾，目標商家:', targetMerchantId)
+      // 注意：targetMerchantId 是字串，item.merchantId 可能是數字，所以用 ==
+      allData = allData.filter((item) => {
+        // 同時檢查 item.merchantId 或 item.merchant?.merchantId (看你的 JSON 結構)
+        const mId = item.merchantId || item.merchant?.merchantId
+        return mId == targetMerchantId
+      })
+    }
+
+    allCoupons.value = allData
     currentPage.value = 1
 
+    // 更新會員點數
     const mid = getMemberId()
     if (mid) {
       const memberRes = await axios.get(`http://localhost:8080/api/members/${mid}`)
       currentPoints.value = memberRes.data.data.memPoints || 0
     }
   } catch (error) {
-    console.error('資料載入錯誤', error)
+    console.error('資料載入失敗', error)
   } finally {
     loading.value = false
   }
 }
 
-// 防抖搜尋
+// 監聽路由變化 (處理從商家 A 點到商家 B 的情況)
+watch(
+  () => route.query.merchantId,
+  () => {
+    currentPage.value = 1
+    fetchData()
+  },
+)
+
+// 搜尋處理 (防抖)
 let searchTimer = null
 const handleSearch = () => {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
+    currentPage.value = 1
     fetchData()
   }, 500)
 }
@@ -233,6 +271,13 @@ const handleSearch = () => {
 const clearSearch = () => {
   searchKeyword.value = ''
   fetchData()
+}
+
+// 重置所有過濾條件
+const resetAndFetch = () => {
+  searchKeyword.value = ''
+  router.push('/mall') // 清除 URL 參數
+  setTimeout(() => fetchData(), 50)
 }
 
 const changePage = (page) => {
@@ -243,12 +288,12 @@ const changePage = (page) => {
 
 const canAfford = (points) => {
   const mid = getMemberId()
-  if (!mid) return true 
+  if (!mid) return true
   return currentPoints.value >= points
 }
 
 const handleRedeem = (coupon) => {
-  const mid = getMemberId();
+  const mid = getMemberId()
   if (!mid) {
     Swal.fire({
       title: '請先登入',
@@ -256,11 +301,36 @@ const handleRedeem = (coupon) => {
       icon: 'info',
       showCancelButton: true,
       confirmButtonText: '立即登入',
-      confirmButtonColor: '#ffc107'
-    }).then((res) => { if (res.isConfirmed) router.push('/login') })
+      confirmButtonColor: '#ffc107',
+    }).then((res) => {
+      if (res.isConfirmed) router.push('/login')
+    })
     return
   }
-  // ... 核銷邏輯 (與之前相同)
+
+  Swal.fire({
+    title: '確認兌換？',
+    html: `將扣除 <b class="text-warning">${coupon.pointsRequired}</b> 點數<br>兌換 <b>${coupon.couponName}</b>`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: '確定兌換',
+    cancelButtonText: '取消',
+    confirmButtonColor: '#ffc107',
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      // 這裡串接後端兌換 API
+      try {
+        await axios.post(`http://localhost:8080/api/discounts/redeem`, {
+          memberId: mid,
+          couponId: coupon.couponId,
+        })
+        Swal.fire('兌換成功！', '請向店員出示核銷畫面', 'success')
+        fetchData() // 重新載入點數與狀態
+      } catch (err) {
+        Swal.fire('兌換失敗', err.response?.data?.message || '點數不足或系統錯誤', 'error')
+      }
+    }
+  })
 }
 
 onMounted(fetchData)
@@ -367,7 +437,8 @@ onMounted(fetchData)
   color: #e6a23c;
 }
 
-.game-btn, .home-btn {
+.game-btn,
+.home-btn {
   padding: 10px 20px;
   border-radius: 10px;
   font-weight: 600;
@@ -435,8 +506,13 @@ onMounted(fetchData)
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .header-text h1 {
@@ -757,7 +833,9 @@ onMounted(fetchData)
 }
 
 /* ========== 間距工具類 ========== */
-.mr-1 { margin-right: 4px; }
+.mr-1 {
+  margin-right: 4px;
+}
 
 /* ========== 響應式設計 ========== */
 @media (max-width: 768px) {
@@ -765,16 +843,16 @@ onMounted(fetchData)
     flex-direction: column;
     gap: 16px;
   }
-  
+
   .navbar-right {
     flex-wrap: wrap;
     justify-content: center;
   }
-  
+
   .coupon-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .header-text h1 {
     font-size: 1.5rem;
   }

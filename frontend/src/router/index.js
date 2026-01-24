@@ -76,8 +76,8 @@ const routes = [
     component: CouponMall,
   },
   {
-    path: '/snake', // 方便用戶記憶的短網址
-    name: 'user-snake-game',
+    path: '/snake',
+    name: 'snake-game',
     component: SnakeGame,
   },
 
