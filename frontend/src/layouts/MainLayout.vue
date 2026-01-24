@@ -2,12 +2,12 @@
 import { ref, computed } from 'vue'
 import { useMemberAuthStore } from '@/stores/memberAuth'
 import { useAdminAuthStore } from '@/stores/adminAuth'
-import { useRouter } from 'vue-router' // 新增這行
+import { useRouter } from 'vue-router' // ✅ 已有
 
-const router = useRouter() // 初始化 router
+const router = useRouter()
 
 // --- 版面狀態 ---
-const isSidebarCollapsed = ref(false) // 控制側邊欄是否收合
+const isSidebarCollapsed = ref(false)
 
 /**
  * 切換側邊欄的收合狀態
@@ -26,14 +26,38 @@ const adminAuthStore = useAdminAuthStore()
  * - 都沒有就尚未登入
  */
 const displayUID = computed(() => {
-  if (memberAuthStore.isLogin) {
-    return memberAuthStore.member.memUsername
-  }
   if (adminAuthStore.isLogin) {
-    return adminAuthStore.admin.username
+    return adminAuthStore.admin?.username || ''
+  }
+  if (memberAuthStore.isLogin) {
+    return memberAuthStore.member?.memUsername || ''
   }
   return null
 })
+
+/**
+ * ✅ 產品化：點擊 UID 的導頁策略
+ * - 未登入：不動作（也可改成導去 /login）
+ * - 管理員登入：導去 /admin
+ * - 會員登入：導去 /profile
+ */
+const handleUidClick = () => {
+  if (!displayUID.value) return
+
+  if (adminAuthStore.isLogin) {
+    router.push('/admin')
+    return
+  }
+
+  // member
+  router.push('/profile')
+}
+
+/**
+ * ✅ 產品化：讓游標跟可點性一致
+ */
+const uidClickable = computed(() => !!displayUID.value)
+const uidCursor = computed(() => (uidClickable.value ? 'pointer' : 'default'))
 
 /**
  * 登出：
@@ -70,7 +94,10 @@ const logout = () => {
             <span class="logo">Take@Seat</span>
           </div>
         </li>
-        <li class="menu-item">
+
+        <!-- ✅ 產品化：未登入才顯示「會員登入」 -->
+        <!-- 若你堅持要一直顯示，把 v-if 移除即可 -->
+        <li class="menu-item" v-if="!memberAuthStore.isLogin && !adminAuthStore.isLogin">
           <router-link to="/login" class="member-info">
             <span class="icon-wrapper">
               <el-icon><Avatar /></el-icon>
@@ -78,30 +105,33 @@ const logout = () => {
             <span class="menu-text">會員登入</span>
           </router-link>
         </li>
+
+        <!-- ✅ 合併版 + 產品化：UID 行為 -->
         <li class="menu-item">
-          <div 
-            class="member-info" 
-            @click="!adminAuthStore.isLogin && router.push('/profile')" 
-            :style="{ 
-              cursor: adminAuthStore.isLogin ? 'default' : 'pointer', 
-              width: '100%' 
+          <div
+            class="member-info"
+            @click="handleUidClick"
+            :style="{
+              cursor: uidCursor,
+              width: '100%',
             }"
+            :aria-disabled="!uidClickable"
           >
             <span class="menu-text">
               UID：
-              <span v-if="displayUID">
-                {{ displayUID }}
-              </span>
+              <span v-if="displayUID">{{ displayUID }}</span>
               <span v-else> 尚未登入 </span>
             </span>
           </div>
         </li>
+
         <li class="menu-item" @click="router.push('/SearchSpot')">
-            <span class="icon-wrapper">
-              <el-icon><Pointer /></el-icon>
-            </span>
-            <span class="menu-text">租借服務</span>
+          <span class="icon-wrapper">
+            <el-icon><Pointer /></el-icon>
+          </span>
+          <span class="menu-text">租借服務</span>
         </li>
+
         <li class="menu-item">
           <router-link to="/mall" class="member-info">
             <span class="icon-wrapper">
@@ -110,6 +140,7 @@ const logout = () => {
             <span class="menu-text">商家優惠</span>
           </router-link>
         </li>
+
         <li class="menu-item">
           <router-link to="/snake" class="member-info">
             <span class="icon-wrapper">
@@ -118,24 +149,28 @@ const logout = () => {
             <span class="menu-text">小遊戲</span>
           </router-link>
         </li>
+
         <li class="menu-item">
           <span class="icon-wrapper">
             <el-icon><MapLocation /></el-icon>
           </span>
           <span class="menu-text">猜你喜歡</span>
         </li>
+
         <li class="menu-item">
           <span class="icon-wrapper">
             <el-icon><Comment /></el-icon>
           </span>
           <span class="menu-text">分享討論</span>
         </li>
+
         <li class="menu-item">
           <span class="icon-wrapper">
             <el-icon><Phone /></el-icon>
           </span>
           <span class="menu-text">客服支援</span>
         </li>
+
         <li class="menu-item">
           <router-link to="/payment" class="member-info">
             <span class="icon-wrapper">
@@ -144,6 +179,7 @@ const logout = () => {
             <span class="menu-text">支持我們</span>
           </router-link>
         </li>
+
         <li class="menu-item" @click="logout">
           <span class="icon-wrapper">
             <el-icon><TopLeft /></el-icon>
@@ -165,6 +201,8 @@ const logout = () => {
           </el-icon>
         </button>
       </div>
+
+      <!-- ✅ 管理員快捷入口：保留你原本邏輯 -->
       <div class="menu-admin" v-if="adminAuthStore.isLogin">
         <router-link to="/admin" class="member-info">
           <span class="icon-wrapper">

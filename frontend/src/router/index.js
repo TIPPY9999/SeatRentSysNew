@@ -53,30 +53,43 @@ const routes = [
         path: 'SearchSpot',
         component: () => import('@/views/rec/RecRentUserSearchPage.vue'),
       },
+
+      // 會員頁面
       {
         path: 'profile',
         name: 'member-profile',
         component: MemberProfileView,
       },
+
+      // 會員身份證頁面
       {
         path: 'user-info',
         name: 'member-user-info',
         component: () => import('@/views/rec/IdHoldingPage.vue'),
       },
+
+      // 租借頁面
       {
         path: 'rent/:action?',
         name: 'rec-rent-user',
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
+
+      // --- 新增：優惠券商城 ---
       {
         path: '/mall',
         name: 'coupon-mall',
         component: CouponMall,
       },
+
+      // --- 新增：前台貪食蛇遊戲 ---
       {
         path: '/snake',
         name: 'snake-game',
         component: SnakeGame,
+        path: 'recordRoute',
+        name: 'rec-rent-record',
+        component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
     ],
   },

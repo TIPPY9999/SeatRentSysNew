@@ -26,8 +26,8 @@ spring:
 
   datasource:
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSysNew;encrypt=false;trustServerCertificate=true
-    username: kang
+    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
+    username: tippy
     password: 1234
 
   jpa:

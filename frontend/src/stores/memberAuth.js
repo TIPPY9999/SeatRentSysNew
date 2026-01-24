@@ -3,11 +3,19 @@ import axios from 'axios'
 
 export const useMemberAuthStore = defineStore('memberAuth', {
   state: () => {
+    // ✅ 保留 HEAD：登入狀態還原
     const savedMember = localStorage.getItem('member_user')
     const savedLogin = localStorage.getItem('isLogin') === 'true'
 
     return {
+      /* =====================
+       * 類型 1：登入狀態（核心）
+       * ===================== */
       isLogin: savedLogin,
+
+      /* =====================
+       * 類型 2：會員業務資料（前台會用）
+       * ===================== */
       member: savedMember
         ? JSON.parse(savedMember)
         : {
@@ -17,6 +25,11 @@ export const useMemberAuthStore = defineStore('memberAuth', {
             memPoints: 0,
             memInvoice: '',
           },
+
+      /* =====================
+       * 類型 3：使用者操作暫存（rec 需要）
+       * ===================== */
+      selectedSpotId: null,
     }
   },
 
@@ -36,7 +49,7 @@ export const useMemberAuthStore = defineStore('memberAuth', {
       localStorage.setItem('isLogin', 'true')
     },
 
-    /* ========= 點數 / 資料刷新（保留 HEAD） ========= */
+    /* ========= 點數同步========= */
     async refreshPoints() {
       if (!this.member.memId) return
 
@@ -46,7 +59,6 @@ export const useMemberAuthStore = defineStore('memberAuth', {
         })
 
         if (res.data) {
-          // 重設整個物件，確保 Vue reactivity
           this.member = {
             ...this.member,
             memPoints: res.data.memPoints,
@@ -54,24 +66,18 @@ export const useMemberAuthStore = defineStore('memberAuth', {
           }
 
           localStorage.setItem('member_user', JSON.stringify(this.member))
-          console.log('✅ 點數同步成功', this.member.memPoints)
         }
       } catch (err) {
-        console.warn('❌ 點數同步失敗', err)
+        console.warn('點數同步失敗', err)
       }
     },
 
-    /* ========= 登出（合併強化版） ========= */
+    /* ========= 登出 ========= */
     async clearMemberLogin() {
-      // 1️⃣ 通知後端清除 Session（member2 的優點）
       try {
         await axios.post('http://localhost:8080/api/auth/logout', {}, { withCredentials: true })
-        console.log('✅ 後端 Session 已清除')
-      } catch (err) {
-        console.log('ℹ️ 後端無 Session 或清除失敗')
-      }
+      } catch (_) {}
 
-      // 2️⃣ 清前端狀態
       this.isLogin = false
       this.member = {
         memId: null,
@@ -80,13 +86,19 @@ export const useMemberAuthStore = defineStore('memberAuth', {
         memPoints: 0,
         memInvoice: '',
       }
+      this.selectedSpotId = null
 
-      // 3️⃣ 清 localStorage
       localStorage.removeItem('member_user')
       localStorage.removeItem('isLogin')
       localStorage.removeItem('token')
+    },
 
-      console.log('✅ 前端登入資訊已清理')
+    /* ========= rec 專用 ========= */
+    setSpotId(spotId) {
+      this.selectedSpotId = spotId
+    },
+    clearSpotId() {
+      this.selectedSpotId = null
     },
   },
 })

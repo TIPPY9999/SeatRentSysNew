@@ -80,10 +80,10 @@ public class RecRentController {
     }
 
     // 5. 更新訂單
-    @PutMapping("/{id}")
-    public RecRent update(@PathVariable String id, @RequestBody RecRent recRent) {
+    @PutMapping("/update/{id}")
+    public RecRent update(@PathVariable Integer id, @RequestBody RecRent recRent) {
         // 確保 ID 一致
-        recRent.setRecId(id);
+        recRent.setRecSeqId(id);
         return rentRepos.save(recRent);
     }
 
