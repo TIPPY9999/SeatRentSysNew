@@ -43,6 +43,7 @@ const routes = [
     name: 'login',
     component: LoginView,
   },
+  
 
   // ==========================================
   // [新增] 前台使用者頁面 (不套用後台側邊欄)
@@ -53,10 +54,12 @@ const routes = [
     component: CouponMall,
   },
   {
-    path: '/snake', // 方便用戶記憶的短網址
-    name: 'user-snake-game',
+    path: '/snake', 
+    name: 'snake-game',
     component: SnakeGame,
   },
+  
+ 
 
   // 註冊會員
   {
@@ -90,11 +93,7 @@ const routes = [
         name: 'rec-rent-user',
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
-      {
-        path: '/snake', // 方便用戶記憶的短網址
-        name: 'user-snake-game',
-        component: SnakeGame,
-      },
+      
     ],
   },
 
