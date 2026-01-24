@@ -75,7 +75,6 @@ const logout = () => {
             <span class="menu-text" style="padding: 2px">會員登入</span>
           </router-link>
         </li>
-<<<<<<< HEAD
         <li class="menu-item">
           <span class="menu-text">
             UID：
@@ -86,10 +85,6 @@ const logout = () => {
               尚未登入
             </span>
           </span>
-=======
-        <li class="menu-text">
-          <span class="menu-text"> UID:</span>
->>>>>>> rec
         </li>
 
         <li class="menu-item">
