@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,9 +23,12 @@ import com.example.backend.model.rec.RentDetails;
 import com.example.backend.repository.rec.RecRentRepository;
 import com.example.backend.service.rec.RecDetailMgnService;
 
+import jakarta.transaction.Transactional;
+
 @RestController
-@RequestMapping("/api/rec-rents")
+@RequestMapping("/rec-rent") // 1. 將根路徑改為 /rec-rent
 @CrossOrigin
+@Transactional
 public class RecRentController {
 
     @Autowired
@@ -60,12 +65,18 @@ public class RecRentController {
         return recDetailService.getRecById(id);
     }
 
-    // 4. 新增訂單
-    @PostMapping
-    public RecRent create(@RequestBody RecRent recRent) {
+    // 4. 新增訂單 (修改後)
+    @PostMapping("/new") // 2. 將端點改為 /new
+    public ResponseEntity<RecRent> create(@RequestBody RecRent recRent) {
+        // 3. 在後端控制台打印收到的完整訂單資料
+        System.out.println("後端收到新的訂單請求: " + recRent.toString());
+
         // recSeqId 會由資料庫自動產生
         // recId 會由資料庫自動計算
-        return rentRepos.save(recRent);
+        RecRent savedRent = rentRepos.save(recRent);
+
+        // 4. 返回 201 Created 狀態碼以及已儲存的訂單物件
+        return new ResponseEntity<>(savedRent, HttpStatus.CREATED);
     }
 
     // 5. 更新訂單

@@ -9,20 +9,17 @@ import Swal from 'sweetalert2'
 import LoginView from '@/views/member/LoginView.vue' // 登入頁
 import AdminLayout from '@/layouts/AdminLayout.vue' // 後臺主框架 (包含側邊欄與 Header)
 import AdminHomeView from '@/views/member/AdminHomeView.vue' // 後臺首頁(儀表板)
-
 import MemberListView from '@/views/member/MemberListView.vue'
 import MemberEditView from '@/views/member/MemberEditView.vue'
 import MemberCreateView from '@/views/member/MemberCreateView.vue'
 import PaymentView from '@/views/ecpay/PaymentView.vue'
-
 import AdminListView from '@/views/member/AdminListView.vue'
 import AdminCreateView from '@/views/member/AdminCreateView.vue'
 import AdminEditView from '@/views/member/AdminEditView.vue'
-
 import MemberLayout from '@/layouts/MemberLayout.vue'
 import MemberProfileView from '@/views/member/MemberProfileView.vue'
-
 import AuthLayout from '@/layouts/AuthLayout.vue'
+import MainLayout from '@/layouts/MainLayout.vue'
 
 /**
  * ==========================================
@@ -49,6 +46,32 @@ const routes = [
   // [新增] 前台使用者頁面 (不套用後台側邊欄)
   // ==========================================
   {
+    path: '/',
+    name: 'entrance',
+    component: MainLayout,
+    children: [
+      {
+        path: 'SearchSpot',
+        component: () => import('@/views/rec/RecRentUserSearchPage.vue'),
+      },
+      {
+        path: 'profile',
+        name: 'member-profile',
+        component: MemberProfileView,
+      },
+      {
+        path: 'user-info',
+        name: 'member-user-info',
+        component: () => import('@/views/rec/IdHoldingPage.vue'),
+      },
+      {
+        path: 'rent/:action?',
+        name: 'rec-rent-user',
+        component: () => import('@/views/rec/RecRentUserPage.vue'),
+      },
+    ],
+  },
+  {
     path: '/mall',
     name: 'coupon-mall',
     component: CouponMall,
@@ -73,6 +96,7 @@ const routes = [
     ],
   },
 
+<<<<<<< HEAD
   // 會員頁面
   {
     path: '/member',
@@ -96,6 +120,30 @@ const routes = [
       
     ],
   },
+=======
+  // // 會員頁面
+  // {
+  //   path: '/member',
+  //   component: MemberLayout,
+  //   children: [
+  //     {
+  //       path: 'profile',
+  //       name: 'member-profile',
+  //       component: MemberProfileView,
+  //     },
+  //     {
+  //       path: 'user-info',
+  //       name: 'member-user-info',
+  //       component: () => import('@/views/rec/IdHoldingPage.vue'),
+  //     },
+  //     {
+  //       path: 'rent/:action?',
+  //       name: 'rec-rent-user',
+  //       component: () => import('@/views/rec/RecRentUserPage.vue'),
+  //     },
+  //   ],
+  // },
+>>>>>>> 6e822a850713018201f2f8a977bba945dc1e90ac
 
   {
     path: '/payment-checkout/:recId',
@@ -292,11 +340,7 @@ const routes = [
   // ==========================================
   // 4. 路由守衛與轉址 (Redirects)
   // ==========================================
-  {
-    path: '/',
-    name: 'entrance',
-    component: () => import('@/views/EnterancePage.vue'),
-  },
+
   {
     path: '/:pathMatch(.*)*',
     redirect: '/',

@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted } from "vue";
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/rec-rents";
+const API_URL = "http://localhost:8080/rec-rent";
 
 const rentList = ref([]);
 const searchCriteria = reactive({
@@ -14,6 +14,7 @@ const searchCriteria = reactive({
   spotName: "",
   returnDate: "",
   rentDate: "",
+  recPayment: "",
 });
 
 const emit = defineEmits(["edit-rent", "delete-rent"]);
@@ -29,6 +30,7 @@ const loadRents = async () => {
     if (searchCriteria.spotName) params.append("spotName", searchCriteria.spotName);
     if (searchCriteria.returnDate) params.append("returnDate", searchCriteria.returnDate);
     if (searchCriteria.rentDate) params.append("rentDate", searchCriteria.rentDate);
+    if (searchCriteria.recPayment) params.append("recPayment", searchCriteria.recPayment);
 
     const queryString = params.toString();
     const requestUrl = queryString ? `${API_URL}?${queryString}` : API_URL;
@@ -160,6 +162,7 @@ defineExpose({
           <th>歸還點名稱</th>
           <th>租借時間</th>
           <th>歸還時間</th>
+          <th>費用</th>
           <th width="150">操作</th>
         </tr>
       </thead>
@@ -179,6 +182,7 @@ defineExpose({
           <td>{{ rent.returnSpotName }}</td>
           <td>{{ rent.recRentDT2 ? rent.recRentDT2.replace("T", " ") : "" }}</td>
           <td>{{ rent.recReturnDT2 ? rent.recReturnDT2.replace("T", " ") : "" }}</td>
+          <td>{{ rent.recPayment }}</td>
           <td>
             <button class="btn-warning" @click="editRent(rent)">編輯</button
             ><span> / </span>

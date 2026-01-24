@@ -1,17 +1,17 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed } from 'vue'
 import { useMemberAuthStore } from '@/stores/memberAuth'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 
 // --- 版面狀態 ---
-const isSidebarCollapsed = ref(false); // 控制側邊欄是否收合
+const isSidebarCollapsed = ref(false) // 控制側邊欄是否收合
 
 /**
  * 切換側邊欄的收合狀態
  */
 const toggleSidebar = () => {
-  isSidebarCollapsed.value = !isSidebarCollapsed.value;
-};
+  isSidebarCollapsed.value = !isSidebarCollapsed.value
+}
 
 const memberAuthStore = useMemberAuthStore()
 const adminAuthStore = useAdminAuthStore()
@@ -60,11 +60,19 @@ const logout = () => {
       <!-- 可收合的功能選單 -->
       <ul class="menu-list">
         <li class="menu-item">
+          <router-link to="/" class="member-info">
+            <span class="icon-wrapper">
+              <el-icon><House /></el-icon>
+            </span>
+            <span class="logo">Take@Seat</span>
+          </router-link>
+        </li>
+        <li class="menu-item">
           <router-link to="/login" class="member-info">
             <span class="icon-wrapper">
               <el-icon><Avatar /></el-icon>
             </span>
-            <span class="menu-text" style="padding: 2px">會員登入</span>
+            <span class="menu-text">會員登入</span>
           </router-link>
         </li>
         <li class="menu-item">
@@ -73,21 +81,12 @@ const logout = () => {
             <span v-if="displayUID">
               {{ displayUID }}
             </span>
-            <span v-else>
-              尚未登入
-            </span>
+            <span v-else> 尚未登入 </span>
           </span>
         </li>
-        <!-- <li class="menu-item">
-          <router-link to="/rent" class="member-info">
-            <span class="icon-wrapper">
-              <el-icon><Search /></el-icon>
-            </span>
-            <span class="menu-text">站點查詢</span>
-          </router-link>
-        </li> -->
+
         <li class="menu-item">
-          <router-link to="/rent" class="member-info">
+          <router-link to="/SearchSpot" class="member-info">
             <span class="icon-wrapper">
               <el-icon><Pointer /></el-icon>
             </span>
@@ -157,10 +156,7 @@ const logout = () => {
           </el-icon>
         </button>
       </div>
-      <div 
-      class="menu-admin"
-      v-if="adminAuthStore.isLogin"
-      >
+      <div class="menu-admin" v-if="adminAuthStore.isLogin">
         <router-link to="/admin" class="member-info">
           <span class="icon-wrapper">
             <el-icon><Tools /></el-icon>
@@ -172,7 +168,7 @@ const logout = () => {
 
     <!-- 右側主內容容器 -->
     <main class="main-content-area">
-      <slot></slot>
+      <router-view />
     </main>
   </div>
 </template>
@@ -180,11 +176,18 @@ const logout = () => {
 <style scoped>
 /* --- 1. CSS 變數 --- */
 :root {
-  --sidebar-width-expanded: 250px;
-  --sidebar-width-collapsed: 80px;
+  --sidebar-width-expanded: 200px;
+  --sidebar-width-collapsed: 70px;
 }
 
 /* --- 2. 主佈局 --- */
+
+.logo {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 10px;
+  padding: 0;
+}
 .page-wrapper {
   display: flex;
   height: 100vh; /* 改為 100vh 佔滿整個視窗高度 */
@@ -195,13 +198,12 @@ const logout = () => {
 /* --- 3. 側邊欄 --- */
 .sidebar {
   width: var(--sidebar-width-expanded);
-  background-color: #99ff99;
+  background-color: #b9f8b9;
   border-right: 1px solid #dee2e6;
-  transition: width 0.3s ease;
+  transition: width 0.2s ease;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .page-wrapper.sidebar-collapsed .sidebar {
@@ -233,6 +235,9 @@ const logout = () => {
   list-style: none;
   padding: 0;
   margin: 10px 0;
+  flex-grow: 1;
+  overflow-y: auto;
+  overflow-x: hidden; /* 新增：防止水平滾動條 */
 }
 
 .menu-item {
@@ -263,7 +268,9 @@ const logout = () => {
   font-size: 20px;
   font-family: fantasy;
   opacity: 1;
-  transition: opacity 0.2s ease, width 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    width 0.2s ease;
 }
 
 .page-wrapper.sidebar-collapsed .menu-text {
@@ -291,7 +298,9 @@ const logout = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .toggle-btn:hover {

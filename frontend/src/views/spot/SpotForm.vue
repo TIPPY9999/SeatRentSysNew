@@ -139,15 +139,21 @@ const handleFileChange = (event) => {
 const submitForm = async () => {
   isSubmitting.value = true;
   try {
-    // 這裡示範傳送 JSON 資料
-    // [修正] 處理 merchantId，如果是空字串轉為 null，避免後端 Integer 轉換錯誤
-    const payload = { ...formData.value };
-    if (payload.merchantId === '' || payload.merchantId === undefined) {
-      payload.merchantId = null;
-    }
+    // 1. 建構乾淨的 Payload，避免將 GET 取得的額外欄位 (如 merchant 物件) 傳回後端導致錯誤
+    const payload = {
+      spotCode: formData.value.spotCode,
+      spotName: formData.value.spotName,
+      spotAddress: formData.value.spotAddress,
+      spotDescription: formData.value.spotDescription,
+      spotStatus: formData.value.spotStatus,
+      spotImage: formData.value.spotImage, // 若有圖片路徑則保留
+      // 處理 merchantId: 若為空值則送 null，確保型別正確
+      merchantId: (formData.value.merchantId === '' || formData.value.merchantId === null || formData.value.merchantId === undefined) ? null : Number(formData.value.merchantId)
+    };
 
-    // 若需上傳圖片，建議改用 FormData 或分兩階段上傳
     if (isEditMode.value) {
+      // 編輯模式：確保 Body 內也有 ID，許多後端邏輯會檢查 Path ID 與 Body ID 是否一致
+      payload.spotId = Number(route.params.id);
       await axios.put(`/api/spot/${route.params.id}`, payload);
       alert('更新成功！');
     } else {
@@ -157,8 +163,10 @@ const submitForm = async () => {
     
     router.push({ name: 'spot-list' }); // 成功後回列表
   } catch (error) {
-    console.error(error);
-    alert('儲存失敗，請檢查輸入資料或後端連線');
+    console.error('儲存錯誤:', error);
+    // 顯示後端回傳的具體錯誤訊息，方便除錯
+    const msg = error.response?.data?.message || error.message || '儲存失敗，請檢查輸入資料或後端連線';
+    alert(`操作失敗：${msg}`);
   } finally {
     isSubmitting.value = false;
   }
