@@ -59,38 +59,6 @@ const routes = [
         path: 'SearchSpot',
         component: () => import('@/views/rec/RecRentUserSearchPage.vue'),
       },
-    ],
-  },
-  {
-    path: '/mall',
-    name: 'coupon-mall',
-    component: CouponMall,
-  },
-  {
-    path: '/snake', // 方便用戶記憶的短網址
-    name: 'user-snake-game',
-    component: SnakeGame,
-  },
-
-  // 註冊會員
-  {
-    path: '/register',
-    component: AuthLayout,
-    children: [
-      {
-        path: '',
-        component: () => import('@/views/member/Register.vue'),
-      },
-    ],
-  },
-
-
-
-  // 會員頁面
-  {
-    path: '/member',
-    component: MemberLayout,
-    children: [
       {
         path: 'profile',
         name: 'member-profile',
@@ -106,13 +74,53 @@ const routes = [
         name: 'rec-rent-user',
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
+    ],
+  },
+  {
+    path: '/mall',
+    name: 'coupon-mall',
+    component: CouponMall,
+  },
+  {
+    path: '/snake',
+    name: 'snake-game',
+    component: SnakeGame,
+  },
+
+  // 註冊會員
+  {
+    path: '/register',
+    component: AuthLayout,
+    children: [
       {
-        path: '/snake', // 方便用戶記憶的短網址
-        name: 'user-snake-game',
-        component: SnakeGame,
+        path: '',
+        component: () => import('@/views/member/Register.vue'),
       },
     ],
   },
+
+  // // 會員頁面
+  // {
+  //   path: '/member',
+  //   component: MemberLayout,
+  //   children: [
+  //     {
+  //       path: 'profile',
+  //       name: 'member-profile',
+  //       component: MemberProfileView,
+  //     },
+  //     {
+  //       path: 'user-info',
+  //       name: 'member-user-info',
+  //       component: () => import('@/views/rec/IdHoldingPage.vue'),
+  //     },
+  //     {
+  //       path: 'rent/:action?',
+  //       name: 'rec-rent-user',
+  //       component: () => import('@/views/rec/RecRentUserPage.vue'),
+  //     },
+  //   ],
+  // },
 
   {
     path: '/payment-checkout/:recId',

@@ -1,4 +1,8 @@
 {
+  "output": {
+    "copyToClipboard": false,
+    "style": "xml"
+  },
   "ignore": {
     "useGitignore": true,
     "useDefaultPatterns": true,
@@ -16,7 +20,8 @@
       "**/*.svg",
       "**/*.png",
       "**/*.jpg",
-      "**/*.ico"
+      "**/*.ico",
+      "AI_good/**"
     ]
   }
 }
