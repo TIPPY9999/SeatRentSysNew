@@ -192,17 +192,38 @@ const renderPieChart = () => {
     const name = l.couponName || '未知'
     nameMap[name] = (nameMap[name] || 0) + 1
   })
-  
+
+  // 轉換成陣列並排序，只取前 10 或前 15 名，其餘歸類為「其他」
+  let data = Object.keys(nameMap).map(k => ({ name: k, value: nameMap[k] }))
+    .sort((a, b) => b.value - a.value);
+
+  if (data.length > 15) { 
+    const others = data.slice(15).reduce((sum, item) => sum + item.value, 0);
+    data = data.slice(0, 15);
+    data.push({ name: '其他', value: others });
+  }
+
   chart.setOption({
-    tooltip: { trigger: 'item' },
-    legend: { bottom: '0%', icon: 'circle', itemWidth: 10 },
+    tooltip: { 
+      trigger: 'item',
+      formatter: '{b}: {c} 次 ({d}%)' // 懸停時顯示完整名稱與佔比
+    },
+    legend: { 
+      type: 'scroll',      // 💡 開啟滾動模式，避免擠爆
+      orient: 'vertical',
+      right: 10,
+      top: 20,
+      bottom: 20,
+      textStyle: { fontSize: 10 }
+    },
     series: [{
       type: 'pie', 
       radius: ['40%', '70%'],
-      avoidLabelOverlap: false,
+      center: ['40%', '50%'], // 💡 將圓餅圖往左移，給右邊圖例留空間
+      avoidLabelOverlap: true, // 避免標籤重疊
       itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-      label: { show: false },
-      data: Object.keys(nameMap).map(k => ({ name: k, value: nameMap[k] }))
+      label: { show: false }, // 隱藏線條標籤，讓畫面清爽
+      data: data
     }]
   })
   charts.push(chart)
