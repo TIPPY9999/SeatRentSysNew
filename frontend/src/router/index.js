@@ -78,13 +78,10 @@ const routes = [
     name: 'snake-game',
     component: SnakeGame,
   },
-<<<<<<< HEAD
     ],
   },
   
  
-=======
->>>>>>> dd6883a1f54e8a4f2164b7cdf622a0f2bc90da25
 
   // 註冊會員
   {

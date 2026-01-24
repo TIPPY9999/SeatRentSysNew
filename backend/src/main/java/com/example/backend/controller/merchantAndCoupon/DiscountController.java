@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.*;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -166,12 +167,13 @@ public class DiscountController {
      * 網址: GET /api/discounts/logs
      */
     @GetMapping("/logs")
-    public Result<List<RedemptionLog>> getAllLogs() {
-        try {
-            List<RedemptionLog> logs = discountService.getAllRedemptionLogs();
-            return Result.success(logs, "取得紀錄成功");
-        } catch (Exception e) {
-            return Result.error("取得紀錄失敗: " + e.getMessage());
-        }
+    public Map<String, Object> getAllLogs() {
+        // 抓取兌換紀錄
+        List<RedemptionLog> list = redemptionLogRepository.findAllByOrderByRedeemTimeDesc();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "success");
+        result.put("data", list);
+        return result;
     }
 }
