@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.*;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -112,6 +113,10 @@ public class DiscountController {
     @Transactional // 確保 1.扣點 與 2.寫入紀錄 是一體的，要成功就一起成功
     public Result<Map<String, Object>> redeemCoupon(@RequestBody Map<String, Object> payload) {
         try {
+
+            if (payload.get("memberId") == null || payload.get("couponId") == null || payload.get("passcode") == null) {
+                return Result.error("核銷失敗：缺少必要參數 (memberId, couponId 或 passcode)");
+            }
             Integer memberId = Integer.valueOf(payload.get("memberId").toString());
             Integer couponId = Integer.valueOf(payload.get("couponId").toString());
             String inputPasscode = payload.get("passcode").toString();
@@ -162,12 +167,13 @@ public class DiscountController {
      * 網址: GET /api/discounts/logs
      */
     @GetMapping("/logs")
-    public Result<List<RedemptionLog>> getAllLogs() {
-        try {
-            List<RedemptionLog> logs = discountService.getAllRedemptionLogs();
-            return Result.success(logs, "取得紀錄成功");
-        } catch (Exception e) {
-            return Result.error("取得紀錄失敗: " + e.getMessage());
-        }
+    public Map<String, Object> getAllLogs() {
+        // 抓取兌換紀錄
+        List<RedemptionLog> list = redemptionLogRepository.findAllByOrderByRedeemTimeDesc();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "success");
+        result.put("data", list);
+        return result;
     }
 }

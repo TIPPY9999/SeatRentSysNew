@@ -1,26 +1,25 @@
 import { defineStore } from 'pinia'
+import axios from 'axios'
 
 export const useMemberAuthStore = defineStore('memberAuth', {
-  state: () => ({
-    /* =====================
-     * 類型 1：登入狀態（前台系統用）
-     * ===================== */
-    isLogin: false, // 是否有會員登入
+  state: () => {
+    const savedMember = localStorage.getItem('member_user')
+    const savedLogin = localStorage.getItem('isLogin') === 'true'
 
-    /* =====================
-     * 類型 2：會員業務資料（前台功能會用）
-     * ===================== */
-    member: {
-      memId: null,
-      memUsername: '',
-      memName: '',
-      memPoints: 0,
-      memInvoice: '',
-    },
-  }),
+    return {
+      isLogin: savedLogin,
+      member: savedMember ? JSON.parse(savedMember) : {
+        memId: null,
+        memUsername: '',
+        memName: '',
+        memPoints: 0,
+        memInvoice: '',
+      },
+    }
+  },
 
   actions: {
-    /* 會員登入成功時呼叫 */
+    // 登入
     setMemberLogin(memberData) {
       this.isLogin = true
       this.member = {
@@ -30,9 +29,35 @@ export const useMemberAuthStore = defineStore('memberAuth', {
         memPoints: memberData.memPoints,
         memInvoice: memberData.memInvoice,
       }
+      localStorage.setItem('member_user', JSON.stringify(this.member))
+      localStorage.setItem('isLogin', 'true')
     },
 
-    /* 會員登出 */
+    // 刷新點數與資料
+  async refreshPoints() {
+  if (!this.member.memId) return
+  try {
+    const res = await axios.get(`http://localhost:8080/api/members/find`, {
+      params: { memId: this.member.memId }
+    })
+
+    if (res.data) {
+      // 🔥 關鍵：重新賦值整個 member 物件，這樣 Vue 才會 100% 偵測到變化
+      this.member = {
+        ...this.member,
+        memPoints: res.data.memPoints,
+        memName: res.data.memName || this.member.memName
+      }
+      
+      localStorage.setItem('member_user', JSON.stringify(this.member))
+      console.log('✅ 點數同步成功，最新點數：', this.member.memPoints)
+    }
+  } catch (error) {
+    console.warn('同步點數失敗', error)
+  }
+},
+
+    // 登出
     clearMemberLogin() {
       this.isLogin = false
       this.member = {
@@ -42,6 +67,9 @@ export const useMemberAuthStore = defineStore('memberAuth', {
         memPoints: 0,
         memInvoice: '',
       }
-    },
-  },
-})
+      localStorage.removeItem('member_user')
+      localStorage.removeItem('isLogin')
+      localStorage.removeItem('token')
+    }
+  } // <--- actions 的結束
+}) // <--- defineStore 的結束

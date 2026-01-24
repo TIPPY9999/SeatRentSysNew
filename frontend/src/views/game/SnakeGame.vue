@@ -43,6 +43,11 @@
         </div>
       </div>
 
+      <!-- Daily Play Limit Hint -->
+      <div class="limit-hint" v-if="remainingPlays !== null">
+        今日剩餘遊玩次數：<strong>{{ remainingPlays }}</strong> / {{ maxDailyPlays }}
+      </div>
+
       <!-- Canvas -->
       <div class="canvas-section">
         <div class="canvas-wrapper" :class="{ playing: isGameRunning, shake: isShaking }">
@@ -121,6 +126,10 @@
                     再玩一次
                   </button>
                 </div>
+
+                <div class="limit-hint overlay-limit" v-if="remainingPlays !== null">
+                  今日剩餘遊玩次數：<strong>{{ remainingPlays }}</strong> / {{ maxDailyPlays }}
+                </div>
               </div>
             </div>
           </transition>
@@ -138,6 +147,9 @@
           <li>吃到食物獲得 20 分，蛇身變長。</li>
           <li>每累積 <strong>100 分</strong> 可兌換 <strong>1 點</strong>（無條件捨去）。</li>
           <li>領取點數前請先登入會員帳號。</li>
+          <li>
+            每日遊玩次數上限：<strong>{{ maxDailyPlays }}</strong> 次（超過需隔天再來）。
+          </li>
         </ul>
       </div>
     </div>
@@ -152,6 +164,57 @@ import Swal from 'sweetalert2'
 
 const router = useRouter()
 
+// =============================
+// 每日遊玩次數限制（整合自組員邏輯，但不破壞你原本流程）
+// =============================
+const maxDailyPlays = 10 // 你可自行調整
+const remainingPlays = ref(null)
+
+const getTodayKey = () => {
+  // 使用本機 locale 的日期字串即可（同一天判斷一致即可）
+  return new Date().toLocaleDateString()
+}
+
+const readPlayRecord = () => {
+  try {
+    return JSON.parse(localStorage.getItem('snake_game_record') || '{}')
+  } catch {
+    return {}
+  }
+}
+
+const writePlayRecord = (record) => {
+  localStorage.setItem('snake_game_record', JSON.stringify(record))
+}
+
+const refreshPlayLimit = () => {
+  const today = getTodayKey()
+  const record = readPlayRecord()
+
+  // 若不是今天，重置
+  if (record.date !== today) {
+    const newRecord = { date: today, count: 0 }
+    writePlayRecord(newRecord)
+    remainingPlays.value = maxDailyPlays
+    return { ok: true, record: newRecord }
+  }
+
+  // 是今天
+  const count = Number.isFinite(record.count) ? record.count : 0
+  remainingPlays.value = Math.max(0, maxDailyPlays - count)
+  return { ok: count < maxDailyPlays, record: { date: today, count } }
+}
+
+const consumeOnePlay = () => {
+  const { ok, record } = refreshPlayLimit()
+  if (!ok) return false
+
+  const next = { ...record, count: (record.count || 0) + 1 }
+  writePlayRecord(next)
+  remainingPlays.value = Math.max(0, maxDailyPlays - next.count)
+  return true
+}
+
 // ===== 核心遊戲狀態（維持原規則） =====
 const gameCanvas = ref(null)
 const score = ref(0)
@@ -160,7 +223,7 @@ const isGameRunning = ref(false)
 const gameOver = ref(false)
 const isUploaded = ref(false)
 
-// 會員資料：支援兩種 key
+// 會員資料：支援兩種 key（保留你原本邏輯，避免耦合其他 store）
 const memberId = ref(localStorage.getItem('memberId') || localStorage.getItem('memId'))
 
 // ===== UI ONLY（不影響核心規則） =====
@@ -201,7 +264,8 @@ const checkLoginStatus = () => {
   memberId.value = localStorage.getItem('memberId') || localStorage.getItem('memId')
 }
 
-const startGame = () => {
+// 內部：真正啟動遊戲（保持你原本遊戲初始化與流程不變）
+const startGameCore = () => {
   score.value = 0
   displayScore.value = 0 // UI ONLY
   gameSpeed.value = 150
@@ -218,6 +282,40 @@ const startGame = () => {
   isGameRunning.value = true
   spawnFood()
   gameLoop()
+}
+
+// 外部：你畫面所有按鈕呼叫的 startGame（加入每日次數限制，但不破壞你的 UX/UI 流程）
+const startGame = async () => {
+  // 若正在遊戲中，不做任何事（避免重複扣次數/重啟）
+  if (isGameRunning.value) return
+
+  // 先刷新顯示（確保 UI 顯示正確）
+  const { ok } = refreshPlayLimit()
+  if (!ok) {
+    await Swal.fire({
+      icon: 'error',
+      title: '今日次數已用盡',
+      text: `今天已經玩滿 ${maxDailyPlays} 次囉，請明天再來！`,
+      confirmButtonText: '回商城逛逛',
+    })
+    router.push('/mall')
+    return
+  }
+
+  // 扣一次
+  const consumed = consumeOnePlay()
+  if (!consumed) {
+    await Swal.fire({
+      icon: 'error',
+      title: '今日次數已用盡',
+      text: `今天已經玩滿 ${maxDailyPlays} 次囉，請明天再來！`,
+      confirmButtonText: '回商城逛逛',
+    })
+    router.push('/mall')
+    return
+  }
+
+  startGameCore()
 }
 
 const gameLoop = () => {
@@ -392,7 +490,12 @@ const uploadScore = async () => {
 onMounted(() => {
   ctx = gameCanvas.value?.getContext('2d')
   window.addEventListener('keydown', handleKeyDown)
+
+  // 會員狀態（保留你原本邏輯）
   checkLoginStatus()
+
+  // 每日次數顯示初始化
+  refreshPlayLimit()
 
   // 登入後回來可承接暫存分數（核心行為不變）
   const savedScore = sessionStorage.getItem('pendingSnakeScore')
@@ -514,7 +617,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .kpi-tile {
@@ -557,6 +660,17 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Daily Limit Hint */
+.limit-hint {
+  margin: 0 2px 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.overlay-limit {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 /* Canvas */

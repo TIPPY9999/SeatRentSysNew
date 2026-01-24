@@ -68,9 +68,7 @@ const routes = [
         name: 'rec-rent-user',
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
-    ],
-  },
-  {
+      {
     path: '/mall',
     name: 'coupon-mall',
     component: CouponMall,
@@ -80,6 +78,10 @@ const routes = [
     name: 'snake-game',
     component: SnakeGame,
   },
+    ],
+  },
+  
+ 
 
   // 註冊會員
   {
@@ -338,7 +340,7 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const admin = localStorage.getItem('admin')
 
-  if (token && admin) {
+  if (admin ||(token && admin)) {
     next()
     return
   }
