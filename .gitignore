@@ -61,3 +61,6 @@ frontend/dist/
 repomix-output.xml
 repomix-output.txt
 repomix-output.md
+
+# AI Assistant / Agent folder
+.agent/

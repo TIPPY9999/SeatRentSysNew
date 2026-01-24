@@ -134,12 +134,25 @@ const logout = async () => {
               <RouterLink
                 to="/admin/spot/list"
                 class="nav-link"
-                :class="{ active: isActiveGroup('/admin/spot') }"
+                :class="{ active: isActiveGroup('/admin/spot') && !isActiveGroup('/admin/spot/monitor') }"
               >
                 <i class="nav-icon fas fa-map-marker-alt"></i>
                 <p>據點管理</p>
               </RouterLink>
             </li>
+
+            <li class="nav-item">
+              <RouterLink
+                to="/admin/spot/monitor"
+                class="nav-link"
+                :class="{ active: isActiveGroup('/admin/spot/monitor') }"
+              >
+                <i class="nav-icon fas fa-chart-line"></i>
+                <p>調度監控中心</p>
+              </RouterLink>
+            </li>
+
+
 
             <li class="nav-item">
               <RouterLink

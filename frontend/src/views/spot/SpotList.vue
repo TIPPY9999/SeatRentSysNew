@@ -1,27 +1,88 @@
 <template>
   <div class="spot-list container">
+    <!-- [Proposal 2] 迷你儀表板 -->
+    <div class="row mb-4">
+      <div class="col-md-3 col-sm-6">
+        <div class="small-box bg-info">
+          <div class="inner">
+            <h3>{{ statsSummary.totalSpots || 0 }}</h3>
+            <p>總據點數</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-map-marker-alt"></i>
+          </div>
+          <a href="#" class="small-box-footer" @click.prevent="goToAnalyze">
+            更多資訊 <i class="fas fa-arrow-circle-right"></i>
+          </a>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="small-box bg-success">
+          <div class="inner">
+            <h3>{{ statsSummary.activeSeats || 0 }}</h3>
+            <p>營運座位</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-chair"></i>
+          </div>
+          <a href="#" class="small-box-footer" @click.prevent="goToAnalyze">
+            更多資訊 <i class="fas fa-arrow-circle-right"></i>
+          </a>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="small-box bg-warning">
+          <div class="inner">
+            <h3>{{ statsSummary.todayRents || 0 }}</h3>
+            <p>今日租借</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-file-invoice dollar"></i>
+          </div>
+          <a href="#" class="small-box-footer" @click.prevent="goToAnalyze">
+            更多資訊 <i class="fas fa-arrow-circle-right"></i>
+          </a>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="small-box bg-danger">
+          <div class="inner">
+            <h3>{{ statsSummary.maintenance || 0 }}</h3>
+            <p>維修中</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-tools"></i>
+          </div>
+          <a href="#" class="small-box-footer" @click.prevent="goToAnalyze">
+            更多資訊 <i class="fas fa-arrow-circle-right"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 列表模式內容 -->
     <div class="card shadow-sm">
       <div class="card-body">
         <div class="header">
           <h2>據點管理列表</h2>
           <!-- 新增搜尋框 -->
           <div class="search-bar">
-            <!-- [修復] 補上遺失的關鍵字搜尋框 -->
             <input type="text" v-model="searchKeyword" placeholder="搜尋名稱、代碼或地址" class="search-input" />
-            <!-- Merchant ID 搜尋框 ，說明：min="0" 讓點擊上下箭頭時不會變負數；oninput 則是防止使用者直接用鍵盤打 - 號。-->
             <input type="number" v-model.number="searchMerchantId" placeholder="搜尋ID" class="search-input-mid" min="1"
               step="1" @input="sanitizeMerchantId" />
-            <!-- 狀態下拉選單 -->
             <select v-model="searchStatus" class="search-select">
               <option value="">全部狀態</option>
               <option value="營運中">營運中</option>
               <option value="停用">停用</option>
               <option value="維修中">維修中</option>
             </select>
-
           </div>
-          <!-- 點擊新增，跳轉到 SpotForm (無 ID) -->
-          <button class="btn-add" @click="goToAdd">新增據點</button>
+          <div>
+            <button class="btn-monitor" @click="goToMonitor">
+              <i class="fas fa-desktop"></i> 調度監控
+            </button>
+            <button class="btn-add" @click="goToAdd">新增據點</button>
+          </div>
         </div>
 
         <table class="table">
@@ -31,21 +92,17 @@
               <th>代碼</th>
               <th>名稱</th>
               <th>地址</th>
-              <!-- 這裡新增了 Merchant ID 的標題欄位 -->
               <th>Merchant ID</th>
               <th>狀態</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <!-- 修改：改為遍歷過濾後的 filteredSpots -->
             <tr v-for="spot in filteredSpots" :key="spot.spotId">
               <td>{{ spot.spotId }}</td>
               <td>{{ spot.spotCode }}</td>
               <td>{{ spot.spotName }}</td>
               <td>{{ spot.spotAddress }}</td>
-              <!-- 這裡對應顯示每一筆資料的 merchantId 數值 -->
-              <!-- 建議後端 DTO 補上 merchantName -->
               <td>{{ spot.merchantName || spot.merchantId }}</td>
               <td>
                 <span
@@ -54,23 +111,25 @@
                 </span>
               </td>
               <td>
-                <!-- [修改] 改用 button 統一操作風格，並呼叫 goToView 函式 -->
                 <button class="btn btn-info btn-sm me-1 text-white" @click="goToView(spot.spotId)">
                   詳細
                 </button>
-                <!-- 點擊編輯，跳轉到 SpotForm (帶 ID) -->
                 <button class="btn-edit" @click="goToEdit(spot.spotId)">編輯</button>
                 <button class="btn-delete" @click="deleteSpot(spot.spotId, spot.spotName)">刪除</button>
               </td>
             </tr>
             <tr v-if="filteredSpots.length === 0">
-              <!-- 因為我們新增了 Merchant ID，現在表格總共有 7 個欄位，所以這裡 colspan (跨欄) 要改成 7，讓這行字能置中佔滿整列 -->
               <td colspan="7" style="text-align: center">目前沒有資料</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+
+
+
+
   </div>
 </template>
 
@@ -79,53 +138,60 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
-// 明確定義元件名稱
 defineOptions({
   name: 'SpotList'
 })
 
 const router = useRouter()
 const spots = ref([])
-const searchKeyword = ref('') // 搜尋關鍵字狀態
-const searchMerchantId = ref('') // Merchant ID 搜尋狀態
-const searchStatus = ref('') // 狀態搜尋狀態
+const searchKeyword = ref('')
+const searchMerchantId = ref('')
+const searchStatus = ref('')
+const statsSummary = ref({ totalSpots: 0, activeSeats: 0, todayRents: 0, maintenance: 0 })
 
-// 防止輸入負數
 const sanitizeMerchantId = () => {
   const v = searchMerchantId.value
-  // 1. 允許使用者清空欄位 (不套用搜尋條件)
   if (v === '' || v === null || v === undefined) return
-
-  // 2. 如果是非數字或是小於 1，強制變成 1
   if (!Number.isFinite(v) || v < 1) {
     searchMerchantId.value = 1
   }
 }
 
-// 載入資料
 const loadSpots = async () => {
   try {
-    // 呼叫後端 API (對應 RentalSpotController 的 list 方法)
-    // [修正] 改用 RESTful 風格路徑，對應 RentalSpotController 的 @GetMapping("/api/spot")
-    // TODO: 若資料量大，建議將 searchKeyword, searchMerchantId 等參數傳給後端進行過濾，而非前端過濾
-    const res = await axios.get('/api/spot/list', {
-      // params: {
-      //   keyword: searchKeyword.value,
-      //   status: searchStatus.value
-      // }
-    })
-    spots.value = res.data
+    // 1. 平行呼叫兩個 API：列表 + 統計數據
+    const [resList, resStats] = await Promise.all([
+      axios.get('/api/spot/list'),
+      axios.get('/api/analyze/stats')
+    ])
+
+    // 2. 更新列表
+    spots.value = resList.data
+
+    // 3. 計算並更新統計卡片
+    calculateStats(resList.data, resStats.data)
+
   } catch (err) {
     console.error('讀取失敗:', err)
     alert('讀取資料失敗，請檢查後端連線')
   }
 }
 
-// 計算屬性：即時過濾資料
+const calculateStats = (listData, statsData) => {
+  // A. 從列表計算的基本數據
+  statsSummary.value.totalSpots = listData.length
+  statsSummary.value.maintenance = listData.filter(s => s.spotStatus === '維修中').length
+
+  // B. 從統計 API 取得的進階數據 (spotMonitor 陣列)
+  const monitorList = statsData?.spotMonitor || []
+
+  // 用 reduce 加總所有站點的數據
+  statsSummary.value.activeSeats = monitorList.reduce((sum, item) => sum + (item.totalSeats || 0), 0)
+  statsSummary.value.todayRents = monitorList.reduce((sum, item) => sum + (item.rentedCount || 0), 0)
+}
+
 const filteredSpots = computed(() => {
   let results = spots.value
-
-  // 1. 關鍵字過濾 (名稱、代碼、地址)
   if (searchKeyword.value.trim()) {
     const keyword = searchKeyword.value.toLowerCase().trim()
     results = results.filter(
@@ -135,48 +201,41 @@ const filteredSpots = computed(() => {
         spot.spotAddress?.toLowerCase().includes(keyword),
     )
   }
-
-  // 2. Merchant ID 過濾 (若有輸入才過濾)
   if (searchMerchantId.value !== '' && searchMerchantId.value !== null) {
     const mId = Number(searchMerchantId.value)
     results = results.filter((spot) => Number(spot.merchantId) === mId)
   }
-
-  // 3. 狀態過濾 (若有選擇才過濾)
   if (searchStatus.value) {
     results = results.filter((spot) => spot.spotStatus === searchStatus.value)
   }
-
   return results
 })
 
-// 跳轉到新增頁面
 const goToAdd = () => {
-  router.push({ name: 'spot-add' }) // 改用具名路由，對應 router/index.js 的 name: 'spot-add'
+  router.push({ name: 'spot-add' })
 }
 
-// [新增] 跳轉到詳細頁面
+const goToMonitor = () => {
+  // 請確保 router/index.js 中已設定 name: 'dispatch-monitor' 的路由
+  router.push({ name: 'dispatch-monitor' })
+}
+
+const goToAnalyze = () => {
+  router.push({ name: 'spot-analyze' })
+}
+
 const goToView = (id) => {
-  // 改用具名路由，對應 router/index.js 的 name: 'spot-view'
   router.push({ name: 'spot-view', params: { id } })
 }
 
-// 跳轉到編輯頁面
 const goToEdit = (id) => {
-  // 改用具名路由，對應 router/index.js 的 name: 'spot-edit'
   router.push({ name: 'spot-edit', params: { id } })
 }
 
-// 刪除功能
 const deleteSpot = async (id, name) => {
-  // 二次確認：顯示更詳細的資訊 (名稱 + ID)，並提示無法復原，增加安全性
   if (!confirm(`確定要刪除據點「${name}」(ID: ${id}) 嗎？\n此動作無法復原！`)) return
-
   try {
-    // [修正] 改用 RESTful 風格：DELETE 方法 + 路徑參數 ID
-    // 對應 RentalSpotController 的 @DeleteMapping("/{id}")
     await axios.delete(`/api/spot/${id}`)
-
     alert('刪除成功')
     await loadSpots()
   } catch (err) {
@@ -195,6 +254,65 @@ onMounted(() => {
   padding: 20px;
 }
 
+/* Small Box Styles */
+.small-box {
+  border-radius: 0.25rem;
+  box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+  display: block;
+  margin-bottom: 20px;
+  position: relative;
+  background: #fff;
+  color: #fff;
+  overflow: hidden;
+}
+.small-box > .inner {
+  padding: 10px;
+}
+.small-box h3 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  white-space: nowrap;
+  padding: 0;
+}
+.small-box p {
+  font-size: 1rem;
+}
+.small-box .icon {
+  color: rgba(0,0,0,.15);
+  z-index: 0;
+}
+.small-box .icon > i {
+  font-size: 90px;
+  position: absolute;
+  right: 15px;
+  top: 15px;
+  transition: all .3s linear;
+}
+.small-box:hover .icon > i {
+  transform: scale(1.1);
+}
+.small-box > .small-box-footer {
+  background: rgba(0,0,0,.1);
+  color: #fff;
+  display: block;
+  padding: 3px 0;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  z-index: 10;
+}
+.small-box > .small-box-footer:hover {
+  background: rgba(0,0,0,.15);
+}
+.bg-info { background-color: #17a2b8 !important; }
+.bg-success { background-color: #28a745 !important; }
+.bg-warning { background-color: #ffc107 !important; color: #1f2d3d !important; }
+.bg-danger { background-color: #dc3545 !important; }
+
+
+
+/* Original Styles */
 .header {
   display: flex;
   justify-content: space-between;
@@ -219,7 +337,6 @@ onMounted(() => {
   background-color: #f4f4f4;
 }
 
-/* 搜尋框樣式 */
 .search-bar input {
   padding: 8px;
   width: 250px;
@@ -227,7 +344,6 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-/* 補上 search-input 樣式 */
 .search-bar .search-input {
   width: 200px;
   margin-right: 10px;
@@ -235,7 +351,6 @@ onMounted(() => {
 
 .search-bar .search-input-mid {
   width: 150px;
-  /* 數字欄位可以窄一點 */
   margin-left: 10px;
 }
 
@@ -246,7 +361,6 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-/* 按鈕樣式 */
 button {
   cursor: pointer;
   padding: 5px 10px;
@@ -260,6 +374,13 @@ button {
   background-color: #28a745;
   font-size: 1.1em;
   padding: 8px 16px;
+}
+
+.btn-monitor {
+  background-color: #17a2b8; /* Info color (藍綠色) 區隔於新增按鈕 */
+  font-size: 1.1em;
+  padding: 8px 16px;
+  margin-right: 10px;
 }
 
 .btn-edit {
