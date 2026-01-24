@@ -76,6 +76,7 @@ const logout = () => {
           </router-link>
         </li>
         <li class="menu-item">
+        <router-link to="/profile" class="member-info">
           <span class="menu-text">
             UID：
             <span v-if="displayUID">
@@ -83,6 +84,7 @@ const logout = () => {
             </span>
             <span v-else> 尚未登入 </span>
           </span>
+            </router-link>
         </li>
 
         <li class="menu-item">

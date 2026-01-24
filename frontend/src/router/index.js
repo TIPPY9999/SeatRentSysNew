@@ -68,6 +68,11 @@ const routes = [
         name: 'rec-rent-user',
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
+      {
+        path: 'recordRoute',
+        name: 'rec-rent-record',
+        component: () => import('@/views/rec/RecRentUserPage.vue'),
+      },
     ],
   },
   {

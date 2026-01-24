@@ -17,6 +17,11 @@ export const useMemberAuthStore = defineStore('memberAuth', {
       memPoints: 0,
       memInvoice: '',
     },
+
+    /* =====================
+     * 類型 3：使用者操作暫存 (如目前選擇的站點)
+     * ===================== */
+    selectedSpotId: null,
   }),
 
   actions: {
@@ -42,6 +47,16 @@ export const useMemberAuthStore = defineStore('memberAuth', {
         memPoints: 0,
         memInvoice: '',
       }
+    },
+
+    /* 設定目前選擇的站點 ID */
+    setSpotId(spotId) {
+      this.selectedSpotId = spotId
+    },
+
+    /* 清除站點 ID */
+    clearSpotId() {
+      this.selectedSpotId = null
     },
   },
 })

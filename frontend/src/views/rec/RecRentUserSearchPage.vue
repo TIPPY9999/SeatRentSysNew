@@ -1,13 +1,31 @@
 <script setup>
-import { ref, onMounted, nextTick } from "vue";
+import { ref, onMounted, nextTick,computed } from "vue";
 import { LocationFilled } from "@element-plus/icons-vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
+import { useMemberAuthStore } from "@/stores/memberAuth";
+import { useAdminAuthStore } from "@/stores/adminAuth";
+
+// --- Computed properties from store ---
+// --- Props ---
+const props = defineProps({
+  spotId: {
+    type: String,
+    required: true,
+  },
+});
+
+// --- Pinia Store ---
+const memberAuthStore = useMemberAuthStore();
+const adminAuthStore = useAdminAuthStore();
+
+// --- Computed properties from store ---
+const isLoggedIn = computed(() => memberAuthStore.isLogin && !!memberAuthStore.member?.memId);
+const memberId = computed(() => memberAuthStore.member?.memId);
+const memberName = computed(() => memberAuthStore.member?.memName || "訪客");
 
 // --- 路由與狀態管理 ---
 const router = useRouter();
-const authStore = useAuthStore();
 
 // --- 1. 組態設定 ---
 const center = ref({ lat: 23.973875, lng: 120.982025 });
@@ -43,6 +61,7 @@ const infoWindow = ref({
 
 // 根據站點狀態生成帶有顏色的地圖圖示
 const getMarkerIcon = (status) => {
+  
   const color = status === "營運中" ? "green" : "gray";
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="${color}" class="bi bi-lightbulb-fill" viewBox="0 0 16 16">
@@ -185,11 +204,28 @@ const handleNavigation = (action) => {
     routeParams.query = { spotId }
   }
 
-  if (authStore.isLogin) {
-    router.push(routeParams)
+  // --- [新增] 將站點 ID 寫入 Pinia，確保切換頁面時能讀取 ---
+  if (spotId) {
+    memberAuthStore.setSpotId(spotId);
+  }
+
+  // --- 統一導航邏輯 ---
+  // 1. 檢查是否處於「假登入」狀態 (isLogin=true 但 memId 遺失)
+  if (memberAuthStore.isLogin && !memberAuthStore.member?.memId ) {
+    console.warn("偵測到登入狀態異常(無會員ID)，執行強制登出並重導向");
+    memberAuthStore.clearMemberLogin();
+    const redirectPath = router.resolve(routeParams).path;
+    router.push({ name: 'login', query: { redirect: redirectPath } });
+    return;
+  }
+
+  // 2. 正常狀態判斷
+  if (memberAuthStore.isLogin||adminAuthStore.isLogin ) {
+    console.log("準備導向 Store 中的會員ID:", memberAuthStore.member?.memId);
+    router.push(routeParams);
   } else {
-    const redirectPath = router.resolve(routeParams).path
-    router.push({ name: 'login', query: { redirect: redirectPath } })
+    const redirectPath = router.resolve(routeParams).path;
+    router.push({ name: 'login', query: { redirect: redirectPath } });
   }
 }
 
