@@ -134,6 +134,22 @@ const saveEdit = async () => {
           />
         </div>
 
+        <!-- 會員點數（唯讀） -->
+        <div class="row">
+          <label>會員點數</label>
+          <div class="value">
+            {{ member.memPoints }}
+          </div>
+        </div>
+
+        <!-- 租借狀態（給租借組員完成） -->
+        <div class="row">
+          <label>租借狀態</label>
+          <div class="value placeholder">
+            等租借同仁完成
+          </div>
+        </div>
+
         <div class="row">
           <label>發票載具</label>
           <input
@@ -157,6 +173,12 @@ const saveEdit = async () => {
 .profile-page {
   max-width: 720px;
   margin: 0 auto;
+  min-height: 100vh;      /* 至少佔滿整個視窗高度 */
+  display: flex;          /* 使用 Flexbox 排版 */
+  flex-direction: column; /* 內容垂直排列 */
+  justify-content: center;/* 垂直置中 */
+  padding: 40px 0;        /* 增加上下邊距，避免在小螢幕時貼邊 */
+  box-sizing: border-box;
 }
 
 /* 頭像 */
@@ -216,7 +238,7 @@ const saveEdit = async () => {
 .profile-card {
   background: #fff;
   border-radius: 12px;
-  padding: 20px;
+  padding: 20px 20px 5px 20px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
 }
 
@@ -277,5 +299,10 @@ label {
 .actions button:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.placeholder {
+  color: #9ca3af;
+  font-style: italic;
 }
 </style>

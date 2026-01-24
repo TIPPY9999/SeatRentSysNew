@@ -9,28 +9,28 @@ import Swal from 'sweetalert2'
 import LoginView from '@/views/member/LoginView.vue' // 登入頁
 import AdminLayout from '@/layouts/AdminLayout.vue' // 後臺主框架 (包含側邊欄與 Header)
 import AdminHomeView from '@/views/member/AdminHomeView.vue' // 後臺首頁(儀表板)
-import MemberListView from '@/views/member/MemberListView.vue'
-import MemberEditView from '@/views/member/MemberEditView.vue'
-import MemberCreateView from '@/views/member/MemberCreateView.vue'
-import PaymentView from '@/views/ecpay/PaymentView.vue'
-import AdminListView from '@/views/member/AdminListView.vue'
-import AdminCreateView from '@/views/member/AdminCreateView.vue'
-import AdminEditView from '@/views/member/AdminEditView.vue'
-import MemberLayout from '@/layouts/MemberLayout.vue'
-import MemberProfileView from '@/views/member/MemberProfileView.vue'
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import MainLayout from '@/layouts/MainLayout.vue'
+import MemberListView from '@/views/member/MemberListView.vue' // 會員列表
+import MemberEditView from '@/views/member/MemberEditView.vue' // 會員編輯
+import MemberCreateView from '@/views/member/MemberCreateView.vue' // 會員新增
+import PaymentView from '@/views/ecpay/PaymentView.vue' // 綠界付款頁
+import AdminListView from '@/views/member/AdminListView.vue' // 管理員列表
+import AdminCreateView from '@/views/member/AdminCreateView.vue' // 管理員新增
+import AdminEditView from '@/views/member/AdminEditView.vue' // 管理員編輯
+import MemberLayout from '@/layouts/MemberLayout.vue' // 會員主框架
+import MemberProfileView from '@/views/member/MemberProfileView.vue' // 會員個人資料頁
+import AuthLayout from '@/layouts/AuthLayout.vue' // 認證相關頁面框架
+import MainLayout from '@/layouts/MainLayout.vue' // 前台主框架
 
 /**
  * ==========================================
  * 2. 懶加載導入 (Dynamic Imports)
  * ==========================================
  */
-const MerchantList = () => import('@/views/merchantAndCoupon/MerchantList.vue')
-const DiscountList = () => import('@/views/merchantAndCoupon/DiscountList.vue')
+const MerchantList = () => import('@/views/merchantAndCoupon/MerchantList.vue') // 商家列表
+const DiscountList = () => import('@/views/merchantAndCoupon/DiscountList.vue') // 優惠券列表
 const RedemptionLogList = () => import('@/views/merchantAndCoupon/RedemptionLogList.vue') // 新增：後台紀錄
 const CouponMall = () => import('@/views/merchantAndCoupon/CouponMallView.vue') // 新增：前台商城
-const SnakeGame = () => import('@/views/game/SnakeGame.vue')
+const SnakeGame = () => import('@/views/game/SnakeGame.vue') // 貪食蛇遊戲
 
 // 定義路由表
 const routes = [
@@ -69,19 +69,17 @@ const routes = [
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
       {
-    path: '/mall',
-    name: 'coupon-mall',
-    component: CouponMall,
-  },
-  {
-    path: '/snake',
-    name: 'snake-game',
-    component: SnakeGame,
-  },
+        path: '/mall',
+        name: 'coupon-mall',
+        component: CouponMall,
+      },
+      {
+        path: '/snake',
+        name: 'snake-game',
+        component: SnakeGame,
+      },
     ],
   },
-  
- 
 
   // 註冊會員
   {
@@ -148,16 +146,22 @@ const routes = [
         name: 'spot-list',
         component: () => import('@/views/spot/SpotList.vue'),
       },
+
+      // 據點新增與編輯共用同一個元件
       {
         path: 'spot/add',
         name: 'spot-add',
         component: () => import('@/views/spot/SpotForm.vue'),
       },
+
+      // 據點編輯
       {
         path: 'spot/edit/:id',
         name: 'spot-edit',
         component: () => import('@/views/spot/SpotForm.vue'),
       },
+
+      // 據點詳細資訊
       {
         path: 'spot/view/:id', // 網址: /admin/spot/view/1
         name: 'spot-view',
@@ -167,21 +171,28 @@ const routes = [
       // ==========================================
       // [整合] 座位管理模組 (Seat)
       // ==========================================
+      // 座位管理
       {
         path: 'seat/list',
         name: 'seat-list',
         component: () => import('@/views/spot/SeatList.vue'),
       },
+
+      // 座位新增與編輯共用同一個元件
       {
         path: 'seat/insert',
         name: 'seat-insert',
         component: () => import('@/views/spot/SeatForm.vue'),
       },
+
+      // 座位編輯
       {
         path: 'seat/edit/:id',
         name: 'seat-edit',
         component: () => import('@/views/spot/SeatForm.vue'),
       },
+
+      // 座位詳細資訊
       {
         path: 'seat/view/:id',
         name: 'seat-view',
@@ -194,6 +205,8 @@ const routes = [
         name: 'merchants',
         component: MerchantList,
       },
+
+      // 優惠券管理
       {
         path: 'discounts',
         name: 'discounts',
@@ -207,6 +220,7 @@ const routes = [
         component: RedemptionLogList,
       },
 
+      // [新增] 後台貪食蛇遊戲
       {
         path: 'snake-game',
         name: 'admin-snake-game',
@@ -219,11 +233,15 @@ const routes = [
         name: 'member-list',
         component: MemberListView,
       },
+
+      // 會員編輯
       {
         path: 'members/edit/:id',
         name: 'member-edit',
         component: MemberEditView,
       },
+
+      // 會員新增
       {
         path: 'members/create',
         name: 'member-create',
@@ -236,11 +254,15 @@ const routes = [
         name: 'admin-list',
         component: AdminListView,
       },
+
+      // 管理員新增
       {
         path: 'admins/create',
         name: 'admin-create',
         component: AdminCreateView,
       },
+
+      // 管理員編輯
       {
         path: 'admins/edit/:id',
         name: 'admin-edit',
@@ -260,6 +282,8 @@ const routes = [
         name: 'staff-list',
         component: () => import('@/views/maintenance/MaintenanceStaffList.vue'),
       },
+
+      // 維修人員表單 (新增/編輯)
       {
         path: 'staff-form/:id?',
         name: 'staff-form',
@@ -273,18 +297,23 @@ const routes = [
         component: () => import('@/views/maintenance/MaintenanceStaffHistory.vue'),
       },
 
+      // 維修工單列表與表單
       {
         path: 'mtif-list',
         name: 'mtif-list',
         component: () => import('@/views/maintenance/MtifList.vue'),
         props: { historyMode: false },
       },
+
+      // 維修工單歷史紀錄
       {
         path: 'mtif-history',
         name: 'mtif-history',
         component: () => import('@/views/maintenance/MtifList.vue'),
         props: { historyMode: true },
       },
+
+      // 維修工單表單 (新增/編輯)
       {
         path: 'mtif-form/:id?',
         name: 'mtif-form',
@@ -297,11 +326,15 @@ const routes = [
         name: 'schedule-list',
         component: () => import('@/views/maintenance/ScheduleList.vue'),
       },
+
+      // 排程表單 (新增/編輯)
       {
         path: 'maintenance/schedule/create',
         name: 'schedule-create',
         component: () => import('@/views/maintenance/ScheduleForm.vue'),
       },
+
+      // 排程編輯
       {
         path: 'maintenance/schedule/edit/:id',
         name: 'schedule-edit',
@@ -331,28 +364,35 @@ const router = createRouter({
  * ==========================================
  */
 router.beforeEach((to, from, next) => {
-  // 只保護後台
+  // 1. 如果不是去後台，直接放行
   if (!to.path.startsWith('/admin')) {
     next()
     return
   }
 
+  // 2. 取得 localStorage 資料
   const token = localStorage.getItem('token')
-  const admin = localStorage.getItem('admin')
+  const adminJson = localStorage.getItem('admin')
 
-  if (admin ||(token && admin)) {
+  // Debug 用：如果進不去，請按 F12 看 Console
+  console.log('路由守衛檢查:', { path: to.path, hasToken: !!token, hasAdmin: !!adminJson })
+
+  // 3. 判斷是否有管理員身分
+  if (adminJson) {
+    // 只要有 admin 資料就讓它進去 (Token 視後端攔截器而定)
     next()
-    return
+  } else {
+    // 沒資料才跳警告
+    Swal.fire({
+      icon: 'warning',
+      title: '請先登入',
+      text: '管理員帳號已過期或尚未登入。',
+      confirmButtonText: '去登入',
+      allowOutsideClick: false,
+    }).then(() => {
+      next('/login')
+    })
   }
-
-  Swal.fire({
-    icon: 'warning',
-    title: '請先登入',
-    text: '您沒有權限訪問此頁面，請重新登入。',
-    confirmButtonText: '去登入',
-    allowOutsideClick: false,
-  })
-  next('/login')
 })
 
 export default router

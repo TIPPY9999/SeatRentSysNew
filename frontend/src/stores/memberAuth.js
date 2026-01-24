@@ -8,18 +8,20 @@ export const useMemberAuthStore = defineStore('memberAuth', {
 
     return {
       isLogin: savedLogin,
-      member: savedMember ? JSON.parse(savedMember) : {
-        memId: null,
-        memUsername: '',
-        memName: '',
-        memPoints: 0,
-        memInvoice: '',
-      },
+      member: savedMember
+        ? JSON.parse(savedMember)
+        : {
+            memId: null,
+            memUsername: '',
+            memName: '',
+            memPoints: 0,
+            memInvoice: '',
+          },
     }
   },
 
   actions: {
-    // 登入
+    /* ========= 登入 ========= */
     setMemberLogin(memberData) {
       this.isLogin = true
       this.member = {
@@ -29,36 +31,47 @@ export const useMemberAuthStore = defineStore('memberAuth', {
         memPoints: memberData.memPoints,
         memInvoice: memberData.memInvoice,
       }
+
       localStorage.setItem('member_user', JSON.stringify(this.member))
       localStorage.setItem('isLogin', 'true')
     },
 
-    // 刷新點數與資料
-  async refreshPoints() {
-  if (!this.member.memId) return
-  try {
-    const res = await axios.get(`http://localhost:8080/api/members/find`, {
-      params: { memId: this.member.memId }
-    })
+    /* ========= 點數 / 資料刷新（保留 HEAD） ========= */
+    async refreshPoints() {
+      if (!this.member.memId) return
 
-    if (res.data) {
-      // 🔥 關鍵：重新賦值整個 member 物件，這樣 Vue 才會 100% 偵測到變化
-      this.member = {
-        ...this.member,
-        memPoints: res.data.memPoints,
-        memName: res.data.memName || this.member.memName
+      try {
+        const res = await axios.get('http://localhost:8080/api/members/find', {
+          params: { memId: this.member.memId },
+        })
+
+        if (res.data) {
+          // 重設整個物件，確保 Vue reactivity
+          this.member = {
+            ...this.member,
+            memPoints: res.data.memPoints,
+            memName: res.data.memName || this.member.memName,
+          }
+
+          localStorage.setItem('member_user', JSON.stringify(this.member))
+          console.log('✅ 點數同步成功', this.member.memPoints)
+        }
+      } catch (err) {
+        console.warn('❌ 點數同步失敗', err)
       }
-      
-      localStorage.setItem('member_user', JSON.stringify(this.member))
-      console.log('✅ 點數同步成功，最新點數：', this.member.memPoints)
-    }
-  } catch (error) {
-    console.warn('同步點數失敗', error)
-  }
-},
+    },
 
-    // 登出
-    clearMemberLogin() {
+    /* ========= 登出（合併強化版） ========= */
+    async clearMemberLogin() {
+      // 1️⃣ 通知後端清除 Session（member2 的優點）
+      try {
+        await axios.post('http://localhost:8080/api/auth/logout', {}, { withCredentials: true })
+        console.log('✅ 後端 Session 已清除')
+      } catch (err) {
+        console.log('ℹ️ 後端無 Session 或清除失敗')
+      }
+
+      // 2️⃣ 清前端狀態
       this.isLogin = false
       this.member = {
         memId: null,
@@ -67,9 +80,13 @@ export const useMemberAuthStore = defineStore('memberAuth', {
         memPoints: 0,
         memInvoice: '',
       }
+
+      // 3️⃣ 清 localStorage
       localStorage.removeItem('member_user')
       localStorage.removeItem('isLogin')
       localStorage.removeItem('token')
-    }
-  } // <--- actions 的結束
-}) // <--- defineStore 的結束
+
+      console.log('✅ 前端登入資訊已清理')
+    },
+  },
+})
