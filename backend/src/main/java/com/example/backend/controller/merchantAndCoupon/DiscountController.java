@@ -112,6 +112,10 @@ public class DiscountController {
     @Transactional // 確保 1.扣點 與 2.寫入紀錄 是一體的，要成功就一起成功
     public Result<Map<String, Object>> redeemCoupon(@RequestBody Map<String, Object> payload) {
         try {
+
+            if (payload.get("memberId") == null || payload.get("couponId") == null || payload.get("passcode") == null) {
+                return Result.error("核銷失敗：缺少必要參數 (memberId, couponId 或 passcode)");
+            }
             Integer memberId = Integer.valueOf(payload.get("memberId").toString());
             Integer couponId = Integer.valueOf(payload.get("couponId").toString());
             String inputPasscode = payload.get("passcode").toString();

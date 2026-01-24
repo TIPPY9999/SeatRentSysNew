@@ -69,9 +69,7 @@ const routes = [
         name: 'rec-rent-user',
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
-    ],
-  },
-  {
+      {
     path: '/mall',
     name: 'coupon-mall',
     component: CouponMall,
@@ -80,6 +78,8 @@ const routes = [
     path: '/snake', 
     name: 'snake-game',
     component: SnakeGame,
+  },
+    ],
   },
   
  
@@ -96,31 +96,6 @@ const routes = [
     ],
   },
 
-<<<<<<< HEAD
-  // 會員頁面
-  {
-    path: '/member',
-    component: MemberLayout,
-    children: [
-      {
-        path: 'profile',
-        name: 'member-profile',
-        component: MemberProfileView,
-      },
-      {
-        path: 'user-info',
-        name: 'member-user-info',
-        component: () => import('@/views/rec/IdHoldingPage.vue'),
-      },
-      {
-        path: 'rent/:action?',
-        name: 'rec-rent-user',
-        component: () => import('@/views/rec/RecRentUserPage.vue'),
-      },
-      
-    ],
-  },
-=======
   // // 會員頁面
   // {
   //   path: '/member',
@@ -143,7 +118,6 @@ const routes = [
   //     },
   //   ],
   // },
->>>>>>> 6e822a850713018201f2f8a977bba945dc1e90ac
 
   {
     path: '/payment-checkout/:recId',
@@ -367,7 +341,7 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const admin = localStorage.getItem('admin')
 
-  if (token && admin) {
+  if (admin ||(token && admin)) {
     next()
     return
   }

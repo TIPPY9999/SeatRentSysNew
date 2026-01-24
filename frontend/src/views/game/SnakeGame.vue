@@ -5,8 +5,15 @@
         <div class="card shadow-lg border-0">
           <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
             <h5 class="mb-0"><i class="bi bi-controller me-2"></i>蛇蛇賺點數 (100分 = 1點)</h5>
-            <span class="badge bg-warning text-dark">
-              <template v-if="memberId">會員 ID: {{ memberId }}</template>
+            
+            <span class="badge bg-warning text-dark px-3 py-2">
+              <template v-if="memberId">
+                <i class="bi bi-person-fill me-1"></i>{{ memName }} 
+                <span class="mx-2 opacity-50">|</span>
+                <i class="bi bi-coin me-1"></i>{{ currentPoints }} Pts
+                <span class="mx-2 opacity-50">|</span>
+                ID: {{ memberId }}
+              </template>
               <template v-else>
                 <router-link to="/login" class="text-dark text-decoration-none">⚠️ 未登入 (點我登入)</router-link>
               </template>
@@ -75,13 +82,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { useMemberAuthStore } from '@/stores/memberAuth'; 
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
 const router = useRouter();
-const route = useRoute();
+const memberAuthStore = useMemberAuthStore();
 
 // 狀態變數
 const gameCanvas = ref(null);
@@ -91,8 +99,10 @@ const isGameRunning = ref(false);
 const gameOver = ref(false);
 const isUploaded = ref(false);
 
-// 會員資料：同時支援兩種常見的 Key
-const memberId = ref(localStorage.getItem('memberId') || localStorage.getItem('memId'));
+// 會員響應式資料 (修正變數名稱一致性)
+const memberId = computed(() => memberAuthStore.member?.memId);
+const memName = computed(() => memberAuthStore.member?.memName || '訪客');
+const currentPoints = computed(() => memberAuthStore.member?.memPoints || 0);
 
 // 遊戲邏輯變數
 let ctx = null;
@@ -101,12 +111,6 @@ let food = { x: 5, y: 5 };
 let direction = { x: 1, y: 0 };
 let nextDirection = { x: 1, y: 0 };
 const gridSize = 20;
-
-// 更新會員資訊
-const checkLoginStatus = () => {
-  const id = localStorage.getItem('memberId') || localStorage.getItem('memId');
-  memberId.value = id;
-};
 
 // 遊戲主迴圈
 const startGame = () => {
@@ -135,7 +139,6 @@ const update = () => {
   direction = nextDirection;
   const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
 
-  // 碰撞偵測
   if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 ||
       snake.some(s => s.x === head.x && s.y === head.y)) {
     isGameRunning.value = false;
@@ -146,7 +149,6 @@ const update = () => {
   snake.unshift(head);
   if (head.x === food.x && head.y === food.y) {
     score.value += 20;
-    // 每 100 分加速一次
     if (score.value % 100 === 0 && gameSpeed.value > 60) gameSpeed.value -= 15;
     spawnFood();
   } else {
@@ -156,16 +158,14 @@ const update = () => {
 
 const draw = () => {
   if (!ctx) return;
-  ctx.fillStyle = "#1e272e"; // 背景色
+  ctx.fillStyle = "#1e272e";
   ctx.fillRect(0, 0, 400, 400);
 
-  // 食物
   ctx.fillStyle = "#ff4757";
   ctx.beginPath();
   ctx.arc(food.x * gridSize + 10, food.y * gridSize + 10, 8, 0, Math.PI * 2);
   ctx.fill();
 
-  // 蛇
   snake.forEach((p, i) => {
     ctx.fillStyle = i === 0 ? "#ffffff" : "#2ecc71";
     ctx.fillRect(p.x * gridSize + 1, p.y * gridSize + 1, gridSize - 2, gridSize - 2);
@@ -185,14 +185,9 @@ const handleKeyDown = (e) => {
   if (key === 'ArrowRight' && direction.x === 0) nextDirection = { x: 1, y: 0 };
 };
 
-// 核心：領取點數對接後端
 const uploadScore = async () => {
-  checkLoginStatus();
-
   if (!memberId.value) {
-    // 儲存目前分數到 Session，登入後可恢復
     sessionStorage.setItem('pendingSnakeScore', score.value);
-    
     const result = await Swal.fire({
       title: '請先登入',
       text: `您獲得了 ${score.value} 分，登入後即可換取點數！`,
@@ -219,23 +214,26 @@ const uploadScore = async () => {
     isUploaded.value = true;
     sessionStorage.removeItem('pendingSnakeScore');
 
-    Swal.fire({
+    await Swal.fire({
       title: '兌換成功！',
-      text: `已入帳 ${res.data.addPoints} 點，目前帳戶總點數：${res.data.currentPoints}`,
+      text: `已入帳 ${res.data.addPoints} 點！`,
       icon: 'success'
     });
+
+    // ✅ 自動刷新全站點數
+    if (typeof memberAuthStore.refreshPoints === 'function') {
+      await memberAuthStore.refreshPoints();
+    }
   } catch (err) {
     console.error("上傳失敗", err);
-    Swal.fire('系統錯誤', '無法連接到伺服器，請稍後再試', 'error');
+    Swal.fire('系統錯誤', '無法連接到伺服器', 'error');
   }
 };
 
 onMounted(() => {
   ctx = gameCanvas.value.getContext('2d');
   window.addEventListener('keydown', handleKeyDown);
-  checkLoginStatus();
 
-  // 檢查是否有登入後跳回來的暫存分數
   const savedScore = sessionStorage.getItem('pendingSnakeScore');
   if (savedScore && memberId.value) {
     score.value = parseInt(savedScore);
@@ -267,5 +265,4 @@ canvas {
   border: 4px solid #34495e;
 }
 .shadow { box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important; }
-.card { overflow: hidden; }
 </style>

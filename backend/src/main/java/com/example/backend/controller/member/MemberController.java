@@ -1,6 +1,8 @@
 package com.example.backend.controller.member;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -14,9 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.backend.model.member.Member;
 import com.example.backend.service.member.MemberService;
 
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*") // 確保跨域沒問題
 @RestController
-@RequestMapping("/members")
+@RequestMapping("/api/members")
 public class MemberController {
 
     private final MemberService memberService;
@@ -33,15 +35,25 @@ public class MemberController {
 
     // 查單筆
     @GetMapping("/find")
-    public Object findOne(@RequestParam(required = false) Integer memId) {
-
+    public ResponseEntity<?> findOne(@RequestParam(required = false) Integer memId) {
         if (memId == null) {
-            return "請輸入 memId";
+            return ResponseEntity.badRequest().body("請輸入 memId");
         }
 
         Member member = memberService.findById(memId);
 
-        return member != null ? member : "查無此會員";
+        if (member != null) {
+            // --- 暴力拆解法：只傳需要的欄位，避開所有可能導致 500 的複雜物件 ---
+            Map<String, Object> response = new HashMap<>();
+            response.put("memId", member.getMemId());
+            response.put("memPoints", member.getMemPoints());
+            response.put("memName", member.getMemName());
+            response.put("memUsername", member.getMemUsername());
+
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(404).body("查無此會員");
+        }
     }
 
     // 新增
