@@ -99,7 +99,7 @@ const login = async () => {
     }
 
     // =========================
-    // 管理員登入
+    // 管理員登入 (最簡化修正版)
     // =========================
     const res = await axios.post(
       'http://localhost:8080/login/admin',
@@ -108,42 +108,35 @@ const login = async () => {
         admPassword: password.value,
       },
       {
-        withCredentials: true, // 如果後端有用 Session/Cookie 驗證，這行保留最安全
+        withCredentials: true,
       },
     )
 
-    /**
-     *  token 儲存（統一 localStorage）
-     * - 若後端有回 token 就用，沒有就給臨時值
-     */
+    // 1. 只清掉「會員」的資料，不要用 clear()
+    localStorage.removeItem('member_user');
+    memberAuthStore.clearMemberLogin();
+
+    // 2. 存入管理員 Token 與資料
     const token = res.data?.token || 'admin-login-ok'
     localStorage.setItem('token', token)
 
-    /**
-     *  admin 儲存（統一 localStorage + Pinia）
-     * - router/index.js 的後台守衛會檢查 localStorage.admin 是否存在
-     * - AdminLayout 會顯示 adminAuthStore.admin.name/username
-     * 所以：Pinia + localStorage 兩邊都要存
-     */
     const adminData = {
       username: res.data?.admUsername,
       name: res.data?.admName,
       role: res.data?.admRole,
     }
 
-    memberAuthStore.clearMemberLogin()
-    localStorage.removeItem('member_user')
-
+    // 3. 同步寫入 Pinia 和 LocalStorage
     adminAuthStore.setAdmin(adminData)
     localStorage.setItem('admin', JSON.stringify(adminData))
 
-    // 成功提示
+    // 4. 成功提示
     await Swal.fire({
       icon: 'success',
       title: '管理員登入成功',
       text: '歡迎回來！',
       showConfirmButton: false,
-      timer: 1200,
+      timer: 1000,
     })
 
     //  進後台（replace 避免回上一頁又回到登入頁）
@@ -209,6 +202,12 @@ const particlesOptions = {
 const goRegister = () => {
   router.push('/register')
 }
+
+const loginWithGoogle = () => {
+  // 加上時間戳記 t=${Date.now()} 確保每次請求都是新的，不被瀏覽器緩存網址
+  const googleLoginUrl = `http://localhost:8080/oauth2/authorization/google?prompt=select_account&t=${Date.now()}`;
+  window.location.href = googleLoginUrl;
+}
 </script>
 
 <template>
@@ -267,7 +266,22 @@ const goRegister = () => {
               <span @click="goRegister">註冊會員</span>
             </div>
 
+            <div class="google-login-section">
+              <div class="divider">
+                <span>或使用第三方登入</span>
+              </div>
+              
+              <button type="button" class="btn-google" @click="loginWithGoogle">
+                <img src="https://developers.google.com/static/identity/images/g-logo.png" alt="Google" />
+                使用 Google 帳號登入
+              </button>
+            </div>
+
             <button type="submit" class="btn btn-primary btn-block">登入</button>
+            <div class="back-to-home" @click="router.push('/')">
+               <el-icon><ArrowLeft /></el-icon>
+               <span>返回首頁</span>
+            </div>
           </form>
         </div>
       </div>
@@ -335,5 +349,79 @@ const goRegister = () => {
 
 .register-link span:hover {
   text-decoration: underline;
+}
+
+.back-to-home {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 15px; /* 與登入按鈕拉開距離 */
+  padding-top: 10px;
+  border-top: 1px inset #f0f0f0; /* 加一條淡淡的分隔線 */
+  color: #6c757d; /* 灰色，不搶走登入按鈕的焦點 */
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s;
+  gap: 5px;
+}
+
+.back-to-home:hover {
+  color: #007bff; /* 懸浮時變回藍色 */
+  text-decoration: underline;
+}
+
+/* 確保 el-icon 在文字中間 */
+.back-to-home .el-icon {
+  font-size: 12px;
+}
+
+.google-login-section {
+  margin-top: 20px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  color: #888;
+  font-size: 12px;
+}
+
+.divider::before, .divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #eee;
+}
+
+.divider span {
+  padding: 0 10px;
+}
+
+.btn-google {
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: #ffffff;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  color: #3c4043;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-google img {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-google:hover {
+  background-color: #f8f9fa;
+  box-shadow: 0 1px 2px 0 rgba(60,64,67,.30), 0 1px 3px 1px rgba(60,64,67,.15);
 }
 </style>

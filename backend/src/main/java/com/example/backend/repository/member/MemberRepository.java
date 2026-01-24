@@ -1,6 +1,7 @@
 package com.example.backend.repository.member;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -22,4 +23,7 @@ public interface MemberRepository extends JpaRepository<Member, Integer> {
                    OR m.memPhone LIKE %:kw%
             """)
     List<Member> findByKeyword(@Param("kw") String keyword);
+
+    // 讓 CustomOAuth2UserService 可以用 Email 檢查會員是否存在
+    Optional<Member> findByMemEmail(String memEmail);
 }

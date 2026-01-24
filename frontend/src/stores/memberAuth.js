@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import axios from 'axios'
 
 export const useMemberAuthStore = defineStore('memberAuth', {
   state: () => ({
@@ -32,8 +33,18 @@ export const useMemberAuthStore = defineStore('memberAuth', {
       }
     },
 
-    /* 會員登出 */
-    clearMemberLogin() {
+    /* 會員登出 (優化版) */
+    async clearMemberLogin() {
+      // 1. 先嘗試通知後端清除 Session (Google 登出)
+      try {
+        await axios.post('http://localhost:8080/api/auth/logout', {}, { withCredentials: true });
+        console.log('後端 Session 已清除');
+      } catch (err) {
+        // 如果後端本來就沒 Session 也沒關係，繼續清理前端
+        console.log('後端無 Session 或清除失敗');
+      }
+
+      // 2. 清理前端 Pinia 狀態
       this.isLogin = false
       this.member = {
         memId: null,
@@ -42,6 +53,12 @@ export const useMemberAuthStore = defineStore('memberAuth', {
         memPoints: 0,
         memInvoice: '',
       }
+
+      // 3. 清理前端 localStorage
+      localStorage.removeItem('member_user');
+      localStorage.removeItem('token');
+      
+      console.log('前端登入資訊已清理');
     },
   },
 })

@@ -2,6 +2,9 @@
 import { ref, computed } from 'vue'
 import { useMemberAuthStore } from '@/stores/memberAuth'
 import { useAdminAuthStore } from '@/stores/adminAuth'
+import { useRouter } from 'vue-router' // 新增這行
+
+const router = useRouter() // 初始化 router
 
 // --- 版面狀態 ---
 const isSidebarCollapsed = ref(false) // 控制側邊欄是否收合
@@ -59,13 +62,13 @@ const logout = () => {
     <aside class="sidebar">
       <!-- 可收合的功能選單 -->
       <ul class="menu-list">
-        <li class="menu-item">
-          <router-link to="/" class="member-info">
+        <li class="menu-item" @click="router.push('/')">
+          <div class="member-info">
             <span class="icon-wrapper">
               <el-icon><House /></el-icon>
             </span>
             <span class="logo">Take@Seat</span>
-          </router-link>
+          </div>
         </li>
         <li class="menu-item">
           <router-link to="/login" class="member-info">
@@ -76,22 +79,28 @@ const logout = () => {
           </router-link>
         </li>
         <li class="menu-item">
-          <span class="menu-text">
-            UID：
-            <span v-if="displayUID">
-              {{ displayUID }}
+          <div 
+            class="member-info" 
+            @click="!adminAuthStore.isLogin && router.push('/profile')" 
+            :style="{ 
+              cursor: adminAuthStore.isLogin ? 'default' : 'pointer', 
+              width: '100%' 
+            }"
+          >
+            <span class="menu-text">
+              UID：
+              <span v-if="displayUID">
+                {{ displayUID }}
+              </span>
+              <span v-else> 尚未登入 </span>
             </span>
-            <span v-else> 尚未登入 </span>
-          </span>
+          </div>
         </li>
-
-        <li class="menu-item">
-          <router-link to="/SearchSpot" class="member-info">
+        <li class="menu-item" @click="router.push('/SearchSpot')">
             <span class="icon-wrapper">
               <el-icon><Pointer /></el-icon>
             </span>
             <span class="menu-text">租借服務</span>
-          </router-link>
         </li>
         <li class="menu-item">
           <router-link to="/mall" class="member-info">
@@ -271,6 +280,12 @@ const logout = () => {
   transition:
     opacity 0.2s ease,
     width 0.2s ease;
+  user-select: none;
+  pointer-events: none;
+}
+
+.member-info:active {
+  background-color: transparent !important;
 }
 
 .page-wrapper.sidebar-collapsed .menu-text {

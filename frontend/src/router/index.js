@@ -329,28 +329,35 @@ const router = createRouter({
  * ==========================================
  */
 router.beforeEach((to, from, next) => {
-  // 只保護後台
+  // 1. 如果不是去後台，直接放行
   if (!to.path.startsWith('/admin')) {
     next()
     return
   }
 
+  // 2. 取得 localStorage 資料
   const token = localStorage.getItem('token')
-  const admin = localStorage.getItem('admin')
+  const adminJson = localStorage.getItem('admin')
 
-  if (token && admin) {
+  // Debug 用：如果進不去，請按 F12 看 Console
+  console.log('路由守衛檢查:', { path: to.path, hasToken: !!token, hasAdmin: !!adminJson });
+
+  // 3. 判斷是否有管理員身分
+  if (adminJson) {
+    // 只要有 admin 資料就讓它進去 (Token 視後端攔截器而定)
     next()
-    return
+  } else {
+    // 沒資料才跳警告
+    Swal.fire({
+      icon: 'warning',
+      title: '請先登入',
+      text: '管理員帳號已過期或尚未登入。',
+      confirmButtonText: '去登入',
+      allowOutsideClick: false,
+    }).then(() => {
+      next('/login')
+    })
   }
-
-  Swal.fire({
-    icon: 'warning',
-    title: '請先登入',
-    text: '您沒有權限訪問此頁面，請重新登入。',
-    confirmButtonText: '去登入',
-    allowOutsideClick: false,
-  })
-  next('/login')
 })
 
 export default router
