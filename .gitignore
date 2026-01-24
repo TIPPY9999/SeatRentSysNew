@@ -57,6 +57,22 @@ frontend/dist/
 # =====================================
 **/application-local.yml
 
+# =====================================
+# AI 開發專用忽略區 (Updated)
+# =====================================
+# 1. 忽略整個 AI 輸出目錄
+AI_good/
+
+# 2. 忽略根目錄可能產生的 XML 檔案
+*.xml
+
+# 3. 例外：絕對不能忽略 Maven 的設定檔
+!pom.xml
+!backend/pom.xml
+
+# 4. 確保忽略 repomix 的快取或 log (如果有)
+repomix-output.json
+
 # AI Context Tool Output
 repomix-output.xml
 repomix-output.txt

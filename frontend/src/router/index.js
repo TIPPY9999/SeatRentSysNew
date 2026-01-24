@@ -40,7 +40,6 @@ const routes = [
     name: 'login',
     component: LoginView,
   },
-  
 
   // ==========================================
   // [新增] 前台使用者頁面 (不套用後台側邊欄)
@@ -75,14 +74,17 @@ const routes = [
     component: CouponMall,
   },
   {
-    path: '/snake', 
+    path: '/snake',
     name: 'snake-game',
     component: SnakeGame,
   },
+<<<<<<< HEAD
     ],
   },
   
  
+=======
+>>>>>>> dd6883a1f54e8a4f2164b7cdf622a0f2bc90da25
 
   // 註冊會員
   {
