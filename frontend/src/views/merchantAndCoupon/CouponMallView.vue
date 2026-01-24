@@ -6,12 +6,6 @@
           <h4 class="mb-0 fw-bold text-dark me-3">
             <i class="bi bi-shop me-2 text-warning"></i>點數商城
           </h4>
-          <nav aria-label="breadcrumb" class="d-none d-md-block">
-            <ol class="breadcrumb mb-0">
-              <li class="breadcrumb-item"><router-link to="/">首頁</router-link></li>
-              <li class="breadcrumb-item active">優惠兌換</li>
-            </ol>
-          </nav>
         </div>
 
         <div class="d-flex align-items-center gap-3 mt-3 mt-md-0">

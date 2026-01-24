@@ -34,27 +34,28 @@ export const useMemberAuthStore = defineStore('memberAuth', {
     },
 
     // 刷新點數與資料
-    async refreshPoints() {
-      if (!this.member.memId) return
-      
-      try {
-        const res = await axios.get(`http://localhost:8080/api/members/find`, {
-          params: { memId: this.member.memId }
-        })
+  async refreshPoints() {
+  if (!this.member.memId) return
+  try {
+    const res = await axios.get(`http://localhost:8080/api/members/find`, {
+      params: { memId: this.member.memId }
+    })
 
-        if (res.data) {
-          // 更新 Store 裡的資料
-          this.member.memPoints = res.data.memPoints
-          if (res.data.memName) this.member.memName = res.data.memName
-          
-          // 同步回 LocalStorage
-          localStorage.setItem('member_user', JSON.stringify(this.member))
-          console.log('✅ 自動同步成功：', this.member)
-        }
-      } catch (error) {
-        console.warn('同步點數失敗', error)
+    if (res.data) {
+      // 🔥 關鍵：重新賦值整個 member 物件，這樣 Vue 才會 100% 偵測到變化
+      this.member = {
+        ...this.member,
+        memPoints: res.data.memPoints,
+        memName: res.data.memName || this.member.memName
       }
-    },
+      
+      localStorage.setItem('member_user', JSON.stringify(this.member))
+      console.log('✅ 點數同步成功，最新點數：', this.member.memPoints)
+    }
+  } catch (error) {
+    console.warn('同步點數失敗', error)
+  }
+},
 
     // 登出
     clearMemberLogin() {

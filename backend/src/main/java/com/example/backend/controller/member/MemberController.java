@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.backend.model.member.Member;
 import com.example.backend.service.member.MemberService;
 
-@CrossOrigin(origins = "*") // 確保跨域沒問題
+@CrossOrigin(origins = "http://localhost:5173") // 確保跨域沒問題
 @RestController
 @RequestMapping("/api/members")
 public class MemberController {
