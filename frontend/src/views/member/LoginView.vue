@@ -76,7 +76,6 @@ const login = async () => {
         memInvoice: res.data.memInvoice,
       })
 
-
       //  [+] 將會員資料存入 localStorage，實現持久化登入
       localStorage.setItem('member_user', JSON.stringify(res.data))
 
@@ -260,10 +259,7 @@ const goRegister = () => {
               />
             </div>
 
-            <div
-              v-if="loginType === 'member'"
-              class="register-link"
-            >
+            <div v-if="loginType === 'member'" class="register-link">
               <span @click="goRegister">註冊會員</span>
             </div>
 
@@ -276,6 +272,7 @@ const goRegister = () => {
 </template>
 
 <style scoped>
+/* ========== 登入頁面主容器 ========== */
 .login-page {
   position: relative;
   height: 100vh;
@@ -283,6 +280,7 @@ const goRegister = () => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  background: linear-gradient(135deg, #9db8d4 0%, #8aa5c1 100%);
 }
 
 /* 粒子背景：最底層 */
@@ -292,48 +290,145 @@ const goRegister = () => {
   z-index: 0;
 }
 
-/* 登入框：浮在上面 */
+/* ========== 登入框：Glassmorphism 風格 ========== */
 .login-box {
-  width: 360px;
+  width: 400px;
   position: relative;
   z-index: 10;
 }
 
+.login-box .card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.login-box .card-header {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  padding: 24px;
+  border-bottom: none;
+}
+
+.login-box .card-header h1 {
+  color: #ffffff;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.login-box .card-body {
+  padding: 28px;
+}
+
+/* ========== 登入切換按鈕 ========== */
 .login-switch {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 15px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .login-switch button {
-  padding: 6px 16px;
-  border: 1px solid #ccc;
-  background-color: #f3f4f6;
+  padding: 10px 24px;
+  border: 2px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #475569;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.login-switch button:hover {
+  background-color: #e2e8f0;
+  border-color: #cbd5e1;
 }
 
 .login-switch button.active {
-  background-color: #007bff;
-  color: #fff;
-  border-color: #007bff;
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  color: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+/* ========== 輸入欄位 ========== */
+.login-box .input-group {
+  margin-bottom: 16px;
+}
+
+.login-box .form-control {
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  background: #f8fafc;
+}
+
+.login-box .form-control:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+  outline: none;
+  background: #ffffff;
+}
+
+.login-box .form-control::placeholder {
+  color: #94a3b8;
+}
+
+/* ========== 註冊連結 ========== */
 .register-link {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 
 .register-link span {
-  font-size: 13px;
-  color: #007bff;
+  font-size: 14px;
+  color: #3b82f6;
   cursor: pointer;
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
 .register-link span:hover {
+  color: #1d4ed8;
   text-decoration: underline;
+}
+
+/* ========== 登入按鈕 ========== */
+.login-box .btn-primary {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.login-box .btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.login-box .btn-primary:active {
+  transform: translateY(1px);
 }
 </style>

@@ -129,7 +129,7 @@ const goBack = () => {
 .create-page {
   min-height: 100vh;
   padding: 40px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -166,15 +166,15 @@ const goBack = () => {
 .header-icon {
   width: 72px;
   height: 72px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #e8f4fc 0%, #d4e8f7 100%);
   border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 28px;
-  color: white;
+  color: #5b9bd5;
   margin: 0 auto 16px;
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(91, 155, 213, 0.15);
 }
 
 .card-header h2 {
@@ -228,14 +228,14 @@ const goBack = () => {
   font-size: 16px;
   font-weight: 600;
   border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #5b9bd5 0%, #7cb9e8 100%);
   border: none;
   transition: all 0.3s ease;
 }
 
 .submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 25px rgba(91, 155, 213, 0.35);
 }
 
 .back-btn {
@@ -250,9 +250,9 @@ const goBack = () => {
 }
 
 .back-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #5b9bd5;
+  color: #5b9bd5;
+  background: rgba(91, 155, 213, 0.05);
 }
 
 /* ========== 工具類 ========== */

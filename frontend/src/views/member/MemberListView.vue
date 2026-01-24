@@ -71,25 +71,25 @@ onMounted(() => {
     <h2 class="title">會員列表</h2>
 
     <div class="toolbar">
-  <!-- 左：搜尋 -->
-  <div class="search-bar">
-    <input
-      v-model="keyword"
-      type="text"
-      placeholder="搜尋帳號 / 姓名 / Email / 電話"
-      @keyup.enter="searchMembers"
-    />
-    <button @click="searchMembers">搜尋</button>
-    <button @click="fetchMembers">顯示全部</button>
-  </div>
+      <!-- 左：搜尋 -->
+      <div class="search-bar">
+        <input
+          v-model="keyword"
+          type="text"
+          placeholder="搜尋帳號 / 姓名 / Email / 電話"
+          @keyup.enter="searchMembers"
+        />
+        <button @click="searchMembers">搜尋</button>
+        <button @click="fetchMembers">顯示全部</button>
+      </div>
 
-  <!-- 右：新增會員 -->
-  <div class="create-bar">
-    <button class="btn-create" @click="router.push('/admin/members/create')">
-      ＋ 新增會員
-    </button>
-  </div>
-</div>
+      <!-- 右：新增會員 -->
+      <div class="create-bar">
+        <button class="btn-create" @click="router.push('/admin/members/create')">
+          ＋ 新增會員
+        </button>
+      </div>
+    </div>
 
     <p v-if="errorMsg" class="error">{{ errorMsg }}</p>
 
@@ -130,17 +130,12 @@ onMounted(() => {
           <td>{{ formatDateTime(m.createdAt) }}</td>
           <td>{{ formatDateTime(m.updatedAt) }}</td>
           <td>
-            <button
-              class="btn-edit"
-              @click="router.push(`/admin/members/edit/${m.memId}`)"
-            >
+            <button class="btn-edit" @click="router.push(`/admin/members/edit/${m.memId}`)">
               編輯
             </button>
           </td>
           <td>
-            <button class="btn-delete" @click="deleteMember(m.memId)">
-              刪除
-            </button>
+            <button class="btn-delete" @click="deleteMember(m.memId)">刪除</button>
           </td>
         </tr>
       </tbody>
@@ -149,136 +144,223 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* 整個頁面 */
+/* ========== 整個頁面 - 淺色背景 ========== */
 .member-page {
-  padding: 20px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f0f5fa 0%, #e8eef5 100%);
+  padding: 20px 1rem;
+  padding-bottom: 40px;
 }
 
-/* 標題 */
+/* ========== 標題區塊 ========== */
 .title {
-  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #303133;
   margin-bottom: 20px;
-  font-size: 22px;
-  font-weight: bold;
 }
 
-/* 上方工具列：搜尋（左）＋新增（右） */
+/* ========== 工具列 - 淺色卡片 ========== */
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
 }
 
-/* 搜尋列 */
+.toolbar:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* ========== 搜尋列 ========== */
 .search-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
 }
 
 .search-bar input {
-  width: 260px;
-  padding: 6px 8px;
+  width: 280px;
+  padding: 10px 14px;
   font-size: 14px;
-  border: 1px solid #999;
-  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  background: #f5f7fa;
+  transition: all 0.3s ease;
+}
+
+.search-bar input:focus {
+  border-color: #c0c4cc;
+  background: white;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.08);
+  outline: none;
+}
+
+.search-bar input::placeholder {
+  color: #c0c4cc;
 }
 
 .search-bar button {
-  padding: 6px 12px;
+  padding: 10px 18px;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  border: 1px solid #333;
-  background-color: #f3f4f6;
-  color: #333 !important;
+  border: none;
+  background: #409eff;
+  color: #ffffff;
+  border-radius: 8px;
+  transition: all 0.3s ease;
 }
 
 .search-bar button:hover {
-  background-color: #e5e7eb;
-  color: #111 !important;
+  background: #66b1ff;
+  transform: translateY(-1px);
 }
 
-/* 新增會員區 */
+/* ========== 新增會員按鈕 ========== */
 .create-bar {
   display: flex;
   justify-content: flex-end;
 }
 
 .btn-create {
-  padding: 8px 18px;
-  background-color: #28a745;
+  padding: 10px 20px;
+  background: #67c23a;
   color: #fff;
   border: none;
-  border-radius: 6px;
-  font-size: 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .btn-create:hover {
-  background-color: #218838;
+  background: #85ce61;
+  transform: translateY(-1px);
 }
 
-/* 表格 */
+/* ========== 表格 ========== */
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 14px;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
-/* 表格欄位 */
+/* ========== 表格欄位 ========== */
 th,
 td {
-  border: 1px solid #999;
-  padding: 6px;
+  border-bottom: 1px solid #ebeef5;
+  padding: 14px 12px;
   text-align: center;
   white-space: nowrap;
 }
 
-/* 表頭 */
+/* ========== 表頭 - 淺灰色 ========== */
 th {
-  background-color: #a8fefa;
-  font-weight: bold;
+  background: #f5f7fa;
+  color: #606266;
+  font-weight: 600;
+  font-size: 13px;
 }
 
-/* 沒資料提示 */
+/* ========== 表格內容行 ========== */
+tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+tbody tr:hover {
+  background-color: #f5f7fa;
+}
+
+/* 奇偶行交替色 */
+tbody tr:nth-child(even) {
+  background-color: #fafbfc;
+}
+
+tbody tr:nth-child(even):hover {
+  background-color: #f5f7fa;
+}
+
+/* ========== 沒資料提示 ========== */
 tbody tr td[colspan] {
   text-align: center;
-  padding: 12px;
+  padding: 40px;
+  color: #909399;
+  font-size: 14px;
 }
 
-/* 錯誤訊息 */
+/* ========== 錯誤訊息 ========== */
 .error {
-  color: red;
+  color: #f56c6c;
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #fef0f0;
+  border-radius: 8px;
+  font-weight: 500;
+  border: 1px solid #fde2e2;
 }
 
-/* 修改按鈕 */
+/* ========== 編輯按鈕 - 圓形藍色 ========== */
 .btn-edit {
-  padding: 4px 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   cursor: pointer;
-  border: 1px solid #333;
-  background-color: #f3f4f6;
-  color: #333 !important;
+  border: none;
+  background: #409eff;
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-edit:hover {
-  background-color: #e5e7eb;
-  color: #111 !important;
+  background: #66b1ff;
+  transform: scale(1.1);
 }
 
-/* 刪除按鈕 */
+/* ========== 刪除按鈕 - 圓形紅色 ========== */
 .btn-delete {
-  padding: 4px 8px;
-  background-color: #ff4d4f;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: #f56c6c;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-delete:hover {
-  background-color: #d9363e;
+  background: #f89898;
+  transform: scale(1.1);
+}
+
+/* ========== ID 欄位 ========== */
+td:first-child {
+  color: #606266;
+  font-size: 13px;
 }
 </style>

@@ -221,34 +221,35 @@ onMounted(() => {
   gap: 16px;
   margin-bottom: 24px;
   padding: 20px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: white;
   border-radius: 16px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e8ecf1;
 }
 
 .title-icon {
   width: 56px;
   height: 56px;
-  background: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #e8f4fc 0%, #d4e8f7 100%);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  color: white;
+  color: #5b9bd5;
 }
 
 .title-content h2 {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
-  color: white;
+  color: #303133;
 }
 
 .title-content p {
   margin: 4px 0 0;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: #909399;
 }
 
 /* ========== 統計卡片 ========== */
