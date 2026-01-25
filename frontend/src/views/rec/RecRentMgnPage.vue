@@ -4,6 +4,7 @@ import axios from 'axios'
 import RecRentSearch from '@/components/rec/RecRentSearch.vue'
 import RecRentAdd from '@/components/rec/RecRentAdd.vue'
 import RecRentEdit from '@/components/rec/RecRentEdit.vue' // 1. 引入 Edit 組件
+import Swal from 'sweetalert2'
 
 // --- 1. 狀態定義 ---
 const activeView = ref('list') // 'list', 'add', 'edit'
