@@ -159,15 +159,34 @@ const performSearch = () => {
 const fetchSpots = async () => {
   try {
     const response = await axios.get(backendApiUrl);
-    spots.value = response.data.map((spot) => ({
-      id: spot.spotId,
-      name: spot.spotName,
-      status: spot.spotStatus,
-      position: {
-        lat: parseFloat(spot.latitude),
-        lng: parseFloat(spot.longitude),
-      },
-    }));
+    // 為了顯示每個站點的座位數，我們使用 Promise.all 來平行發送請求
+    const spotsData = await Promise.all(
+      response.data.map(async (spot) => {
+        let seatCount = 0; // 預設座位數為 0
+        try {
+          // 呼叫後端 API 獲取該站點的座位數量
+          const countResponse = await axios.get(`http://localhost:8080/seats/count-by-spot?spotId=${spot.spotId}`);
+          seatCount = countResponse.data;
+        } catch (countErr) {
+          // 如果獲取座位數失敗，在控制台印出錯誤，但整個流程不中斷
+          console.error(`無法獲取站點 ${spot.spotId} 的座位數:`, countErr);
+        }
+        
+        // 組合最終的站點物件，包含座位資訊
+        return {
+          id: spot.spotId,
+          name: spot.spotName,
+          status: spot.spotStatus,
+          position: {
+            lat: parseFloat(spot.latitude),
+            lng: parseFloat(spot.longitude),
+          },
+          seatCount: seatCount,
+          returnCount: 20 - seatCount, // 根據需求計算可歸還數量
+        };
+      })
+    );
+    spots.value = spotsData;
   } catch (err) {
     console.error("無法獲取租借站點資料:", err);
     error.value = "無法載入租借站點資料，請稍後再試。";
@@ -298,20 +317,22 @@ onMounted(() => {
             <div v-if="infoWindow.spot">
               <h5>{{ infoWindow.title }}</h5>
               <p><strong>ID:</strong> {{ infoWindow.spot.id }}<strong>   |   狀態:</strong> {{ infoWindow.spot.status }}</p>
+              <p><strong>目前座位數量:</strong> {{ infoWindow.spot.seatCount }}</p>
+              <p><strong>可歸還位置:</strong> {{ infoWindow.spot.returnCount }}</p>
               <div class="button-group">
                 <button
                   @click="handleNavigation('order')"
                   class="btn btn-success"
-                  :disabled="infoWindow.spot.status !== '營運中'"
-                  :class="{ 'btn-disabled': infoWindow.spot.status !== '營運中' }"
+                  :disabled="infoWindow.spot.status !== '營運中' || infoWindow.spot.seatCount <= 0"
+                  :class="{ 'btn-disabled': infoWindow.spot.status !== '營運中' || infoWindow.spot.seatCount <= 0 }"
                 >
                   租借
                 </button>
                 <button
                   @click="handleNavigation('complete')"
                   class="btn btn-primary"
-                  :disabled="infoWindow.spot.status !== '營運中'"
-                  :class="{ 'btn-disabled': infoWindow.spot.status !== '營運中' }"
+                  :disabled="infoWindow.spot.status !== '營運中' || infoWindow.spot.returnCount <= 0"
+                  :class="{ 'btn-disabled': infoWindow.spot.status !== '營運中' || infoWindow.spot.returnCount <= 0 }"
                 >
                   歸還
                 </button>

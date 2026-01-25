@@ -23,4 +23,6 @@ public interface ISeatService {
 
     public List<Seat> selectByKeyword(String keyword);
 
+    public long countBySpotId(Integer spotId);
+
 }

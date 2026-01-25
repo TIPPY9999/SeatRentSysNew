@@ -268,7 +268,7 @@ watch(
           </h3>
 
           <button @click="openTermsModal" class="btn btn-success btn-lg" :disabled="!isReadyToRent">
-            {{ isReadyToRent ? '閱讀使用條款' : '請完成所有步驟' }}
+            {{ isReadyToRent ? '閱讀使用條款後租借' : '請先完成前置步驟' }}
           </button>
         </fieldset>
       </div>

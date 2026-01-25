@@ -127,4 +127,9 @@ public class SeatService implements ISeatService {
     public List<Seat> selectByKeyword(String keyword) {
         return seatRepository.findByKeyword(keyword);
     }
+
+    @Override
+    public long countBySpotId(Integer spotId) {
+        return seatRepository.countBySpotId(spotId);
+    }
 }

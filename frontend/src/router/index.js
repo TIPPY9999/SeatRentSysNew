@@ -75,6 +75,12 @@ const routes = [
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
 
+      {
+        path: 'recordRoute',
+        name: 'rec-rent-record',
+        component: () => import('@/views/rec/RecRentUserPage.vue'),
+      },
+
       // --- 新增：優惠券商城 ---
       {
         path: '/mall',
@@ -87,12 +93,6 @@ const routes = [
         path: '/snake',
         name: 'snake-game',
         component: SnakeGame,
-      },
-
-      {
-        path: 'recordRoute',
-        name: 'rec-rent-record',
-        component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
     ],
   },
