@@ -16,11 +16,11 @@ const adminName = computed(() => adminAuthStore.admin?.name || '管理員')
 
 // 統計數據 - 從 API 取得
 const stats = ref({
-  totalSpots: 0,       // 租借點數量
-  totalSeats: 0,       // 椅子數量
+  totalSpots: 0, // 租借點數量
+  totalSeats: 0, // 椅子數量
   maintenanceCount: 0, // 維修/維護中數量
-  totalMembers: 0,     // 會員人數
-  activeRentals: 0     // 進行中租借
+  totalMembers: 0, // 會員人數
+  activeRentals: 0, // 進行中租借
 })
 
 // 載入狀態
@@ -38,7 +38,7 @@ const updateTime = () => {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
+    second: '2-digit',
   })
 }
 
@@ -48,11 +48,11 @@ const fetchStats = async () => {
   try {
     // 並行請求所有數據
     const [spotsRes, seatsRes, membersRes, rentalsRes, ticketsRes] = await Promise.all([
-      axios.get('http://localhost:8080/spot/list'),          // 租借點
-      axios.get('http://localhost:8080/seats'),              // 椅子
-      axios.get('http://localhost:8080/members'),            // 會員
-      axios.get('http://localhost:8080/rec-rent'),           // 租借紀錄
-      axios.get('http://localhost:8080/api/maintenance/tickets/active') // 維修工單
+      axios.get('http://localhost:8080/spot/list'), // 租借點
+      axios.get('http://localhost:8080/seats'), // 椅子
+      axios.get('http://localhost:8080/api/members'), // 會員
+      axios.get('http://localhost:8080/rec-rent'), // 租借紀錄
+      axios.get('http://localhost:8080/api/maintenance/tickets/active'), // 維修工單
     ])
 
     // 租借點數量
@@ -70,8 +70,7 @@ const fetchStats = async () => {
 
     // 進行中租借 (狀態為 租借中)
     const rentals = rentalsRes.data || []
-    stats.value.activeRentals = rentals.filter(r => r.recStatus === '租借中').length
-
+    stats.value.activeRentals = rentals.filter((r) => r.recStatus === '租借中').length
   } catch (error) {
     console.error('取得統計數據失敗:', error)
   } finally {
@@ -98,48 +97,93 @@ const moduleGroups = [
     icon: 'fas fa-users-cog',
     modules: [
       { name: '會員管理', desc: '管理會員資料', icon: 'fas fa-users', path: '/admin/members' },
-      { name: '管理員管理', desc: '管理後台人員帳號', icon: 'fas fa-user-shield', path: '/admin/admins' }
-    ]
+      {
+        name: '管理員管理',
+        desc: '管理後台人員帳號',
+        icon: 'fas fa-user-shield',
+        path: '/admin/admins',
+      },
+    ],
   },
   {
     title: '場地與座位管理',
     icon: 'fas fa-building',
     modules: [
-      { name: '據點管理', desc: '管理各區域據點', icon: 'fas fa-map-marker-alt', path: '/admin/spot/list' },
-      { name: '座位管理', desc: '管理座位狀態與配置', icon: 'fas fa-chair', path: '/admin/seat/list' }
-    ]
+      {
+        name: '據點管理',
+        desc: '管理各區域據點',
+        icon: 'fas fa-map-marker-alt',
+        path: '/admin/spot/list',
+      },
+      {
+        name: '座位管理',
+        desc: '管理座位狀態與配置',
+        icon: 'fas fa-chair',
+        path: '/admin/seat/list',
+      },
+    ],
   },
   {
     title: '租借與金流管理',
     icon: 'fas fa-hand-holding-usd',
     modules: [
-      { name: '租借紀錄', desc: '查看租借與歸還紀錄', icon: 'fas fa-clipboard-list', path: '/admin/rec-rent' },
-      { name: '金流管理', desc: '管理金流相關設定', icon: 'fas fa-credit-card', path: '/admin/payment' }
-    ]
+      {
+        name: '租借紀錄',
+        desc: '查看租借與歸還紀錄',
+        icon: 'fas fa-clipboard-list',
+        path: '/admin/rec-rent',
+      },
+      {
+        name: '金流管理',
+        desc: '管理金流相關設定',
+        icon: 'fas fa-credit-card',
+        path: '/admin/payment',
+      },
+    ],
   },
   {
     title: '維護與工單管理',
     icon: 'fas fa-tools',
     modules: [
-      { name: '維護人員管理', desc: '管理維護技術人員', icon: 'fas fa-user-cog', path: '/admin/staff-list' },
-      { name: '維修工單管理', desc: '追蹤維修進度與派工', icon: 'fas fa-wrench', path: '/admin/mtif-list' }
-    ]
+      {
+        name: '維護人員管理',
+        desc: '管理維護技術人員',
+        icon: 'fas fa-user-cog',
+        path: '/admin/staff-list',
+      },
+      {
+        name: '維修工單管理',
+        desc: '追蹤維修進度與派工',
+        icon: 'fas fa-wrench',
+        path: '/admin/mtif-list',
+      },
+    ],
   },
   {
     title: '商家與優惠管理',
     icon: 'fas fa-store-alt',
     modules: [
-      { name: '商家管理', desc: '管理商家資料與狀態', icon: 'fas fa-store', path: '/admin/merchants' },
-      { name: '優惠券管理', desc: '管理優惠券與活動', icon: 'fas fa-ticket-alt', path: '/admin/coupons' }
-    ]
+      {
+        name: '商家管理',
+        desc: '管理商家資料與狀態',
+        icon: 'fas fa-store',
+        path: '/admin/merchants',
+      },
+      {
+        name: '優惠券管理',
+        desc: '管理優惠券與活動',
+        icon: 'fas fa-ticket-alt',
+        path: '/admin/coupons',
+      },
+    ],
   },
   {
     title: '其他功能',
     icon: 'fas fa-ellipsis-h',
     modules: [
-      { name: '小遊戲', desc: '貪吃蛇', icon: 'fas fa-gamepad', path: '/admin/snake-game' }
-    ]
-  }
+      { name: '小遊戲', desc: '貪吃蛇', icon: 'fas fa-gamepad', path: '/admin/snake-game' },
+    ],
+  },
 ]
 </script>
 
@@ -177,9 +221,7 @@ const moduleGroups = [
           </span>
           <span class="stat-label">租借據點</span>
         </div>
-        <div class="stat-indicator" v-if="!loading">
-          <span class="dot active"></span> 營運中
-        </div>
+        <div class="stat-indicator" v-if="!loading"><span class="dot active"></span> 營運中</div>
       </div>
 
       <!-- 椅子數量 -->
@@ -193,9 +235,7 @@ const moduleGroups = [
           </span>
           <span class="stat-label">座位總數</span>
         </div>
-        <div class="stat-badge" v-if="!loading">
-          <i class="fas fa-check-circle"></i> 可用
-        </div>
+        <div class="stat-badge" v-if="!loading"><i class="fas fa-check-circle"></i> 可用</div>
       </div>
 
       <!-- 維修/維護中 -->
@@ -228,9 +268,7 @@ const moduleGroups = [
           </span>
           <span class="stat-label">會員總數</span>
         </div>
-        <div class="stat-trend up" v-if="!loading">
-          <i class="fas fa-user-plus"></i> 成長中
-        </div>
+        <div class="stat-trend up" v-if="!loading"><i class="fas fa-user-plus"></i> 成長中</div>
       </div>
 
       <!-- 進行中租借 -->
@@ -244,9 +282,7 @@ const moduleGroups = [
           </span>
           <span class="stat-label">進行中租借</span>
         </div>
-        <div class="stat-indicator live" v-if="!loading">
-          <span class="dot pulse"></span> 即時
-        </div>
+        <div class="stat-indicator live" v-if="!loading"><span class="dot pulse"></span> 即時</div>
       </div>
     </div>
 
@@ -262,21 +298,17 @@ const moduleGroups = [
 
       <!-- 模組分類群組 -->
       <div class="module-groups">
-        <div 
-          v-for="(group, gIndex) in moduleGroups" 
-          :key="gIndex" 
-          class="module-group glass"
-        >
+        <div v-for="(group, gIndex) in moduleGroups" :key="gIndex" class="module-group glass">
           <div class="group-header">
             <div class="group-icon">
               <i :class="group.icon"></i>
             </div>
             <h3 class="group-title">{{ group.title }}</h3>
           </div>
-          
+
           <div class="group-modules">
-            <div 
-              v-for="(mod, mIndex) in group.modules" 
+            <div
+              v-for="(mod, mIndex) in group.modules"
               :key="mIndex"
               class="module-item"
               @click="router.push(mod.path)"
@@ -330,29 +362,110 @@ const moduleGroups = [
   animation: float 15s infinite ease-in-out;
 }
 
-.particle:nth-child(1) { left: 5%; top: 10%; animation-delay: 0s; }
-.particle:nth-child(2) { left: 15%; top: 30%; animation-delay: 1s; }
-.particle:nth-child(3) { left: 25%; top: 50%; animation-delay: 2s; }
-.particle:nth-child(4) { left: 35%; top: 20%; animation-delay: 3s; }
-.particle:nth-child(5) { left: 45%; top: 70%; animation-delay: 4s; }
-.particle:nth-child(6) { left: 55%; top: 15%; animation-delay: 5s; }
-.particle:nth-child(7) { left: 65%; top: 45%; animation-delay: 6s; }
-.particle:nth-child(8) { left: 75%; top: 65%; animation-delay: 7s; }
-.particle:nth-child(9) { left: 85%; top: 25%; animation-delay: 8s; }
-.particle:nth-child(10) { left: 95%; top: 55%; animation-delay: 9s; }
-.particle:nth-child(11) { left: 10%; top: 80%; animation-delay: 10s; }
-.particle:nth-child(12) { left: 20%; top: 5%; animation-delay: 11s; }
-.particle:nth-child(13) { left: 30%; top: 85%; animation-delay: 12s; }
-.particle:nth-child(14) { left: 40%; top: 40%; animation-delay: 13s; }
-.particle:nth-child(15) { left: 50%; top: 90%; animation-delay: 14s; }
-.particle:nth-child(16) { left: 60%; top: 35%; animation-delay: 0.5s; }
-.particle:nth-child(17) { left: 70%; top: 75%; animation-delay: 1.5s; }
-.particle:nth-child(18) { left: 80%; top: 8%; animation-delay: 2.5s; }
-.particle:nth-child(19) { left: 90%; top: 60%; animation-delay: 3.5s; }
-.particle:nth-child(20) { left: 3%; top: 45%; animation-delay: 4.5s; }
+.particle:nth-child(1) {
+  left: 5%;
+  top: 10%;
+  animation-delay: 0s;
+}
+.particle:nth-child(2) {
+  left: 15%;
+  top: 30%;
+  animation-delay: 1s;
+}
+.particle:nth-child(3) {
+  left: 25%;
+  top: 50%;
+  animation-delay: 2s;
+}
+.particle:nth-child(4) {
+  left: 35%;
+  top: 20%;
+  animation-delay: 3s;
+}
+.particle:nth-child(5) {
+  left: 45%;
+  top: 70%;
+  animation-delay: 4s;
+}
+.particle:nth-child(6) {
+  left: 55%;
+  top: 15%;
+  animation-delay: 5s;
+}
+.particle:nth-child(7) {
+  left: 65%;
+  top: 45%;
+  animation-delay: 6s;
+}
+.particle:nth-child(8) {
+  left: 75%;
+  top: 65%;
+  animation-delay: 7s;
+}
+.particle:nth-child(9) {
+  left: 85%;
+  top: 25%;
+  animation-delay: 8s;
+}
+.particle:nth-child(10) {
+  left: 95%;
+  top: 55%;
+  animation-delay: 9s;
+}
+.particle:nth-child(11) {
+  left: 10%;
+  top: 80%;
+  animation-delay: 10s;
+}
+.particle:nth-child(12) {
+  left: 20%;
+  top: 5%;
+  animation-delay: 11s;
+}
+.particle:nth-child(13) {
+  left: 30%;
+  top: 85%;
+  animation-delay: 12s;
+}
+.particle:nth-child(14) {
+  left: 40%;
+  top: 40%;
+  animation-delay: 13s;
+}
+.particle:nth-child(15) {
+  left: 50%;
+  top: 90%;
+  animation-delay: 14s;
+}
+.particle:nth-child(16) {
+  left: 60%;
+  top: 35%;
+  animation-delay: 0.5s;
+}
+.particle:nth-child(17) {
+  left: 70%;
+  top: 75%;
+  animation-delay: 1.5s;
+}
+.particle:nth-child(18) {
+  left: 80%;
+  top: 8%;
+  animation-delay: 2.5s;
+}
+.particle:nth-child(19) {
+  left: 90%;
+  top: 60%;
+  animation-delay: 3.5s;
+}
+.particle:nth-child(20) {
+  left: 3%;
+  top: 45%;
+  animation-delay: 4.5s;
+}
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) translateX(0);
     opacity: 0.3;
   }
@@ -572,8 +685,15 @@ const moduleGroups = [
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.1); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
 }
 
 /* ========== 功能模組區 ========== */

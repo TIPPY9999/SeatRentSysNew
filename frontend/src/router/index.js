@@ -87,6 +87,9 @@ const routes = [
         path: '/snake',
         name: 'snake-game',
         component: SnakeGame,
+      },
+
+      {
         path: 'recordRoute',
         name: 'rec-rent-record',
         component: () => import('@/views/rec/RecRentUserPage.vue'),

@@ -5,6 +5,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import Swal from 'sweetalert2'
 
 const router = useRouter()
 
@@ -22,20 +23,35 @@ const member = reactive({
 const errorMsg = ref('')
 const successMsg = ref('')
 
-const submitCreate = () => {
-  axios
-    .post('http://localhost:8080/members', {
+const submitCreate = async () => {
+  try {
+    //  endpoint 統一 /api/members
+    const res = await axios.post('http://localhost:8080/api/members', {
+      //  正確展開 member
       ...member,
       memStatus: 1,
       memLevel: 1,
     })
-    .then((res) => {
-      alert(res.data)
-      router.push('/admin/members')
+
+    await Swal.fire({
+      icon: 'success',
+      title: '新增成功',
+      text: res.data?.message || '會員已新增',
+      confirmButtonText: '確定',
+      confirmButtonColor: '#409eff',
     })
-    .catch((err) => {
-      alert(err.response?.data || '新增失敗')
+
+    router.push('/admin/members')
+  } catch (err) {
+    const msg = err.response?.data?.message || '新增失敗'
+    await Swal.fire({
+      icon: 'error',
+      title: '新增失敗',
+      text: msg,
+      confirmButtonText: '確定',
+      confirmButtonColor: '#f56c6c',
     })
+  }
 }
 
 const goBack = () => {
@@ -136,7 +152,9 @@ input {
   margin-bottom: 16px;
   font-size: 14px;
   background: #f8fafc;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 input:focus {
@@ -162,7 +180,9 @@ button {
   font-weight: 600;
   cursor: pointer;
   margin-top: 8px;
-  transition: box-shadow 0.2s ease, transform 0.15s ease;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
