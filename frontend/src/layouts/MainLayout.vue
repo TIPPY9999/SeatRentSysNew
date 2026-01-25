@@ -129,7 +129,7 @@ const logout = () => {
           <span class="icon-wrapper">
             <el-icon><Pointer /></el-icon>
           </span>
-          <span class="menu-text">租借服務</span>
+          <span class="menu-text">@Seat借還</span>
         </li>
 
         <li class="menu-item">
