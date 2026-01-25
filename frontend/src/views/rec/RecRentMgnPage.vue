@@ -17,7 +17,7 @@ const API_URL = 'http://localhost:8080/rec-rent'
 // 新增或更新 (Create / Update)
 const handleSaveRent = async (formData) => {
   try {
-    const id = formData.recSeqId
+    const id = formData.recId
     const method = id ? 'put' : 'post'
     const url = id ? `${API_URL}/${id}` : API_URL
     const res = await axios[method](url, formData)
@@ -39,21 +39,43 @@ const handleSaveRent = async (formData) => {
 
 // 刪除 (Delete)
 const handleDeleteRent = async (id) => {
-  if (!confirm('確定要刪除這筆訂單嗎？(ID: ' + id + ')')) return
+  // 使用 SweetAlert2 彈出確認對話框，提供更好的使用者體驗
+  const result = await Swal.fire({
+    title: `確定要刪除訂單 #${id} 嗎?`,
+    text: '此操作無法復原！',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '是的，刪除它！',
+    cancelButtonText: '取消',
+  })
+
+  // 如果使用者沒有確認，則中止操作
+  if (!result.isConfirmed) {
+    return
+  }
+
   try {
+    // 呼叫後端 API 執行刪除，使用標準的 RESTful 風格 URL
     const res = await axios.delete(`${API_URL}/${id}`)
-    if (res.status === 200) {
-      alert('刪除成功！')
-      // Use the ref to call the child's method
+    
+    // 檢查回應狀態碼，200 (OK) 或 204 (No Content) 都代表成功
+    if (res.status === 200 || res.status === 204) {
+      await Swal.fire('已刪除！', `訂單 #${id} 已成功刪除。`, 'success')
+      // 如果 searchComponent 存在，則呼叫其方法重新載入訂單列表
       if (searchComponent.value) {
         await searchComponent.value.loadRents()
       }
     } else {
-      alert('刪除失敗')
+      // 若狀態碼不為成功，顯示錯誤
+      Swal.fire('刪除失敗', `發生未預期的錯誤，狀態碼: ${res.status}`, 'error')
     }
   } catch (err) {
     console.error('刪除操作失敗:', err)
-    alert('刪除失敗')
+    // 處理 API 呼叫的錯誤
+    const errorMessage = err.response?.data?.message || err.message || '未知錯誤'
+    Swal.fire('刪除失敗', `錯誤: ${errorMessage}`, 'error')
   }
 }
 

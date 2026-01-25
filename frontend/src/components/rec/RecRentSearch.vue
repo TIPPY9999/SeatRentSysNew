@@ -6,6 +6,7 @@ const API_URL = 'http://localhost:8080/rec-rent'
 
 const rentList = ref([])
 const searchCriteria = reactive({
+  recSeqId: '',
   recId: '',
   memId: '',
   memName: '',
@@ -22,6 +23,7 @@ const emit = defineEmits(['edit-rent', 'delete-rent'])
 const loadRents = async () => {
   try {
     const params = new URLSearchParams()
+    if (searchCriteria.recSeqId) params.append('recSeqId', searchCriteria.recSeqId)
     if (searchCriteria.recId) params.append('recId', searchCriteria.recId)
     if (searchCriteria.memId) params.append('memId', searchCriteria.memId)
     if (searchCriteria.memName) params.append('memName', searchCriteria.memName)
@@ -165,7 +167,7 @@ defineExpose({
         </tr>
       </thead>
       <tbody>
-        <tr v-for="rent in rentList" :key="rent.recSeqId">
+        <tr v-for="(rent, index) in rentList" :key="rent.recId || index">
           <td>{{ rent.recStatus }}</td>
           <td>
             <span v-if="rent.recId">{{ rent.recId }}</span>
@@ -183,7 +185,7 @@ defineExpose({
           <td>{{ rent.recPayment }}</td>
           <td>
             <button class="btn-warning" @click="editRent(rent)">編輯</button><span> / </span>
-            <button class="btn-danger ml-1" @click="deleteRent(rent.recSeqId)">刪除</button>
+            <button class="btn-danger ml-1" @click="deleteRent(rent.recId)">刪除</button>
           </td>
         </tr>
         <tr v-if="rentList.length === 0">

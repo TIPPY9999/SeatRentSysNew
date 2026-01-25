@@ -77,7 +77,6 @@ const closeModal = () => {
   agreedToTerms.value = false // 關閉時重置勾選
 }
 
-
 // --- 問題回報處理 ---
 const handleReport = () => {
   const rent = activeRent.value
@@ -121,7 +120,13 @@ const proceedWithRent = async () => {
     const response = await axios.post(`http://localhost:8080/api/rec-rents/complete`, rentalData)
     if (response.status === 200) {
       // 歸還成功後，導向至付款頁面
+      // [修改] 增加訂單ID的回退(fallback)機制與防呆，避免產生 /payment/undefined 的路由錯誤
       const recId = activeRent.value.recId || activeRent.value.recSeqId
+      if (!recId) {
+        errorMessage.value = '歸還成功，但無法找到訂單ID以進行付款，請聯繫客服。'
+        console.error('訂單物件缺少 recId 與 recSeqId:', activeRent.value)
+        return
+      }
       router.push(`/payment/${recId}`)
     } else {
       errorMessage.value = '歸還失敗，請稍後再試。'
@@ -199,7 +204,7 @@ const handleQuickReturnTest = async () => {
   if (!activeRent.value) return
   if (
     !confirm(
-      `[測試功能] 確定要強制歸還訂單 ${activeRent.value.recSeqId || activeRent.value.recId} 嗎？`,
+      `[測試功能] 確定要強制歸還訂單 ${activeRent.value.recId} 嗎？`,
     )
   )
     return
@@ -208,7 +213,6 @@ const handleQuickReturnTest = async () => {
     const testReturnData = {
       memId: memberId.value,
       seatsId: activeRent.value.seatsId,
-      recSeqId: activeRent.value.recSeqId,
       spotIdRent: activeRent.value.spotIdRent,
       spotIdReturn: selectedSpot.value?.spotId, // 若未選站點則使用原站點
       recRentDT2: activeRent.value.recRentDT2 || activeRent.value.recRentDT,
@@ -224,9 +228,14 @@ const handleQuickReturnTest = async () => {
       recViolatInt: 0, //
     }
 
-    //
-    const updateId = activeRent.value.recSeqId;
-    await axios.put(`http://localhost:8080/rec-rent/update/${updateId}`, testReturnData)
+    // [修改] 增加訂單ID的回退(fallback)機制與防呆，避免產生 undefined 的 API 請求
+    const updateId = activeRent.value.recId //|| activeRent.value.recId
+    if (!updateId) {
+      alert('錯誤：無法找到訂單 ID，無法完成測試歸還。')
+      console.error('訂單物件:', activeRent.value)
+      return
+    }
+    await axios.put(`http://localhost:8080/rec-rent/${updateId}`, testReturnData)
     alert('測試歸還成功，將導向紀錄頁面。')
     router.push({ name: 'rec-rent-user', params: { action: 'record' } })
   } catch (error) {
@@ -247,7 +256,7 @@ watch(selectedSpot, (newSpot) => {
 
 onMounted(async () => {
   // Debug: 確認進入頁面時的狀態
-  console.log('歸還頁面載入，目前會員ID:', memberId.value, '登入狀態:', memberAuthStore.isLogin)
+  console.log('會員ID:', memberId.value, '登入狀態:', memberAuthStore.isLogin)
 
   // 如果進入頁面時發現是登入狀態但沒有 ID，導回登入頁
   if (memberAuthStore.isLogin && !memberId.value) {
@@ -272,6 +281,9 @@ onMounted(async () => {
         router.push({ name: 'rec-rent-user', params: { action: 'record' } })
         return
       } else {
+        // --- 除錯 --- 印出找到的訂單物件，以確認 recSeqId 屬性是否存在及其值
+        console.log('找到進行中的訂單:', foundRent)
+        console.log('訂單Id 為:', foundRent?.recId)
         activeRent.value = foundRent
       }
     } catch (error) {
