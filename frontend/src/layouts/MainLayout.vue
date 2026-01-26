@@ -91,7 +91,7 @@ const logout = () => {
             <span class="icon-wrapper">
               <el-icon><House /></el-icon>
             </span>
-            <span class="logo">Take@Seat</span>
+            <span class="menu-text">Take@Seat</span>
           </div>
         </li>
 
@@ -116,9 +116,9 @@ const logout = () => {
               width: '100%',
             }"
             :aria-disabled="!uidClickable"
-          >
+          ><span class="icon-wrapper" style="font-size: 120%;">歡迎</span>
             <span class="menu-text">
-              UID：
+              
               <span v-if="displayUID">{{ displayUID }}</span>
               <span v-else> 尚未登入 </span>
             </span>
@@ -232,7 +232,7 @@ const logout = () => {
 .logo {
   font-size: 22px;
   font-weight: 600;
-  margin: 0 10px;
+  margin: 0 px;
   padding: 0;
 }
 .page-wrapper {
