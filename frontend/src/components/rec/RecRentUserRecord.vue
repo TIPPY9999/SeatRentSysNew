@@ -112,7 +112,13 @@ onMounted(() => {
             </span>
             <span class="ms-2 title-text">訂單編號: {{ rent.recId || rent.recSeqId }}</span>
           </h5>
-          <span class="ms-2 title-text">座位編號: {{ rent.seatsId }}</span>
+          <span class="ms-2 title-text">座椅編號: {{ rent.seatsId }}</span>
+          <span class="ms-2 title-text">付款方式: {{ rent.recPayBy || '尚未付款' }}</span>
+          <h5 class="mb-0 text-primary fw-bold">
+            <button class="btn btn-sm btn-outline-warning" @click="handleReport(rent)">
+              <i class="fas fa-exclamation-circle"></i> 問題回報
+            </button>
+          </h5>
         </div>
 
         <div class="row mt-2">
@@ -132,16 +138,6 @@ onMounted(() => {
               <strong>歸還時間:</strong> {{ rent.recReturnDT2?.replace('T', ' ') || '-' }}
             </p>
           </div>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-          <span class="text-muted small">付款方式: {{ rent.recPayBy || '-' }}</span>
-
-          <h5 class="mb-0 text-primary fw-bold">
-            <button class="btn btn-sm btn-outline-warning" @click="handleReport(rent)">
-              <i class="fas fa-exclamation-circle"></i> 問題回報
-            </button>
-          </h5>
         </div>
       </div>
     </div>

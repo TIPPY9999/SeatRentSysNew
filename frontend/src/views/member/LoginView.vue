@@ -139,7 +139,7 @@ const login = async () => {
     })
 
     //  進後台（replace 避免回上一頁又回到登入頁）
-    router.push('/')
+    router.push('/admin')
   } catch (err) {
     console.error(err)
 

@@ -75,19 +75,13 @@ const routes = [
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
 
+      // 將 'rec-rent-record' 路由重定向至帶有 action 參數的標準租借路由
       {
         path: 'recordRoute',
         name: 'rec-rent-record',
-        component: () => import('@/views/rec/RecRentUserPage.vue'),
-      },
-      {
-        path: '/payment-checkout/:recId',
-        name: 'payment-checkout',
-        // 確保路徑指向您真正存在的檔案 (ecpay 或 payment 資料夾)
-        component: () => import('@/views/ecpay/PaymentView.vue'),
+        redirect: { name: 'rec-rent-user', params: { action: 'record' } },
       },
 
-      // 訂單確認與付款頁
       {
         path: '/payment/order',
         name: 'payment-order',
@@ -107,6 +101,12 @@ const routes = [
         path: '/snake',
         name: 'snake-game',
         component: SnakeGame,
+      },
+      // 訂單確認與付款頁
+      {
+        path: '/payment-checkout/:recId',
+        name: 'payment-checkout',
+        component: () => import('@/views/ecpay/PaymentView.vue'),
       },
     ],
   },
