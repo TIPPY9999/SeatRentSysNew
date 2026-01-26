@@ -2,21 +2,27 @@ package com.example.backend.controller.maintenance;
 
 import com.example.backend.dto.maintenance.SpotOptionDto;
 import com.example.backend.dto.maintenance.MaintenanceLogResponseDto;
+import com.example.backend.dto.maintenance.MaintenanceStaffResponseDto;
 import com.example.backend.model.maintenance.MaintenanceInformation;
 import com.example.backend.model.maintenance.MaintenanceStaff;
+import com.example.backend.model.member.Admin;
 import com.example.backend.model.spot.Seat;
 import com.example.backend.service.maintenance.MaintenanceInformationService;
 import com.example.backend.service.maintenance.MaintenanceStaffService;
+import com.example.backend.service.member.AdminService; // 引用 AdminService
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import com.example.backend.dto.maintenance.MaintenanceStaffResponseDto;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/maintenance")
-@CrossOrigin(origins = "http://localhost:5173") // 允許 Vue 前端呼叫
+@CrossOrigin(origins = "http://localhost:5173")
 public class MaintenanceController {
 
     @Autowired
@@ -25,187 +31,228 @@ public class MaintenanceController {
     @Autowired
     private MaintenanceInformationService mtifService;
 
+    @Autowired
+    private AdminService adminService; // ★ 確保這裡有注入
+
+    @Autowired
+    private HttpServletRequest request; // ★ 注入 HttpServletRequest 用於讀取 Session
+
+    /**
+     * ★ [問題 1 完整解決方案] 智慧取得當前登入管理員的真實姓名
+     * 
+     * 查找優先順序：
+     * 1. 從 Session 中的 loginAdmin 取得 (最可靠)
+     * 2. 從 SecurityContext 取得 username 並查詢
+     * 3. 如果 username 是數字，當作 ID 查詢
+     * 4. 如果都失敗，回傳預設值「系統管理員」
+     */
+    private String getCurrentUser() {
+        System.out.println("========== [DEBUG] getCurrentUser() 開始 ==========");
+        
+        try {
+            // ==========================================
+            // 方法 1：從 Session 中直接取得 (最準確)
+            // ==========================================
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                Admin sessionAdmin = (Admin) session.getAttribute("loginAdmin");
+                if (sessionAdmin != null && sessionAdmin.getAdmName() != null) {
+                    String name = sessionAdmin.getAdmName();
+                    System.out.println("[DEBUG] ✅ 從 Session 取得管理員: " + name);
+                    System.out.println("[DEBUG] 管理員帳號: " + sessionAdmin.getAdmUsername());
+                    System.out.println("========== [DEBUG] getCurrentUser() 結束 ==========");
+                    return name;
+                }
+            }
+            System.out.println("[DEBUG] ⚠️ Session 中找不到 loginAdmin");
+
+            // ==========================================
+            // 方法 2：從 SecurityContext 取得
+            // ==========================================
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                System.out.println("[DEBUG] ⚠️ SecurityContext 沒有認證資訊");
+                System.out.println("========== [DEBUG] getCurrentUser() 結束 ==========");
+                return "系統管理員";
+            }
+
+            String username = auth.getName();
+            System.out.println("[DEBUG] SecurityContext Auth Name: '" + username + "'");
+            
+            // ==========================================
+            // 步驟 1：嘗試用 username 查詢
+            // ==========================================
+            Admin admin = adminService.findByUsername(username);
+            if (admin != null && admin.getAdmName() != null) {
+                System.out.println("[DEBUG] ✅ 透過 username 找到管理員: " + admin.getAdmName());
+                System.out.println("========== [DEBUG] getCurrentUser() 結束 ==========");
+                return admin.getAdmName();
+            }
+            System.out.println("[DEBUG] ⚠️ findByUsername('" + username + "') 沒有結果");
+
+            // ==========================================
+            // 步驟 2：檢查是否為數字 (ID)
+            // ==========================================
+            if (username.matches("\\d+")) {
+                try {
+                    Integer adminId = Integer.parseInt(username);
+                    System.out.println("[DEBUG] username 是數字，嘗試用 ID 查詢: " + adminId);
+                    admin = adminService.findById(adminId);
+                    if (admin != null && admin.getAdmName() != null) {
+                        System.out.println("[DEBUG] ✅ 透過 ID 找到管理員: " + admin.getAdmName());
+                        System.out.println("========== [DEBUG] getCurrentUser() 結束 ==========");
+                        return admin.getAdmName();
+                    }
+                    System.out.println("[DEBUG] ⚠️ findById(" + adminId + ") 沒有結果");
+                } catch (NumberFormatException e) {
+                    System.out.println("[DEBUG] ⚠️ 轉換 ID 失敗: " + e.getMessage());
+                }
+            }
+
+            // ==========================================
+            // 步驟 3：檢查是否為 Email (選用)
+            // ==========================================
+            if (username.contains("@")) {
+                System.out.println("[DEBUG] username 看起來像 Email: " + username);
+                // 如果 AdminService 有 findByEmail 方法可以在這裡呼叫
+                // Admin admin = adminService.findByEmail(username);
+            }
+
+        } catch (Exception e) {
+            System.err.println("[ERROR] getCurrentUser() 發生錯誤: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // ==========================================
+        // Fallback：所有方法都失敗
+        // ==========================================
+        System.out.println("[DEBUG] ❌ 所有查找方法都失敗，使用預設值");
+        System.out.println("========== [DEBUG] getCurrentUser() 結束 ==========");
+        return "系統管理員";
+    }
+
     @GetMapping("/spots")
-    public List<SpotOptionDto> getSpotOptions() {
-        return mtifService.getSpotOptions();
+    public List<SpotOptionDto> getSpotOptions() { 
+        return mtifService.getSpotOptions(); 
     }
 
     // ================== 維護人員 (Staff) ==================
-
-    // 取得所有維護人員
     @GetMapping("/staff")
-public List<MaintenanceStaffResponseDto> getAllStaff() {
-    return staffService.getAllStaff();
-}
+    public List<MaintenanceStaffResponseDto> getAllStaff() { 
+        return staffService.getAllStaff(); 
+    }
 
-    // 修復：新增取得啟用人員 API
+    // ★ 前端下拉選單應該呼叫這支 API，才不會選到停用的人
     @GetMapping("/staff/active")
-    public List<MaintenanceStaffResponseDto> getActiveStaff() {
-        return staffService.getActiveStaff();
+    public List<MaintenanceStaffResponseDto> getActiveStaff() { 
+        return staffService.getActiveStaff(); 
     }
 
-    // 取得單一維護人員詳情
     @GetMapping("/staff/{id}")
-    public MaintenanceStaffResponseDto getStaffById(@PathVariable Integer id) {
-        return staffService.getStaffById(id);
+    public MaintenanceStaffResponseDto getStaffById(@PathVariable Integer id) { 
+        return staffService.getStaffById(id); 
     }
 
-    //新增維護人員
     @PostMapping("/staff")
-    public MaintenanceStaffResponseDto createStaff(@RequestBody MaintenanceStaff staff) {
-        return staffService.createStaff(staff);
+    public MaintenanceStaffResponseDto createStaff(@RequestBody MaintenanceStaff staff) { 
+        return staffService.createStaff(staff); 
     }
 
-    //更新維護人員
     @PutMapping("/staff/{id}")
-    public MaintenanceStaffResponseDto updateStaff(@PathVariable Integer id,
-                                                @RequestBody MaintenanceStaff staff) {
-        return staffService.updateStaff(id, staff);
+    public MaintenanceStaffResponseDto updateStaff(@PathVariable Integer id, @RequestBody MaintenanceStaff staff) { 
+        return staffService.updateStaff(id, staff); 
     }
 
-    //刪除維護人員 (實際上是停用)
     @DeleteMapping("/staff/{id}")
-    public void deleteStaff(@PathVariable Integer id) {
-        staffService.deleteStaff(id);
+    public void deleteStaff(@PathVariable Integer id) { 
+        staffService.deleteStaff(id); 
     }
 
-    // 查詢已停用的維護人員 (歷史紀錄用)
     @GetMapping("/staff/inactive")
-    public List<MaintenanceStaff> getInactiveStaff() {
-        return staffService.getInactiveStaff();
+    public List<MaintenanceStaff> getInactiveStaff() { 
+        return staffService.getInactiveStaff(); 
     }
 
-    // ================== 工單查詢 (Read) ==================
-
-    // 1. 取得「待處理」工單 (Active: Reported / Assigned / Under Maintenance)
+    // ================== 工單查詢 ==================
     @GetMapping("/tickets/active")
-    public List<MaintenanceInformation> getActiveTickets() {
-        return mtifService.getActiveTickets();
+    public List<MaintenanceInformation> getActiveTickets() { 
+        return mtifService.getActiveTickets(); 
     }
 
-    // 2. 取得「歷史」工單 (History: Resolved / Cancelled)
     @GetMapping("/tickets/history")
-    public List<MaintenanceInformation> getHistoryTickets() {
-        return mtifService.getHistoryTickets();
+    public List<MaintenanceInformation> getHistoryTickets() { 
+        return mtifService.getHistoryTickets(); 
     }
 
-    // 3. 取得「全部」工單 (後台管理用)
     @GetMapping("/tickets")
-    public List<MaintenanceInformation> getAllTickets() {
-        return mtifService.getAllTickets();
+    public List<MaintenanceInformation> getAllTickets() { 
+        return mtifService.getAllTickets(); 
     }
 
-    // 4. 依照 SpotId 查詢工單 (看某個機台的維修紀錄)
     @GetMapping("/tickets/spot/{spotId}")
-    public List<MaintenanceInformation> getTicketsBySpot(@PathVariable Integer spotId) {
-        return mtifService.getTicketsBySpotId(spotId);
+    public List<MaintenanceInformation> getTicketsBySpot(@PathVariable Integer spotId) { 
+        return mtifService.getTicketsBySpotId(spotId); 
     }
 
-    // 5. 取得單張工單詳情 (編輯或查看細節用)
     @GetMapping("/tickets/{id}")
-    public MaintenanceInformation getTicketById(@PathVariable Integer id) {
-        return mtifService.getRequiredTicket(id);
+    public MaintenanceInformation getTicketById(@PathVariable Integer id) { 
+        return mtifService.getRequiredTicket(id); 
     }
 
-    // ================== 工單操作 (Create / Update) ==================
+    // ================== 工單操作 (傳遞 operator) ==================
 
-    // 6. 新增工單
-    // 前端傳送 JSON: { "spotId": 1, "issueType": "硬體", ... }
     @PostMapping("/tickets")
     public MaintenanceInformation createTicket(@RequestBody MaintenanceInformation mtif) {
-        return mtifService.createTicket(mtif);
+        // ★ 這裡傳入 getCurrentUser() 確保 Log 紀錄正確名字
+        return mtifService.createTicket(mtif, getCurrentUser());
     }
 
-    // 7. 更新工單 (修改問題描述、優先級等)
     @PutMapping("/tickets/{id}")
-    public MaintenanceInformation updateTicket(@PathVariable Integer id, 
-                                               @RequestBody MaintenanceInformation mtif) {
-        // 確保 PathVariable 的 ID 與物件內的 ID 一致
+    public MaintenanceInformation updateTicket(@PathVariable Integer id, @RequestBody MaintenanceInformation mtif) {
         mtif.setTicketId(id);
-        return mtifService.updateTicket(mtif);
+        return mtifService.updateTicket(mtif, getCurrentUser());
     }
  
-    // ================== 流程控制 (State Changes) ==================
-
-    // 8. 指派人員
-    // 前端傳送 JSON: { "staffId": 5 }  (若不指派傳 null)
     @PostMapping("/tickets/{id}/assign")
     public void assignStaff(@PathVariable Integer id, @RequestBody Map<String, Integer> body) {
-        Integer staffId = body.get("staffId");
-        mtifService.assignStaff(id, staffId);
+        mtifService.assignStaff(id, body.get("staffId"), getCurrentUser());
     }
 
-    // 9. 開始維修
-    // 前端不需要傳 body，只要呼叫這個 API
     @PostMapping("/tickets/{id}/start")
     public void startTicket(@PathVariable Integer id) {
+        // 開始維修通常是維修人員自己按的
         mtifService.startTicket(id);
     }
 
-    // 10. 結案 (完成維修)
-    // 前端傳送 JSON: { "resultType": "FIXED", "resolveNote": "換了零件" }
     @PostMapping("/tickets/{id}/resolve")
     public void resolveTicket(@PathVariable Integer id, @RequestBody Map<String, String> body) {
-        String resultType = body.get("resultType");
-        String resolveNote = body.get("resolveNote");
-        mtifService.resolveTicket(id, resultType, resolveNote);
+        mtifService.resolveTicket(id, body.get("resultType"), body.get("resolveNote"));
     }
 
-    // 11. 取消工單
-    // 前端傳送 JSON: { "reason": "客戶說修好了" }
     @PostMapping("/tickets/{id}/cancel")
     public void cancelTicket(@PathVariable Integer id, @RequestBody Map<String, String> body) {
-        String reason = body.get("reason");
-        mtifService.cancelTicket(id, reason);
+        mtifService.cancelTicket(id, body.get("reason"), getCurrentUser());
     }
 
-    //轉移工單並刪除人員
+    // ★ [問題 4 補充] 確保人員移轉與刪除時，也記錄操作者
     @PostMapping("/staff/transfer-and-delete")
     public void transferAndDelete(@RequestBody Map<String, Integer> body) {
-        Integer targetStaffId = body.get("targetStaffId");
-        Integer deleteStaffId = body.get("deleteStaffId");
-        staffService.transferAndDelete(targetStaffId, deleteStaffId);
+        staffService.transferAndDelete(body.get("targetStaffId"), body.get("deleteStaffId"), getCurrentUser());
     }
 
-
-    //============ 椅子相關 API ============
-    // 1. 取得所有椅子
+    // ================== 其他 ==================
     @GetMapping("/seats")
-    public List<Seat> getAllSeats() {
-        return mtifService.getAllSeats();
-    }
+    public List<Seat> getAllSeats() { return mtifService.getAllSeats(); }
 
-    // 2. 依照 SpotId 篩選椅子 (選了機台後，只顯示該機台的椅子)
     @GetMapping("/seats/spot/{spotId}")
-    public List<Seat> getSeatsBySpot(@PathVariable Integer spotId) {
-        return mtifService.getSeatsBySpot(spotId);
-    }
+    public List<Seat> getSeatsBySpot(@PathVariable Integer spotId) { return mtifService.getSeatsBySpot(spotId); }
 
-    // ================== 工單歷程 (Timeline / Audit Log) ==================
-
-    /**
-     * 取得指定工單的完整歷程記錄
-     * GET /api/maintenance/tickets/{id}/logs
-     * 
-     * @param id 工單 ID
-     * @return 歷程記錄列表 (按時間倒序)
-     */
     @GetMapping("/tickets/{id}/logs")
-    public List<MaintenanceLogResponseDto> getTicketLogs(@PathVariable Integer id) {
-        return mtifService.getTicketLogs(id);
-    }
-
-    // ================== Task 2: 歷史工單查詢支援 ==================
+    public List<MaintenanceLogResponseDto> getTicketLogs(@PathVariable Integer id) { return mtifService.getTicketLogs(id); }
     
-    /**
-     * 查詢指定人員的工單（可依狀態篩選）
-     * GET /api/maintenance/staff/{staffId}/tickets?statuses=REPORTED,ASSIGNED
-     */
     @GetMapping("/staff/{staffId}/tickets")
-    public List<MaintenanceInformation> getTicketsByStaff(
-            @PathVariable Integer staffId,
-            @RequestParam(required = false) List<String> statuses) {
+    public List<MaintenanceInformation> getTicketsByStaff(@PathVariable Integer staffId, @RequestParam(required = false) List<String> statuses) {
         return mtifService.getTicketsByStaff(staffId, statuses);
     }
-
 }

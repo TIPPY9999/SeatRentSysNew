@@ -22,9 +22,11 @@ const transferForm = ref({
 })
 const transferLoading = ref(false)
 
-// 計算可選的接手人員 (排除要刪除的人)
+// ★ 問題4修復：計算可選的接手人員 (排除要刪除的人 且 必須是啟用中的人員)
 const availableTargetStaff = computed(() => {
-  return staffList.value.filter((s) => s.staffId !== transferForm.value.deleteStaffId)
+  return staffList.value.filter((s) => 
+    s.staffId !== transferForm.value.deleteStaffId && s.isActive === true
+  )
 })
 
 const fetchStaff = async () => {

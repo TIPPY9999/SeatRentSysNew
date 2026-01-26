@@ -1,6 +1,5 @@
 <template>
   <div class="ticket-timeline-container">
-    <!-- 標題區 -->
     <div class="timeline-header">
       <h3>
         <i class="fas fa-history"></i>
@@ -11,15 +10,12 @@
       </el-button>
     </div>
 
-    <!-- Loading 狀態 -->
     <div v-if="loading" class="loading-skeleton">
       <el-skeleton :rows="5" animated />
     </div>
 
-    <!-- 無資料提示 -->
     <el-empty v-else-if="logs.length === 0" description="尚無歷程記錄" :image-size="120" />
 
-    <!-- Timeline 主體 -->
     <el-timeline v-else class="timeline-content">
       <el-timeline-item
         v-for="(log, index) in logs"
@@ -29,7 +25,6 @@
         :size="log.action === 'URGENT' ? 'large' : 'normal'"
         :class="['timeline-item', `animate-delay-${index % 5}`]"
       >
-        <!-- 卡片內容 -->
         <el-card shadow="hover" class="log-card" :class="`action-${log.action.toLowerCase()}`">
           <template #header>
             <div class="card-header">
@@ -46,7 +41,7 @@
           <div class="card-body">
             <div class="operator">
               <i class="fas fa-user-circle"></i>
-              <strong>{{ log.operator }}</strong>
+              <strong>{{ log.operator || '系統' }}</strong>
             </div>
             <div v-if="log.comment" class="comment">
               <i class="fas fa-comment-dots"></i>
@@ -63,7 +58,11 @@
 import { ref, onMounted, watch } from 'vue'
 import maintenanceApi from '@/api/modules/maintenance'
 import { ElMessage } from 'element-plus'
-import { getPriorityText, getStatusText, getResultText } from '@/composables/maintenance/useTicketConfig'
+import {
+  getPriorityText,
+  getStatusText,
+  getResultText,
+} from '@/composables/maintenance/useTicketConfig'
 
 // ========== Props ==========
 const props = defineProps({
@@ -79,9 +78,6 @@ const loading = ref(false)
 
 // ========== Methods ==========
 
-/**
- * 取得工單歷程
- */
 const fetchLogs = async () => {
   if (!props.ticketId) return
 
@@ -98,15 +94,16 @@ const fetchLogs = async () => {
 }
 
 /**
- * 根據 action 決定顏色
+ * 根據 action 決定顏色 (★ 包含 TRANSFERRED)
  */
 const getActionColor = (action) => {
   const colorMap = {
-    CREATED: '#409EFF', // 藍色 (Primary)
-    ASSIGNED: '#909399', // 灰色 (Info)
-    STARTED: '#E6A23C', // 橘色 (Warning)
-    RESOLVED: '#67C23A', // 綠色 (Success)
-    CANCELLED: '#F56C6C', // 紅色 (Danger)
+    CREATED: '#409EFF', // 藍
+    ASSIGNED: '#909399', // 灰
+    TRANSFERRED: '#8E44AD', // ★ 紫色 (移轉)
+    STARTED: '#E6A23C', // 橘
+    RESOLVED: '#67C23A', // 綠
+    CANCELLED: '#F56C6C', // 紅
     URGENT: '#FF6600', // 深橘 (緊急)
   }
   return colorMap[action] || '#409EFF'
@@ -119,6 +116,7 @@ const getActionIcon = (action) => {
   const iconMap = {
     CREATED: 'Plus',
     ASSIGNED: 'User',
+    TRANSFERRED: 'Refresh', // ★ 移轉圖示
     STARTED: 'Tools',
     RESOLVED: 'CircleCheck',
     CANCELLED: 'CircleClose',
@@ -134,6 +132,7 @@ const getActionLabel = (action) => {
   const labelMap = {
     CREATED: '建立工單',
     ASSIGNED: '指派人員',
+    TRANSFERRED: '工單移轉', // ★ 移轉文字
     STARTED: '開始維修',
     RESOLVED: '維修完成',
     CANCELLED: '取消工單',
@@ -142,45 +141,30 @@ const getActionLabel = (action) => {
   return labelMap[action] || action
 }
 
-/**
- * 格式化歷程 comment，將代碼轉換為中文
- * @param {string} comment - 原始 comment 字串
- * @returns {string} 轉換後的中文字串
- */
 const formatLogComment = (comment) => {
   if (!comment) return '-'
-  
   let formatted = comment
-  
-  // 替換「優先權: CODE」為「優先權: 中文」
-  formatted = formatted.replace(/優先權:\s*([A-Z_]+)/g, (match, code) => {
-    return `優先權: ${getPriorityText(code)}`
-  })
-  
-  // 替換「狀態: CODE」為「狀態: 中文」
-  formatted = formatted.replace(/狀態:\s*([A-Z_]+)/g, (match, code) => {
-    return `狀態: ${getStatusText(code)}`
-  })
-  
-  // 替換「結果: CODE」為「結果: 中文」
-  formatted = formatted.replace(/結果:\s*([A-Z_]+)/g, (match, code) => {
-    return `結果: ${getResultText(code)}`
-  })
-  
+  formatted = formatted.replace(
+    /優先權:\s*([A-Z_]+)/g,
+    (match, code) => `優先權: ${getPriorityText(code)}`,
+  )
+  formatted = formatted.replace(
+    /狀態:\s*([A-Z_]+)/g,
+    (match, code) => `狀態: ${getStatusText(code)}`,
+  )
+  formatted = formatted.replace(
+    /結果:\s*([A-Z_]+)/g,
+    (match, code) => `結果: ${getResultText(code)}`,
+  )
   return formatted
 }
 
-// 把 fetchLogs 暴露給父元件使用
-defineExpose({
-  fetchLogs,
-})
+defineExpose({ fetchLogs })
 
-// ========== Lifecycle ==========
 onMounted(() => {
   fetchLogs()
 })
 
-// 監聽 ticketId 變化 (若在同一頁切換工單)
 watch(
   () => props.ticketId,
   () => {
@@ -219,12 +203,9 @@ watch(
   color: #409eff;
 }
 
-/* ========== Loading 骨架屏 ========== */
 .loading-skeleton {
   padding: 20px;
 }
-
-/* ========== Timeline 主體 ========== */
 .timeline-content {
   padding: 10px 0;
 }
@@ -236,7 +217,6 @@ watch(
   border-left: 4px solid transparent;
 }
 
-/* Hover 浮起效果 */
 .log-card:hover {
   transform: translateY(-4px) scale(1.02);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
@@ -246,23 +226,21 @@ watch(
 .log-card.action-created {
   border-left-color: #409eff;
 }
-
 .log-card.action-assigned {
   border-left-color: #909399;
 }
-
+.log-card.action-transferred {
+  border-left-color: #8e44ad;
+} /* ★ 紫色 */
 .log-card.action-started {
   border-left-color: #e6a23c;
 }
-
 .log-card.action-resolved {
   border-left-color: #67c23a;
 }
-
 .log-card.action-cancelled {
   border-left-color: #f56c6c;
 }
-
 .log-card.action-urgent {
   border-left-color: #ff6600;
   animation: pulseGlow 2s ease-in-out infinite;
@@ -285,26 +263,25 @@ watch(
   letter-spacing: 0.5px;
 }
 
+/* Badge 顏色 */
 .badge-created {
   background: linear-gradient(135deg, #409eff, #66b1ff);
 }
-
 .badge-assigned {
   background: linear-gradient(135deg, #909399, #b3b8bd);
 }
-
+.badge-transferred {
+  background: linear-gradient(135deg, #8e44ad, #9b59b6);
+} /* ★ 紫色 */
 .badge-started {
   background: linear-gradient(135deg, #e6a23c, #f0bc65);
 }
-
 .badge-resolved {
   background: linear-gradient(135deg, #67c23a, #85ce61);
 }
-
 .badge-cancelled {
   background: linear-gradient(135deg, #f56c6c, #f89898);
 }
-
 .badge-urgent {
   background: linear-gradient(135deg, #ff6600, #ff9933);
   animation: badgePulse 1.5s ease-in-out infinite;
@@ -315,7 +292,6 @@ watch(
   color: #909399;
   font-weight: 500;
 }
-
 .timestamp i {
   margin-right: 4px;
 }
@@ -332,7 +308,6 @@ watch(
   color: #303133;
   margin-bottom: 8px;
 }
-
 .operator i {
   margin-right: 8px;
   color: #409eff;
@@ -350,7 +325,6 @@ watch(
   display: flex;
   align-items: flex-start;
 }
-
 .comment i {
   margin-right: 8px;
   margin-top: 2px;
@@ -359,8 +333,6 @@ watch(
 }
 
 /* ========== 動畫效果 ========== */
-
-/* 彈跳進場動畫 (Staggered) */
 @keyframes bounceInRight {
   0% {
     opacity: 0;
@@ -382,7 +354,6 @@ watch(
   animation: bounceInRight 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) both;
 }
 
-/* 依序延遲進場 (每個項目間隔 0.1s) */
 .animate-delay-0 {
   animation-delay: 0s;
 }
@@ -399,7 +370,6 @@ watch(
   animation-delay: 0.4s;
 }
 
-/* 緊急工單呼吸燈效果 */
 @keyframes pulseGlow {
   0%,
   100% {
@@ -412,7 +382,6 @@ watch(
   }
 }
 
-/* Badge 脈動動畫 */
 @keyframes badgePulse {
   0%,
   100% {
@@ -423,20 +392,17 @@ watch(
   }
 }
 
-/* ========== 響應式設計 ========== */
 @media (max-width: 768px) {
   .timeline-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
-
   .card-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-
   .log-card:hover {
     transform: translateY(-2px) scale(1.01);
   }

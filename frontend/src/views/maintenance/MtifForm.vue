@@ -254,23 +254,9 @@ const submit = async () => {
 
         if (isEdit.value) {
           // === [更新模式] ===
+          // ★ 問題3修復：後端 updateTicket 已經處理 assignedStaffId 的更新與 Log 紀錄
+          // 不需要額外呼叫 assignStaff API，完全依賴 updateTicket 即可
           await maintenanceApi.updateTicket(ticketId.value, submitData)
-
-          // ★ Bug3 修復：只有當 assignedStaffId 有變更時，才呼叫 assignStaff API
-          if (form.assignedStaffId && form.assignedStaffId !== originalAssignedStaffId.value) {
-            try {
-              await maintenanceApi.assignStaff(ticketId.value, { staffId: form.assignedStaffId })
-            } catch (assignError) {
-              console.error('Assign staff failed:', assignError)
-              // 不阻斷整個流程，只提醒
-              await Swal.fire({
-                icon: 'warning',
-                title: '工單已更新',
-                text: '但人員指派失敗，請再次檢查',
-                timer: 2000
-              })
-            }
-          }
 
           await Swal.fire({
             icon: 'success',
@@ -619,16 +605,21 @@ const handleCancel = async () => {
                   clearable
                   size="large"
                 >
+                  <!-- ★ 問題2修復：過濾只顯示啟用人員，或當前工單已指派的人員（即使已停用） -->
                   <el-option
-                    v-for="s in staffOptions"
+                    v-for="s in staffOptions.filter(staff => staff.isActive === true || staff.staffId === originalAssignedStaffId)"
                     :key="s.staffId"
-                    :label="`${s.staffName} (${s.staffCompany || '外部'})`"
+                    :label="`${s.staffName}${s.isActive === false ? ' (已停用)' : ''} (${s.staffCompany || '外部'})`"
                     :value="s.staffId"
+                    :disabled="s.isActive === false && s.staffId !== form.assignedStaffId"
                   >
                     <div class="staff-option">
-                      <div class="staff-avatar">{{ s.staffName?.charAt(0) }}</div>
+                      <div class="staff-avatar" :style="{ opacity: s.isActive === false ? 0.5 : 1 }">{{ s.staffName?.charAt(0) }}</div>
                       <div class="staff-info">
-                        <span class="staff-name">{{ s.staffName }}</span>
+                        <span class="staff-name" :style="{ color: s.isActive === false ? '#909399' : '' }">
+                          {{ s.staffName }}
+                          <el-tag v-if="s.isActive === false" type="info" size="small" style="margin-left: 4px;">已停用</el-tag>
+                        </span>
                         <span class="staff-company">{{ s.staffCompany || '外部人員' }}</span>
                       </div>
                     </div>
