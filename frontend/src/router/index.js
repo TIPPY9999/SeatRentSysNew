@@ -80,6 +80,20 @@ const routes = [
         name: 'rec-rent-record',
         component: () => import('@/views/rec/RecRentUserPage.vue'),
       },
+      {
+        path: '/payment-checkout/:recId',
+        name: 'payment-checkout',
+        // 確保路徑指向您真正存在的檔案 (ecpay 或 payment 資料夾)
+        component: () => import('@/views/ecpay/PaymentView.vue'),
+      },
+
+      // 訂單確認與付款頁
+      {
+        path: '/payment/order',
+        name: 'payment-order',
+        component: () => import('@/views/ecpay/PaymentViewOrder.vue'),
+      },
+
 
       // --- 新增：優惠券商城 ---
       {
@@ -107,36 +121,6 @@ const routes = [
         component: () => import('@/views/member/Register.vue'),
       },
     ],
-  },
-
-  // // 會員頁面
-  // {
-  //   path: '/member',
-  //   component: MemberLayout,
-  //   children: [
-  //     {
-  //       path: 'profile',
-  //       name: 'member-profile',
-  //       component: MemberProfileView,
-  //     },
-  //     {
-  //       path: 'user-info',
-  //       name: 'member-user-info',
-  //       component: () => import('@/views/rec/IdHoldingPage.vue'),
-  //     },
-  //     {
-  //       path: 'rent/:action?',
-  //       name: 'rec-rent-user',
-  //       component: () => import('@/views/rec/RecRentUserPage.vue'),
-  //     },
-  //   ],
-  // },
-
-  {
-    path: '/payment-checkout/:recId',
-    name: 'payment-checkout',
-    // 確保路徑指向您真正存在的檔案 (ecpay 或 payment 資料夾)
-    component: () => import('@/views/ecpay/PaymentView.vue'),
   },
 
   /**

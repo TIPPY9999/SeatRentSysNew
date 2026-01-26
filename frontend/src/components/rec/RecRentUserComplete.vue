@@ -67,6 +67,26 @@ const goToSearchSpot = () => {
   router.push('/SearchSpot')
 }
 
+// [新增] 前往付款頁面的方法
+const goToPayment = () => {
+  if (!isReadyToRent.value) return
+
+  const recId = activeRent.value?.recId
+  if (!recId) {
+    errorMessage.value = '無法找到訂單ID，無法進行付款。'
+    console.error('訂單物件缺少 recId:', activeRent.value)
+    return
+  }
+
+  router.push({
+    name: 'payment-order',
+    query: {
+      recId: recId,
+      total: rentCalculation.value.totalFee,
+    },
+  })
+}
+
 const openTermsModal = () => {
   if (isReadyToRent.value) {
     showTermsModal.value = true
@@ -165,7 +185,7 @@ const rentCalculation = computed(() => {
   // 3. 計算費用: 使用時間/30 取整後 + 20
   // 註：若您的費率是 "每30分鐘30元"，公式應為 Math.floor(durationMinutes / 30) * 30 + 20
   // 這裡依照您的指示 "使用時間/30 取整後+20" 實作
-  const totalFee = Math.floor(durationMinutes / 30) * 30 + 20
+  const totalFee = Math.floor(durationMinutes / 30) * 30 +45
 
   // 4. 格式化時間顯示 (YYYY/MM/DD HH:mm:ss)
   const formatTime = (date) => {
@@ -310,12 +330,6 @@ onMounted(async () => {
           <h5 class="mb-0">
             您好: <strong>{{ memberName }}</strong> (ID: {{ memberId }})，請確認您的歸還資訊。
           </h5>
-
-          <!-- 除錯用：顯示整個 user 物件結構 -->
-          <!-- <details class="mt-2">
-              <summary style="cursor: pointer; font-size: 0.8rem;">點此查看原始會員資料物件</summary>
-              <pre style="background-color: #333; color: #fff; padding: 10px; border-radius: 4px; font-size: 0.8rem;">{{ JSON.stringify(memberAuthStore.member, null, 2) }}</pre>
-            </details> -->
         </div>
         <div v-else class="alert alert-warning">
           <h5><i class="fas fa-exclamation-triangle"></i> 訪客你好</h5>
@@ -364,7 +378,7 @@ onMounted(async () => {
           <h3>費用總計: {{ rentCalculation.totalFee }} NTD</h3>
           <div class="d-flex justify-content-between align-items-center">
             <button
-              @click="openTermsModal"
+              @click="goToPayment"
               class="btn btn-success btn-lg"
               :disabled="!isReadyToRent"
             >
