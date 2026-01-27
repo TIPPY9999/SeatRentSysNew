@@ -228,7 +228,7 @@ const logout = () => {
 /* --- 1. CSS 變數 --- */
 :root {
   --sidebar-width-expanded: 200px;
-  --sidebar-width-collapsed: 70px;
+  --sidebar-width-collapsed: 80px;
 }
 /* --- 4. 主內容容器 --- */
 .main-content-area {
@@ -251,7 +251,7 @@ const logout = () => {
 /* --- 3. 側邊欄 --- */
 .sidebar {
   width: var(--sidebar-width-expanded);
-  background-color: #b9f8b9;
+  background-color: #c4f7c4;
   border-right: 1px solid #dee2e6;
   transition: width 0.2s ease;
   flex-shrink: 0;
@@ -269,10 +269,10 @@ const logout = () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 15px;
+  height: 10px;
   font-size: 30px; /* for SVG size */
-  color: #484848;
+  color: #2e2e2e;
   flex-shrink: 0;
 }
 
@@ -288,7 +288,7 @@ const logout = () => {
 .menu-list {
   list-style: none;
   padding: 0;
-  margin: 10px 0;
+  margin: 3px 0;
   flex-grow: 1;
   overflow-y: auto;
   overflow-x: hidden; /* 新增：防止水平滾動條 */
@@ -297,8 +297,8 @@ const logout = () => {
 .menu-item {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  gap: 20px;
+  padding: 10px 12px;
+  gap: 17px;
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 0.2s;
@@ -340,21 +340,21 @@ const logout = () => {
 
 /* 側邊欄頁腳 (收合按鈕) */
 .sidebar-footer {
-  padding: 5px;
+  padding: 3px;
   margin-top: auto; /* 將按鈕推到底部 */
   border-top: 1px solid #e9ecef;
 }
 
 .toggle-btn {
-  width: 100%;
+  width: 90%;
   background-color: #f5f7fa;
   border: 1px solid #dcdfe6;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   padding: 5px;
   font-size: 28px;
   line-height: 1;
-  color: #606266;
+  color: #404142;
   display: flex;
   justify-content: center;
   align-items: center;

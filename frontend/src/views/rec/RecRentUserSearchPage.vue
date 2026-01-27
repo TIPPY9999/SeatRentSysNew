@@ -51,8 +51,7 @@ const infoWindow = ref({
   position: null,
   opened: false,
   isSearchResult: false,
-  rentCount: 0,
-  returnCount: 0,
+  isLoadingCounts: false, // 新增：用於追蹤數量是否載入中
   spot: null,
   title: '',
 })
@@ -158,35 +157,17 @@ const performSearch = () => {
 const fetchSpots = async () => {
   try {
     const response = await axios.get(backendApiUrl)
-    // 為了顯示每個站點的座位數，我們使用 Promise.all 來平行發送請求
-    const spotsData = await Promise.all(
-      response.data.map(async (spot) => {
-        let seatCount = 0 // 預設座位數為 0
-        try {
-          // 呼叫後端 API 獲取該站點的座位數量
-          const countResponse = await axios.get(
-            `http://localhost:8080/seats/count-by-spot?spotId=${spot.spotId}`,
-          )
-          seatCount = countResponse.data
-        } catch (countErr) {
-          // 如果獲取座位數失敗，在控制台印出錯誤，但整個流程不中斷
-          console.error(`無法獲取站點 ${spot.spotId} 的座位數:`, countErr)
-        }
-
-        // 組合最終的站點物件，包含座位資訊
-        return {
-          id: spot.spotId,
-          name: spot.spotName,
-          status: spot.spotStatus,
-          position: {
-            lat: parseFloat(spot.latitude),
-            lng: parseFloat(spot.longitude),
-          },
-          seatCount: seatCount,
-          returnCount: 20 - seatCount, // 根據需求計算可歸還數量
-        }
-      }),
-    )
+    // 將後端資料轉換為地圖標記所需的格式
+    const spotsData = response.data.map((spot) => ({
+      id: spot.spotId,
+      name: spot.spotName,
+      status: spot.spotStatus,
+      position: {
+        lat: parseFloat(spot.latitude),
+        lng: parseFloat(spot.longitude),
+      },
+      // 注意：seatCount 和 returnCount 在這裡不再預先載入
+    }))
     spots.value = spotsData
   } catch (err) {
     console.error('無法獲取租借站點資料:', err)
@@ -194,19 +175,52 @@ const fetchSpots = async () => {
   }
 }
 
-// 開啟一個站點的資訊視窗
-const openInfoWindowForSpot = (spot) => {
+// 開啟一個站點的資訊視窗，並動態獲取數量
+const openInfoWindowForSpot = async (spot) => {
   searchResultMarker.value = null // 清除搜尋結果的標記
   infoWindow.value.opened = false
-  nextTick(() => {
-    infoWindow.value = {
-      position: spot.position,
-      opened: true,
-      isSearchResult: false,
-      spot: spot,
-      title: spot.name,
+
+  // 立即顯示基本資訊
+  await nextTick()
+  infoWindow.value = {
+    position: spot.position,
+    opened: true,
+    isSearchResult: false,
+    spot: { ...spot, seatCount: null, returnCount: null }, // 初始設定為 null
+    title: spot.name,
+    isLoadingCounts: true, // 開始載入
+  }
+
+  // 如果站點不在營運中，則不查詢數量
+  if (spot.status !== '營運中') {
+    infoWindow.value.spot.seatCount = 0
+    infoWindow.value.spot.returnCount = 0 // 假設非營運中就沒有可還
+    infoWindow.value.isLoadingCounts = false
+    return
+  }
+
+  // 動態獲取可租借數量
+  try {
+    const countResponse = await axios.get(
+      `http://localhost:8080/seats/count-by-spot?spotId=${spot.id}`,
+    )
+    const seatCount = countResponse.data
+    // 更新 infoWindow 中的 spot 物件
+    if (infoWindow.value.spot && infoWindow.value.spot.id === spot.id) {
+      infoWindow.value.spot.seatCount = seatCount
+      infoWindow.value.spot.returnCount = 20 - seatCount // 假設總數為 20
     }
-  })
+  } catch (err) {
+    console.error(`無法獲取站點 ${spot.id} 的座位數:`, err)
+    if (infoWindow.value.spot && infoWindow.value.spot.id === spot.id) {
+      infoWindow.value.spot.seatCount = 'N/A' // 發生錯誤時顯示 N/A
+      infoWindow.value.spot.returnCount = 'N/A'
+    }
+  } finally {
+    if (infoWindow.value.spot && infoWindow.value.spot.id === spot.id) {
+      infoWindow.value.isLoadingCounts = false // 載入完成
+    }
+  }
 }
 
 // 關閉資訊視窗
@@ -317,40 +331,47 @@ onMounted(() => {
               <!-- <strong>ID:</strong> {{ infoWindow.spot.id }}--><strong>狀態:</strong>
               {{ infoWindow.spot.status }}
             </p>
-            <span style="color: darkgreen"
-              ><strong>可租借數量:</strong> {{ infoWindow.spot.seatCount }}</span
-            >
-            <span> | </span>
-            <span style="color: darkblue"
-              ><strong>可歸還數量:</strong> {{ infoWindow.spot.returnCount }}</span
-            >
-            <div class="button-group">
-              <button
-                @click="handleNavigation('order')"
-                class="btn btn-success"
-                :disabled="infoWindow.spot.status !== '營運中' || infoWindow.spot.seatCount <= 0"
-                :class="{
-                  'btn-disabled':
-                    infoWindow.spot.status !== '營運中' || infoWindow.spot.seatCount <= 0,
-                }"
+            <!-- 當數量載入中時顯示讀取訊息 -->
+            <div v-if="infoWindow.isLoadingCounts" class="loading-text">查詢中...</div>
+            <!-- 載入完成後顯示數量與按鈕 -->
+            <div v-else>
+              <span style="color: darkgreen"
+                ><strong>可租借數量:</strong> {{ infoWindow.spot.seatCount }}</span
               >
-                租借
-              </button>
-              <button
-                @click="handleNavigation('complete')"
-                class="btn btn-primary"
-                :disabled="infoWindow.spot.status !== '營運中' || infoWindow.spot.returnCount <= 0"
-                :class="{
-                  'btn-disabled':
-                    infoWindow.spot.status !== '營運中' || infoWindow.spot.returnCount <= 0,
-                }"
+              <span> | </span>
+              <span style="color: darkblue"
+                ><strong>可歸還數量:</strong> {{ infoWindow.spot.returnCount }}</span
               >
-                歸還
-              </button>
-              <button @click="" class="btn btn-issue">
-                回報 <br />
-                問題
-              </button>
+              <div class="button-group">
+                <button
+                  @click="handleNavigation('order')"
+                  class="btn btn-success"
+                  :disabled="infoWindow.spot.status !== '營運中' || infoWindow.spot.seatCount <= 0"
+                  :class="{
+                    'btn-disabled':
+                      infoWindow.spot.status !== '營運中' || infoWindow.spot.seatCount <= 0,
+                  }"
+                >
+                  租借
+                </button>
+                <button
+                  @click="handleNavigation('complete')"
+                  class="btn btn-primary"
+                  :disabled="
+                    infoWindow.spot.status !== '營運中' || infoWindow.spot.returnCount <= 0
+                  "
+                  :class="{
+                    'btn-disabled':
+                      infoWindow.spot.status !== '營運中' || infoWindow.spot.returnCount <= 0,
+                  }"
+                >
+                  歸還
+                </button>
+                <button @click="" class="btn btn-issue">
+                  回報 <br />
+                  問題
+                </button>
+              </div>
             </div>
           </div>
           <!-- 顯示搜尋結果 -->
@@ -406,6 +427,11 @@ onMounted(() => {
 }
 .info-window-content .map-link:hover {
   text-decoration: underline;
+}
+.loading-text {
+  padding: 10px;
+  text-align: center;
+  color: #666;
 }
 .button-group {
   margin-top: 15px;
