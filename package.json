@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
-  "dependencies": {
-    "echarts": "^6.0.0"
-=======
-  "name": "seat-rent-sys-root",
+  "name": "SeatRentSysNew",
   "version": "1.0.0",
   "private": true,
   "description": "Root control for AI scripts",
@@ -28,6 +24,9 @@
     "xml:back:member": "npx repomix --include \"backend/**/*member*,backend/**/*user*,backend/**/model/**,backend/**/entity/**,backend/**/repository/**,backend/**/dto/**,backend/pom.xml\" --output \"AI_good/back/backend_member.xml\"",
     "xml:back:merchantAndCoupon": "npx repomix --include \"backend/**/*merchant*,backend/**/*coupon*,backend/**/*product*,backend/**/model/**,backend/**/entity/**,backend/**/repository/**,backend/**/dto/**,backend/pom.xml\" --output \"AI_good/back/backend_merchantAndCoupon.xml\"",
     "xml:back:rec": "npx repomix --include \"backend/**/*rec*,backend/**/*recommend*,backend/**/model/**,backend/**/entity/**,backend/**/repository/**,backend/**/dto/**,backend/pom.xml\" --output \"AI_good/back/backend_rec.xml\""
->>>>>>> main
+  },
+  "dependencies": {
+    "echarts": "^6.0.0",
+    "xlsx": "^0.18.5"
   }
 }

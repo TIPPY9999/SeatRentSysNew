@@ -28,6 +28,7 @@ public class RecDetailMgnService {
     }
 
     public List<RentDetails> search(
+            Integer recSeqId,
             String recId,
             Integer memId,
             String memName,

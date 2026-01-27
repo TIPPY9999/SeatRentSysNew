@@ -27,6 +27,38 @@
 
     <section class="content">
       <div class="container-fluid">
+        <!-- ========== 數據摘要區 ========== -->
+        <div class="stats-overview">
+          <div class="stat-box blue">
+            <div class="stat-icon"><i class="fas fa-building"></i></div>
+            <div class="stat-info">
+              <span class="stat-label">據點總數</span>
+              <span class="stat-value">{{ statsSummary.totalSpots }}</span>
+            </div>
+          </div>
+          <div class="stat-box orange">
+            <div class="stat-icon"><i class="fas fa-wrench"></i></div>
+            <div class="stat-info">
+              <span class="stat-label">維修中據點</span>
+              <span class="stat-value">{{ statsSummary.maintenance }}</span>
+            </div>
+          </div>
+          <div class="stat-box purple">
+            <div class="stat-icon"><i class="fas fa-chair"></i></div>
+            <div class="stat-info">
+              <span class="stat-label">營運座位數</span>
+              <span class="stat-value">{{ statsSummary.activeSeats }}</span>
+            </div>
+          </div>
+          <div class="stat-box green">
+            <div class="stat-icon"><i class="fas fa-clipboard-check"></i></div>
+            <div class="stat-info">
+              <span class="stat-label">今日累計租借</span>
+              <span class="stat-value">{{ statsSummary.todayRents }}</span>
+            </div>
+          </div>
+        </div>
+
         <transition name="fade-slide" appear>
           <div>
             <!-- ========== 主要表格卡片 ========== -->
@@ -167,6 +199,14 @@ const loading = ref(false)
 const searchKeyword = ref('') // 搜尋關鍵字狀態
 const searchMerchantId = ref('') // Merchant ID 搜尋狀態
 const searchStatus = ref('') // 狀態搜尋狀態
+
+// 統計數據摘要
+const statsSummary = ref({
+  totalSpots: 0,
+  maintenance: 0,
+  activeSeats: 0,
+  todayRents: 0
+})
 
 // 分頁設定
 const currentPage = ref(1)
@@ -341,6 +381,64 @@ onMounted(() => {
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
   min-height: 100vh;
 }
+
+/* ========== 數據摘要區 ========== */
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: transform 0.3s ease;
+}
+
+.stat-box:hover {
+  transform: translateY(-5px);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: white;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-box.blue .stat-icon { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.stat-box.orange .stat-icon { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+.stat-box.purple .stat-icon { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+.stat-box.green .stat-icon { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
 
 /* ========== 頁面標題區 ========== */
 .page-title-box {

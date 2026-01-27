@@ -1,167 +1,201 @@
 <script setup>
-import { ref, computed, watch } from "vue";
-import axios from "axios";
-import { useAuthStore } from "@/stores/auth";
+import { ref, computed, watch, onMounted } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+import { useMemberAuthStore } from '@/stores/memberAuth'
 
+// --- Computed properties from store ---
 // --- Props ---
 const props = defineProps({
   spotId: {
     type: String,
     required: true,
   },
-});
+})
 
 // --- Pinia Store ---
-const authStore = useAuthStore();
+const memberAuthStore = useMemberAuthStore()
+const router = useRouter()
 
 // --- Computed properties from store ---
-const isLoggedIn = computed(() => authStore.isLogin && authStore.user);
-const memberId = computed(() => authStore.user?.member?.memId);
-const memberName = computed(() => authStore.user?.member?.memName || "訪客");
+const isLoggedIn = computed(() => memberAuthStore.isLogin && !!memberAuthStore.member?.memId)
+const memberId = computed(() => memberAuthStore.member?.memId)
+const memberName = computed(() => memberAuthStore.member?.memName || 'Guest')
+console.log(isLoggedIn.value)
 
 // --- 狀態定義 ---
-const spotInfo = ref(null); // 儲存傳入 spotId 的站點資訊
-const seats = ref([]);
-const selectedSeat = ref(null);
+const spotInfo = ref(null) // 儲存傳入 spotId 的站點資訊
+const seats = ref([])
+const selectedSeat = ref(null)
 const isLoading = ref({
   spot: false,
   seats: false,
   rent: false,
-});
-const errorMessage = ref("");
+})
+const errorMessage = ref('')
 
 // 對話框狀態
-const showTermsModal = ref(false);
-const agreedToTerms = ref(false);
+const showTermsModal = ref(false)
+const agreedToTerms = ref(false)
+// --- Lifecycle ---
+onMounted(async () => {
+  // 如果進入頁面時發現是登入狀態但沒有 ID，導回登入頁
+  if (memberAuthStore.isLogin && !memberId.value) {
+    console.warn('訂單頁面偵測到資料遺失，自動導向登入頁')
+    memberAuthStore.clearMemberLogin() // 確保清除異常狀態
+    router.push('/login')
+    return
+  }
 
+  // 檢查是否有未完成的訂單 (recStatus === '租借中')
+  if (memberAuthStore.isLogin && memberId.value) {
+    try {
+      const res = await axios.get(`http://localhost:8080/rec-rent?memId=${memberId.value}`)
+      const hasActiveRent = res.data.some((rent) => rent.recStatus === '租借中')
+
+      if (hasActiveRent) {
+        alert('您尚有未完成的租借訂單。\n請先完成歸還或洽詢客服人員。')
+        router.push({ name: 'rec-rent-user', params: { action: 'record' } })
+      }
+    } catch (error) {
+      console.error('檢查租借狀態失敗:', error)
+    }
+  }
+})
 // --- API 呼叫 ---
 
 const loadSpotInfo = async (spotId) => {
-  if (!spotId) return;
-  isLoading.value.spot = true;
-  spotInfo.value = null; // 重置舊資料
+  if (!spotId) return
+  isLoading.value.spot = true
+  spotInfo.value = null // 重置舊資料
   try {
     // API 端點 `/spot/{id}`
-    const response = await axios.get(`/spot/${spotId}`);
-    spotInfo.value = response.data;
+    const response = await axios.get(`/spot/${spotId}`)
+    spotInfo.value = response.data
   } catch (error) {
-    console.error(`載入站點 ${spotId} 資訊失敗:`, error);
-    errorMessage.value = "無法載入站點資料。";
+    console.error(`載入站點 ${spotId} 資訊失敗:`, error)
+    errorMessage.value = '無法載入站點資料。'
   } finally {
-    isLoading.value.spot = false;
+    isLoading.value.spot = false
   }
-};
+}
 
 const loadSeats = async (spotId) => {
-  if (!spotId) return;
-  isLoading.value.seats = true;
-  seats.value = [];
-  selectedSeat.value = null;
+  if (!spotId) return
+  isLoading.value.seats = true
+  seats.value = []
+  selectedSeat.value = null
   try {
-    const response = await axios.get(
-      `http://localhost:8080/seats/search?spotId=${spotId}`
-    );
+    const response = await axios.get(`http://localhost:8080/seats/search?spotId=${spotId}`)
     // 根據需求，只顯示狀態為"啟用"的座位
-    seats.value = response.data.filter((seat) => seat.seatsStatus === "啟用");
+    seats.value = response.data.filter((seat) => seat.seatsStatus === '啟用')
   } catch (error) {
-    console.error(`載入 ${spotId} 的座位失敗:`, error);
-    errorMessage.value = "無法載入該站點的座位資訊。";
+    console.error(`載入 ${spotId} 的座位失敗:`, error)
+    errorMessage.value = '無法載入該站點的座位資訊。'
   } finally {
-    isLoading.value.seats = false;
+    isLoading.value.seats = false
   }
-};
+}
 
 // --- 核心邏輯 ---
 
 const openTermsModal = () => {
   if (isReadyToRent.value) {
-    showTermsModal.value = true;
+    showTermsModal.value = true
   }
-};
+}
 
 const closeModal = () => {
-  showTermsModal.value = false;
-  agreedToTerms.value = false; // 關閉時重置勾選
-};
+  showTermsModal.value = false
+  agreedToTerms.value = false // 關閉時重置勾選
+}
 
 const proceedWithRent = async () => {
   // 檢查是否同意條款
   if (!agreedToTerms.value) {
-    alert("請同意使用條款。");
-    return;
+    alert('請同意使用條款。')
+    return
   }
   // 檢查所有步驟是否完成
   if (!isReadyToRent.value) {
-    alert("請完成所有租借步驟。");
-    return;
+    alert('請完成所有租借步驟。')
+    return
   }
+
+  // 防呆檢查：確保會員 ID 存在 (防止登入狀態異常導致 memId 為空)
+  if (!memberAuthStore.member?.memId) {
+    console.warn('無法獲取會員資訊(memId遺失)，自動導向登入頁')
+    memberAuthStore.clearMemberLogin()
+    router.push({ name: 'login', query: { redirect: router.currentRoute.value.fullPath } })
+    return
+  }
+
+
 
   // 根據使用者要求組合新的訂單資料
   const newOrderData = {
-    memId: memberId.value, // 優先使用登入的會員ID
+    memId: memberAuthStore.member.memId, // 直接從 Pinia Store 獲取 USERID
     seatsId: selectedSeat.value.seatsId,
     spotIdRent: parseInt(props.spotId), // 從 props 取得 spotId
-    recRentDT: new Date().toISOString(), // 紀錄當下時間 (ISO 8601 格式)
-    recStatus: "租借中",
-    recPrice: 30, // 價格或費率可由後端根據座位類型和站點決定
+    recRentDT2: new Date().toISOString(), // 紀錄當下時間 (ISO 8601 格式)
+    recStatus: '租借中',
+    recPrice: 0, // 價格或費率可由後端根據座位類型和站點決定
     recRequestPay: 0, // 因為無需確認付款，所以請求付款金額為 0
     recPayment: 0, // 同上，實際付款為 0
-    recPayBy: "NONE", // 付款方式標示為無
-    recInvoice: "INVOICExxx", // 可選，或由後端生成
-    recCarrier: "/xxxTEST", // 可選
-    recViolatInt: 0, // 提供預設值
-  };
+    recPayBy: '尚未付款', //
+    recInvoice: "", // 歸還時生成發票號碼
+    recCarrier: memberAuthStore.member.memInvoice,
+    recViolatInt: 0, //
+  }
 
-  isLoading.value.rent = true;
-  errorMessage.value = ""; // 清除舊的錯誤訊息
+  isLoading.value.rent = true
+  errorMessage.value = '' // 清除舊的錯誤訊息
 
   try {
-    const response = await axios.post("http://localhost:8080/rec-rent/new", newOrderData);
+    const response = await axios.post('http://localhost:8080/rec-rent/new', newOrderData)
 
     if (response.status === 201 || response.status === 200) {
-      console.log("新的訂單紀錄已成功產生:", response.data);
+      console.log('訂單成功產生:', response.data)
       alert(
-        `租借成功！\n訂單ID：${response.data.recId}\n站點：${spotInfo.value.spotName}\n座位：${selectedSeat.value.seatsId}`
-      );
+        `租借成功！\n訂單ID：${response.data.recSeqId}\n站點：${spotInfo.value.spotName}\n座位：${selectedSeat.value.seatsId}`,
+      )
       // 重置流程，也許導航到使用者訂單頁面
-      selectedSeat.value = null;
-      agreedToTerms.value = false;
+      selectedSeat.value = null
+      agreedToTerms.value = false
       // 可以考慮使用 router.push 導向到一個「我的租借」頁面
     } else {
-      errorMessage.value = `租借失敗，伺服器回應狀態碼: ${response.status}`;
+      errorMessage.value = `租借失敗，伺服器回應狀態碼: ${response.status}`
     }
   } catch (error) {
-    console.error("租借請求失敗:", error);
-    const apiError = error.response?.data?.message || error.message;
-    errorMessage.value = `租借請求失敗: ${apiError}`;
-    alert(`租借失敗: ${apiError}`); // 直接彈出錯誤給使用者
+    console.error('租借請求失敗:', error)
+    const apiError = error.response?.data?.message || error.message
+    errorMessage.value = `租借請求失敗: ${apiError}`
+    alert(`租借失敗: ${apiError}`) // 直接彈出錯誤給使用者
   } finally {
-    isLoading.value.rent = false;
-    closeModal(); // 無論成功失敗都關閉對話框
+    isLoading.value.rent = false
+    closeModal() // 無論成功失敗都關閉對話框
   }
-};
+}
 
 // --- Computed ---
 
-const isStep1Completed = computed(() => !!selectedSeat.value); // 現在只有一個步驟：選座位
-const step1Class = computed(() =>
-  isStep1Completed.value ? "status-completed" : "status-pending"
-);
+const isStep1Completed = computed(() => !!selectedSeat.value)
+const step1Class = computed(() => (isStep1Completed.value ? 'status-completed' : 'status-pending'))
 
-const isReadyToRent = computed(() => isStep1Completed.value && isLoggedIn.value);
+const isReadyToRent = computed(() => isStep1Completed.value && isLoggedIn.value)
 
 // --- Watchers & Lifecycle ---
 watch(
   () => props.spotId,
   (newSpotId) => {
     if (newSpotId) {
-      errorMessage.value = "";
-      loadSpotInfo(newSpotId);
-      loadSeats(newSpotId);
+      errorMessage.value = ''
+      loadSpotInfo(newSpotId)
+      loadSeats(newSpotId)
     }
   },
-  { immediate: true }
-);
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -178,7 +212,7 @@ watch(
           </p>
         </div>
         <div v-else class="alert alert-warning">
-          <h5><i class="fas fa-exclamation-triangle"></i> 訪客你好</h5>
+          <h5><i class="fas fa-exclamation-triangle"></i></h5>
           <p class="mb-0">請先登入以進行租借。</p>
         </div>
       </div>
@@ -216,7 +250,9 @@ watch(
           <div v-else-if="spotInfo" class="alert alert-warning">
             此站點目前無可用座位。
             <br />
-            <router-link to="/SearchSpot" class="btn btn-primary mt-2">返回地圖重新選擇</router-link>
+            <router-link to="/SearchSpot" class="btn btn-primary mt-2"
+              >返回地圖重新選擇</router-link
+            >
           </div>
         </fieldset>
       </div>
@@ -226,14 +262,13 @@ watch(
         <fieldset :disabled="!isStep1Completed || !isLoggedIn">
           <h2><i class="fas fa-check-circle"></i> 確認使用條款後租借</h2>
           <p>請確認您的選擇，點擊下方按鈕以同意使用條款並完成租借。</p>
-          <h3>費率說明:<br>  前半小時 20 NTD，半小時後 30 NTD / 30 min</h3>
+          <h3>
+            費率說明:<br />
+            前半小時 20 NTD，半小時後 30 NTD / 30 min
+          </h3>
 
-          <button
-            @click="openTermsModal"
-            class="btn btn-success btn-lg"
-            :disabled="!isReadyToRent"
-          >
-            {{ isReadyToRent ? "閱讀使用條款" : "請完成所有步驟" }}
+          <button @click="openTermsModal" class="btn btn-success btn-lg" :disabled="!isReadyToRent">
+            {{ isReadyToRent ? '閱讀使用條款後租借' : '請先完成前置步驟' }}
           </button>
         </fieldset>
       </div>
@@ -271,9 +306,7 @@ watch(
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeModal">
-              取消
-            </button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">取消</button>
             <button
               type="button"
               class="btn btn-primary"
@@ -291,13 +324,13 @@ watch(
 </template>
 
 <style scoped>
-@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css");
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
 
 .user-order-container {
   padding: 0px;
   max-width: 600px;
   margin: auto;
-  font-family: "Microsoft JhengHei", sans-serif;
+  font-family: 'Microsoft JhengHei', sans-serif;
 }
 .card {
   border: 1px solid #ddd;
@@ -357,7 +390,9 @@ h2 {
   background-clip: padding-box;
   border: 1px solid #ced4da;
   border-radius: 0.25rem;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  transition:
+    border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out;
 }
 .btn {
   font-size: 1rem;

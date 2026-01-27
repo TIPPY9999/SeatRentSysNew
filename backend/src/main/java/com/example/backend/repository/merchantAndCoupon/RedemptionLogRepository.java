@@ -1,7 +1,10 @@
 package com.example.backend.repository.merchantAndCoupon;
 
+import com.example.backend.dto.RedemptionLogDTO;
 import com.example.backend.model.merchantAndCoupon.RedemptionLog;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
 import java.util.List;
 
 public interface RedemptionLogRepository extends JpaRepository<RedemptionLog, Integer> {

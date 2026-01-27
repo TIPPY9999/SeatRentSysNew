@@ -43,7 +43,7 @@
                 <div class="stat-card active-card">
                   <div class="stat-icon"><i class="fas fa-play-circle"></i></div>
                   <div class="stat-info">
-                    <h3>{{ discounts.filter(d => d.couponStatus === 1).length }}</h3>
+                    <h3>{{ discounts.filter((d) => d.couponStatus === 1).length }}</h3>
                     <span>進行中</span>
                   </div>
                 </div>
@@ -52,7 +52,7 @@
                 <div class="stat-card pending-card">
                   <div class="stat-icon"><i class="fas fa-clock"></i></div>
                   <div class="stat-info">
-                    <h3>{{ discounts.filter(d => d.couponStatus === 0).length }}</h3>
+                    <h3>{{ discounts.filter((d) => d.couponStatus === 0).length }}</h3>
                     <span>尚未開始</span>
                   </div>
                 </div>
@@ -61,7 +61,11 @@
                 <div class="stat-card ended-card">
                   <div class="stat-icon"><i class="fas fa-stop-circle"></i></div>
                   <div class="stat-info">
-                    <h3>{{ discounts.filter(d => d.couponStatus === 2 || d.couponStatus === 3).length }}</h3>
+                    <h3>
+                      {{
+                        discounts.filter((d) => d.couponStatus === 2 || d.couponStatus === 3).length
+                      }}
+                    </h3>
                     <span>已結束/下架</span>
                   </div>
                 </div>
@@ -75,7 +79,9 @@
                   <div class="header-left">
                     <span class="header-icon"><i class="fas fa-list"></i></span>
                     <span class="header-text">優惠券列表</span>
-                    <el-tag type="warning" effect="light" size="small" round>{{ discounts.length }} 筆</el-tag>
+                    <el-tag type="warning" effect="light" size="small" round
+                      >{{ discounts.length }} 筆</el-tag
+                    >
                   </div>
                 </div>
               </template>
@@ -110,17 +116,22 @@
                     <span class="id-tag">#{{ row.couponId }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column label="圖片" width="80" align="center">
+                <!-- 圖片欄位 -->
+                <el-table-column label="圖片" width="90" align="center">
                   <template #default="{ row }">
-                    <el-image 
-                      v-if="row.couponImg"
-                      :src="`http://localhost:8080/images/${row.couponImg}`"
-                      :preview-src-list="[`http://localhost:8080/images/${row.couponImg}`]"
-                      fit="cover"
-                      class="coupon-img"
-                    />
-                    <div v-else class="no-img">
-                      <i class="fas fa-image"></i>
+                    <!-- 讓可點擊區域變大，並阻止事件冒泡到 el-table -->
+                    <div class="img-cell" @click.stop>
+                      <el-image
+                        v-if="row.couponImg"
+                        class="coupon-img"
+                        :src="`http://localhost:8080/images/${row.couponImg}`"
+                        :preview-src-list="[`http://localhost:8080/images/${row.couponImg}`]"
+                        :preview-teleported="true"
+                        :z-index="4000"
+                        fit="cover"
+                        @click.stop
+                      />
+                      <span v-else class="img-empty">—</span>
                     </div>
                   </template>
                 </el-table-column>
@@ -128,7 +139,9 @@
                   <template #default="{ row }">
                     <div class="coupon-info-cell">
                       <div class="coupon-name">{{ row.couponName }}</div>
-                      <div class="coupon-desc" :title="row.couponDescription">{{ row.couponDescription }}</div>
+                      <div class="coupon-desc" :title="row.couponDescription">
+                        {{ row.couponDescription }}
+                      </div>
                     </div>
                   </template>
                 </el-table-column>
@@ -136,7 +149,9 @@
                   <template #default="{ row }">
                     <el-tag type="info" effect="plain" size="small" class="merchant-tag">
                       <i class="fas fa-store mr-1"></i>
-                      {{ row.merchantName || (row.merchant ? row.merchant.merchantName : '未指定') }}
+                      {{
+                        row.merchantName || (row.merchant ? row.merchant.merchantName : '未指定')
+                      }}
                     </el-tag>
                   </template>
                 </el-table-column>
@@ -174,13 +189,25 @@
                           <i class="fas fa-edit"></i>
                         </el-button>
                       </el-tooltip>
-                      <el-tooltip v-if="row.couponStatus === 0 || row.couponStatus === 1" content="下架" placement="top">
-                        <el-button size="small" type="warning" @click="handleStatusChange(row.couponId, 'disable')">
+                      <el-tooltip
+                        v-if="row.couponStatus === 0 || row.couponStatus === 1"
+                        content="下架"
+                        placement="top"
+                      >
+                        <el-button
+                          size="small"
+                          type="warning"
+                          @click="handleStatusChange(row.couponId, 'disable')"
+                        >
                           <i class="fas fa-pause"></i>
                         </el-button>
                       </el-tooltip>
                       <el-tooltip v-if="row.couponStatus === 3" content="上架" placement="top">
-                        <el-button size="small" type="success" @click="handleStatusChange(row.couponId, 'relist')">
+                        <el-button
+                          size="small"
+                          type="success"
+                          @click="handleStatusChange(row.couponId, 'relist')"
+                        >
                           <i class="fas fa-play"></i>
                         </el-button>
                       </el-tooltip>
@@ -194,7 +221,10 @@
                 </el-table-column>
               </el-table>
 
-              <el-empty v-if="discounts.length === 0 && !loading" description="目前沒有優惠券資料" />
+              <el-empty
+                v-if="discounts.length === 0 && !loading"
+                description="目前沒有優惠券資料"
+              />
             </el-card>
           </div>
         </transition>
@@ -209,18 +239,37 @@
       class="modern-dialog"
       :close-on-click-modal="false"
     >
-      <el-form :model="editingDiscount" label-width="100px" label-position="top" class="modern-form">
+      <el-form
+        :model="editingDiscount"
+        label-width="100px"
+        label-position="top"
+        class="modern-form"
+      >
         <el-form-item label="優惠名稱" required>
           <el-input v-model="editingDiscount.couponName" placeholder="請輸入優惠名稱">
             <template #prefix><i class="fas fa-tag"></i></template>
           </el-input>
         </el-form-item>
         <el-form-item label="優惠描述">
-          <el-input v-model="editingDiscount.couponDescription" type="textarea" :rows="2" placeholder="請輸入優惠描述" />
+          <el-input
+            v-model="editingDiscount.couponDescription"
+            type="textarea"
+            :rows="2"
+            placeholder="請輸入優惠描述"
+          />
         </el-form-item>
         <el-form-item label="隸屬商家" required>
-          <el-select v-model="editingDiscount.merchantId" placeholder="請選擇商家" style="width: 100%">
-            <el-option v-for="m in merchants" :key="m.merchantId" :value="m.merchantId" :label="m.merchantName">
+          <el-select
+            v-model="editingDiscount.merchantId"
+            placeholder="請選擇商家"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="m in merchants"
+              :key="m.merchantId"
+              :value="m.merchantId"
+              :label="m.merchantName"
+            >
               <i class="fas fa-store mr-2 text-primary"></i>{{ m.merchantName }}
             </el-option>
           </el-select>
@@ -228,19 +277,35 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="開始日期">
-              <el-date-picker v-model="editingDiscount.startDate" type="date" value-format="YYYY-MM-DD" placeholder="選擇日期" style="width: 100%" />
+              <el-date-picker
+                v-model="editingDiscount.startDate"
+                type="date"
+                value-format="YYYY-MM-DD"
+                placeholder="選擇日期"
+                style="width: 100%"
+              />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="結束日期">
-              <el-date-picker v-model="editingDiscount.endDate" type="date" value-format="YYYY-MM-DD" placeholder="選擇日期" style="width: 100%" />
+              <el-date-picker
+                v-model="editingDiscount.endDate"
+                type="date"
+                value-format="YYYY-MM-DD"
+                placeholder="選擇日期"
+                style="width: 100%"
+              />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="所需點數">
-              <el-input-number v-model="editingDiscount.pointsRequired" :min="0" style="width: 100%" />
+              <el-input-number
+                v-model="editingDiscount.pointsRequired"
+                :min="0"
+                style="width: 100%"
+              />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -316,7 +381,12 @@ const getStatusText = (status) => {
 }
 
 const getStatusIcon = (status) => {
-  const map = { 0: 'fas fa-clock', 1: 'fas fa-play-circle', 2: 'fas fa-stop-circle', 3: 'fas fa-pause-circle' }
+  const map = {
+    0: 'fas fa-clock',
+    1: 'fas fa-play-circle',
+    2: 'fas fa-stop-circle',
+    3: 'fas fa-pause-circle',
+  }
   return map[status] || 'fas fa-question-circle'
 }
 
@@ -334,7 +404,7 @@ const fetchDiscounts = async () => {
       title: '錯誤',
       html: '<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f56c6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p style="margin-top:12px;">取得清單失敗</p></div>',
       confirmButtonColor: '#409eff',
-      confirmButtonText: '確定'
+      confirmButtonText: '確定',
     })
   } finally {
     loading.value = false
@@ -353,8 +423,8 @@ const fetchMerchants = async () => {
 
 // 3. 上、下架手動切換 (核心功能)
 const handleStatusChange = async (id, action) => {
-  const actionText = action === 'relist' ? '上架' : '下架';
-  
+  const actionText = action === 'relist' ? '上架' : '下架'
+
   const result = await Swal.fire({
     title: `確定要${actionText}嗎？`,
     html: `<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e6a23c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p style="margin-top:12px;">${action === 'disable' ? '下架後消費者將無法在商城兌換此券' : '上架將根據活動日期自動判定狀態'}</p></div>`,
@@ -362,42 +432,42 @@ const handleStatusChange = async (id, action) => {
     confirmButtonColor: '#409eff',
     cancelButtonColor: '#909399',
     confirmButtonText: `確定${actionText}`,
-    cancelButtonText: '取消'
-  });
+    cancelButtonText: '取消',
+  })
 
-  if (!result.isConfirmed) return;
+  if (!result.isConfirmed) return
 
   try {
     const res = await axios.put(`http://localhost:8080/api/discounts/${id}/status`, null, {
-      params: { action: action }
-    });
+      params: { action: action },
+    })
 
     if (res.data.code === 200) {
       Swal.fire({
         title: '成功',
         html: `<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#67c23a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><p style="margin-top:12px;">${actionText}成功</p></div>`,
         confirmButtonColor: '#409eff',
-        confirmButtonText: '確定'
-      });
-      fetchDiscounts();
+        confirmButtonText: '確定',
+      })
+      fetchDiscounts()
     } else {
       Swal.fire({
         title: '失敗',
         html: `<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f56c6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p style="margin-top:12px;">${res.data.message || '操作失敗'}</p></div>`,
         confirmButtonColor: '#409eff',
-        confirmButtonText: '確定'
-      });
+        confirmButtonText: '確定',
+      })
     }
   } catch (err) {
-    console.error(err);
+    console.error(err)
     Swal.fire({
       title: '錯誤',
       html: '<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f56c6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p style="margin-top:12px;">伺服器連線異常</p></div>',
       confirmButtonColor: '#409eff',
-      confirmButtonText: '確定'
-    });
+      confirmButtonText: '確定',
+    })
   }
-};
+}
 
 // 4. 圖片處理
 const onFileChange = (file) => {
@@ -410,59 +480,65 @@ const onFileChange = (file) => {
 // 5. 開啟 Modal
 const openEditModal = (item = null) => {
   if (item) {
-    editingDiscount.value = { ...item };
-    imagePreview.value = item.couponImg ? `http://localhost:8080/images/${item.couponImg}` : null;
+    editingDiscount.value = { ...item }
+    imagePreview.value = item.couponImg ? `http://localhost:8080/images/${item.couponImg}` : null
   } else {
     editingDiscount.value = {
-      couponId: null, couponName: '', couponDescription: '',
-      merchantId: null, couponStatus: 1, couponImg: '',
-      startDate: '', endDate: '', pointsRequired: 0,
-    };
-    imagePreview.value = null;
+      couponId: null,
+      couponName: '',
+      couponDescription: '',
+      merchantId: null,
+      couponStatus: 1,
+      couponImg: '',
+      startDate: '',
+      endDate: '',
+      pointsRequired: 0,
+    }
+    imagePreview.value = null
   }
-  selectedFile.value = null;
-  isEditModalOpen.value = true;
+  selectedFile.value = null
+  isEditModalOpen.value = true
 }
 
 // 6. 儲存
 const handleSave = async () => {
   try {
-    const formData = new FormData();
-    const jsonBlob = new Blob([JSON.stringify(editingDiscount.value)], { type: 'application/json' });
-    formData.append('discount', jsonBlob);
+    const formData = new FormData()
+    const jsonBlob = new Blob([JSON.stringify(editingDiscount.value)], { type: 'application/json' })
+    formData.append('discount', jsonBlob)
 
     if (selectedFile.value) {
-      formData.append('image', selectedFile.value);
+      formData.append('image', selectedFile.value)
     }
 
-    const res = await axios.post('http://localhost:8080/api/discounts', formData);
+    const res = await axios.post('http://localhost:8080/api/discounts', formData)
 
     if (res.data.code === 200) {
       Swal.fire({
         title: '成功',
         html: '<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#67c23a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><p style="margin-top:12px;">資料已儲存</p></div>',
         confirmButtonColor: '#409eff',
-        confirmButtonText: '確定'
-      });
-      isEditModalOpen.value = false;
-      fetchDiscounts();
+        confirmButtonText: '確定',
+      })
+      isEditModalOpen.value = false
+      fetchDiscounts()
     } else {
       Swal.fire({
         title: '失敗',
         html: `<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f56c6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p style="margin-top:12px;">${res.data.message}</p></div>`,
         confirmButtonColor: '#409eff',
-        confirmButtonText: '確定'
-      });
+        confirmButtonText: '確定',
+      })
     }
   } catch (err) {
     Swal.fire({
       title: '儲存失敗',
       html: '<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f56c6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p style="margin-top:12px;">請檢查資料完整性</p></div>',
       confirmButtonColor: '#409eff',
-      confirmButtonText: '確定'
-    });
+      confirmButtonText: '確定',
+    })
   }
-};
+}
 
 // 7. 刪除
 const deleteDiscount = (id) => {
@@ -473,7 +549,7 @@ const deleteDiscount = (id) => {
     confirmButtonColor: '#f56c6c',
     cancelButtonColor: '#909399',
     confirmButtonText: '確定刪除',
-    cancelButtonText: '取消'
+    cancelButtonText: '取消',
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
@@ -482,16 +558,16 @@ const deleteDiscount = (id) => {
           title: '已刪除',
           html: '<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#67c23a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><p style="margin-top:12px;">優惠券已移除</p></div>',
           confirmButtonColor: '#409eff',
-          confirmButtonText: '確定'
-        });
-        fetchDiscounts();
+          confirmButtonText: '確定',
+        })
+        fetchDiscounts()
       } catch {
         Swal.fire({
           title: '錯誤',
           html: '<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f56c6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p style="margin-top:12px;">刪除失敗</p></div>',
           confirmButtonColor: '#409eff',
-          confirmButtonText: '確定'
-        });
+          confirmButtonText: '確定',
+        })
       }
     }
   })
@@ -522,7 +598,7 @@ onMounted(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   flex-wrap: wrap;
 }
-
+/*========= 標題圖示 ========== */
 .title-icon {
   width: 64px;
   height: 64px;
@@ -537,6 +613,7 @@ onMounted(() => {
   box-shadow: 0 4px 15px rgba(230, 162, 60, 0.3);
 }
 
+/*========= 標題內容 ========== */
 .title-icon:hover {
   transform: scale(1.1) rotate(10deg);
 }
@@ -612,10 +689,18 @@ onMounted(() => {
   border-radius: 4px 0 0 4px;
 }
 
-.total-card::before { background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%); }
-.active-card::before { background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); }
-.pending-card::before { background: linear-gradient(135deg, #409eff 0%, #79bbff 100%); }
-.ended-card::before { background: linear-gradient(135deg, #909399 0%, #c0c4cc 100%); }
+.total-card::before {
+  background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%);
+}
+.active-card::before {
+  background: linear-gradient(135deg, #67c23a 0%, #95d475 100%);
+}
+.pending-card::before {
+  background: linear-gradient(135deg, #409eff 0%, #79bbff 100%);
+}
+.ended-card::before {
+  background: linear-gradient(135deg, #909399 0%, #c0c4cc 100%);
+}
 
 .stat-icon {
   width: 50px;
@@ -628,10 +713,18 @@ onMounted(() => {
   color: white;
 }
 
-.total-card .stat-icon { background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%); }
-.active-card .stat-icon { background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); }
-.pending-card .stat-icon { background: linear-gradient(135deg, #409eff 0%, #79bbff 100%); }
-.ended-card .stat-icon { background: linear-gradient(135deg, #909399 0%, #c0c4cc 100%); }
+.total-card .stat-icon {
+  background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%);
+}
+.active-card .stat-icon {
+  background: linear-gradient(135deg, #67c23a 0%, #95d475 100%);
+}
+.pending-card .stat-icon {
+  background: linear-gradient(135deg, #409eff 0%, #79bbff 100%);
+}
+.ended-card .stat-icon {
+  background: linear-gradient(135deg, #909399 0%, #c0c4cc 100%);
+}
 
 .stat-info h3 {
   margin: 0;
@@ -881,15 +974,29 @@ onMounted(() => {
 }
 
 /* ========== 間距工具類 ========== */
-.mb-4 { margin-bottom: 1.5rem; }
-.mr-1 { margin-right: 4px; }
-.mr-2 { margin-right: 8px; }
+.mb-4 {
+  margin-bottom: 1.5rem;
+}
+.mr-1 {
+  margin-right: 4px;
+}
+.mr-2 {
+  margin-right: 8px;
+}
 
 /* ========== 顏色工具類 ========== */
-.text-primary { color: #409eff; }
-.text-success { color: #67c23a; }
-.text-warning { color: #e6a23c; }
-.text-danger { color: #f56c6c; }
+.text-primary {
+  color: #409eff;
+}
+.text-success {
+  color: #67c23a;
+}
+.text-warning {
+  color: #e6a23c;
+}
+.text-danger {
+  color: #f56c6c;
+}
 
 /* ========== 響應式設計 ========== */
 @media (max-width: 768px) {
@@ -898,16 +1005,16 @@ onMounted(() => {
     text-align: center;
     gap: 16px;
   }
-  
+
   .title-actions {
     width: 100%;
     justify-content: center;
   }
-  
+
   .filter-bar {
     flex-direction: column;
   }
-  
+
   .filter-input {
     width: 100%;
   }

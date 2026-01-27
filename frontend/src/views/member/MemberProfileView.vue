@@ -2,10 +2,26 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
+import { useMemberAuthStore } from '@/stores/memberAuth'
+
+import RecRentUserRecord from '@/components/rec/RecRentUserRecord.vue'
+
+const memberAuth = useMemberAuthStore()
 const member = ref(null)
 const form = ref({})
 const isEdit = ref(false)
 const errorMsg = ref('')
+
+// 租借狀態相關
+const activeRent = ref(null) // 進行中的租借訂單
+const rentSpotName = ref('') // 租借站點的名稱
+const isLoadingRentStatus = ref(true) // 租借狀態的讀取狀態
+
+// [新增] 控制歷史紀錄顯示
+const showHistory = ref(false)
+const toggleHistory = () => {
+  showHistory.value = !showHistory.value
+}
 
 const originForm = ref({})
 
@@ -25,8 +41,59 @@ const fetchProfile = async () => {
       memEmail: m.memEmail?.trim() || '',
       memInvoice: m.memInvoice?.trim() || '',
     }
+    memberAuth.setMemberLogin(m); // 更新 Pinia store
+    
+    // 取得個人資料後，接著取得租借狀態
+    await fetchRentalStatus();
+    
   } catch (e) {
     errorMsg.value = '尚未登入'
+  }
+}
+
+//查詢租借狀態
+const fetchRentalStatus = async () => {
+  isLoadingRentStatus.value = true;
+  try {
+    const memId = memberAuth.member?.memId;
+    if (!memId) {
+      activeRent.value = null;
+      return;
+    }
+
+    // 步驟 1: 查詢會員的租借紀錄，目的是為了找到進行中訂單的 ID
+    const rentListRes = await axios.get(`http://localhost:8080/rec-rent?memId=${memId}`);
+    const basicRentInfo = rentListRes.data.find(rent => rent.recStatus === '租借中');
+
+    // 如果找到進行中的訂單
+    if (basicRentInfo && basicRentInfo.recId) {
+      try {
+        // 步驟 2: 使用訂單 ID 去查詢完整的、包含站點名稱的詳細資訊
+        const detailsRes = await axios.get(`http://localhost:8080/api/rent-details/${basicRentInfo.recId}`);
+        const currentRentDetails = detailsRes.data;
+
+        if (currentRentDetails) {
+          activeRent.value = currentRentDetails;
+          // 直接從回傳的詳細資料中取得站點名稱
+          rentSpotName.value = currentRentDetails.spotNameRent || '未知站點';
+        } else {
+           activeRent.value = null; // 如果詳細資料查無，也當作沒有
+        }
+      } catch (detailsError) {
+        console.error(`查詢訂單詳細資訊 ${basicRentInfo.recId} 失敗:`, detailsError);
+        // Fallback: 即使詳細資料查詢失敗，仍然顯示基本資訊
+        activeRent.value = basicRentInfo;
+        rentSpotName.value = '站點資料讀取失敗';
+      }
+    } else {
+      // 如果連基本訂單都找不到，則確認無租借中訂單
+      activeRent.value = null;
+    }
+  } catch (error) {
+    console.error('查詢租借狀態失敗:', error);
+    activeRent.value = null;
+  } finally {
+    isLoadingRentStatus.value = false;
   }
 }
 
@@ -36,6 +103,21 @@ const formatDate = (dt) => {
   if (!dt) return ''
   return dt.split('T')[0]
 }
+
+// [新增] 格式化日期時間的函式
+const formatDateTime = (dt) => {
+  if (!dt) return '';
+  const date = new Date(dt);
+  return date.toLocaleString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).replace(/\//g, '-');
+};
 
 const startEdit = () => {
   originForm.value = { ...form.value }
@@ -65,7 +147,6 @@ const saveEdit = async () => {
       isEdit.value = false
       fetchProfile()
     } else {
-      // ⭐ 格式錯誤等情況
       alert(res.data)
       form.value = { ...originForm.value }
     }
@@ -91,7 +172,9 @@ const saveEdit = async () => {
       <!-- 操作按鈕 -->
       <div class="actions">
         <template v-if="!isEdit">
-          <router-link :to="{ name: 'member-user-info' }" class="btn btn-info">查看ID資訊＃TESTPAGE</router-link>
+          <button @click="toggleHistory" class="btn btn-info">
+            {{ showHistory ? '隱藏訂單歷史' : '查看訂單歷史資訊' }}
+          </button>
           <button class="edit-btn" @click="startEdit">編輯資料</button>
         </template>
         <template v-else>
@@ -134,6 +217,32 @@ const saveEdit = async () => {
           />
         </div>
 
+        <!-- 會員點數（唯讀） -->
+        <div class="row">
+          <label>會員點數</label>
+          <div class="value">
+            {{ member.memPoints }}
+          </div>
+        </div>
+
+        <!-- 租借狀態 -->
+        <div class="row">
+          <label>租借狀態</label>
+          <div class="value">
+            <!-- 讀取中 -->
+            <div v-if="isLoadingRentStatus" class="placeholder">讀取中...</div>
+            <!-- 有租借中訂單 -->
+            <div v-else-if="activeRent" class="rent-details">
+              <div><strong>狀態:</strong> <span class="status-active">{{ activeRent.recStatus }}</span></div>
+              <div><strong>訂單編號:</strong> {{ activeRent.recId }}</div>
+              <div><strong>租借站點:</strong> {{ activeRent.rentSpotName }}</div>
+              <div><strong>租借時間:</strong> {{ formatDateTime(activeRent.recRentDT2) }}</div>
+            </div>
+            <!-- 無租借中訂單 -->
+            <div v-else class="placeholder">目前沒有租借中的訂單</div>
+          </div>
+        </div>
+
         <div class="row">
           <label>發票載具</label>
           <input
@@ -148,6 +257,11 @@ const saveEdit = async () => {
           <div class="value">{{ formatDate(member.createdAt) }}</div>
         </div>
       </div>
+
+      <!-- [新增] 訂單歷史紀錄 -->
+      <div v-if="showHistory" class="history-container mt-4">
+        <RecRentUserRecord />
+      </div>
     </div>
   </div>
 </template>
@@ -157,6 +271,12 @@ const saveEdit = async () => {
 .profile-page {
   max-width: 720px;
   margin: 0 auto;
+  min-height: 100vh;      /* 至少佔滿整個視窗高度 */
+  display: flex;          /* 使用 Flexbox 排版 */
+  flex-direction: column; /* 內容垂直排列 */
+  justify-content: center;/* 垂直置中 */
+  padding: 40px 0;        /* 增加上下邊距，避免在小螢幕時貼邊 */
+  box-sizing: border-box;
 }
 
 /* 頭像 */
@@ -216,18 +336,20 @@ const saveEdit = async () => {
 .profile-card {
   background: #fff;
   border-radius: 12px;
-  padding: 20px;
+  padding: 20px 20px 5px 20px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
 }
 
 .row {
   display: flex;
-  padding: 10px 0;
+  padding: 4px 0;
+  font-size: larger;
   border-bottom: 1px solid #eee;
 }
 
 .row:last-child {
   border-bottom: none;
+  font-size: larger;
 }
 
 label {
@@ -239,7 +361,7 @@ label {
 .value,
 .value-input {
   flex: 1;
-  font-size: 16px;
+  font-size:large;
 }
 
 .value-input {
@@ -277,5 +399,22 @@ label {
 .actions button:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.placeholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.rent-details > div {
+  padding: 2px 0;
+}
+
+.status-active {
+  background-color: #28a745; /* 綠色背景 */
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
 }
 </style>

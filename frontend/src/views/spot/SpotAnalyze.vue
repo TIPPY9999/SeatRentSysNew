@@ -136,7 +136,7 @@ let durationChart = null
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await axios.get('http://localhost:8080/api/analyze/stats')
+    const res = await axios.get('/api/analyze/stats')
     // 假設後端回傳結構為 { cityDistribution: [...], spotMonitor: [...], ... }
     if (res.status === 200 && res.data) {
       statsData.value = res.data

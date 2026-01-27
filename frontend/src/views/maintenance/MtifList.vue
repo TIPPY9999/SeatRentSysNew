@@ -7,6 +7,7 @@ import { usePagination } from '@/composables/maintenance/usePagination'
 import TicketCharts from '@/components/maintenance/TicketCharts.vue'
 import TicketTimeline from '@/components/maintenance/TicketTimeline.vue'
 
+// --- Props & Refs ---
 const props = defineProps({ historyMode: Boolean })
 const tickets = ref([])
 const filters = reactive({ keyword: '', priority: '', status: '' })
@@ -32,7 +33,7 @@ const fetchAssetStats = async () => {
       title: '載入失敗',
       text: '無法取得資產健康度統計',
       timer: 2000,
-      showConfirmButton: false
+      showConfirmButton: false,
     })
   } finally {
     assetStatsLoading.value = false
@@ -72,7 +73,7 @@ const openLogDialog = (id) => {
   logDialogVisible.value = true
 }
 
-// ★ (2A) 新增：判斷工單是否可編輯
+// 判斷工單是否可編輯
 const EDITABLE_STATUSES = ['REPORTED', 'ASSIGNED']
 const canEdit = (row) => EDITABLE_STATUSES.includes(row.issueStatus)
 
@@ -143,9 +144,31 @@ watch(
   { deep: true },
 )
 
-// --- 業務邏輯 ---
+// ★ [Fix Issue 1] 根據模式動態產生狀態選項
+// 如果是 historyMode，只顯示 已結案/已取消
+// 如果是 activeMode，只顯示 已通報/已指派/維修中
+const availableStatusOptions = computed(() => {
+  const allStatuses = statusText
+  const filtered = {}
+
+  if (props.historyMode) {
+    // 歷史模式：只顯示 RESOLVED, CANCELLED
+    if (allStatuses['RESOLVED']) filtered['RESOLVED'] = allStatuses['RESOLVED']
+    if (allStatuses['CANCELLED']) filtered['CANCELLED'] = allStatuses['CANCELLED']
+  } else {
+    // 現有模式：顯示 REPORTED, ASSIGNED, UNDER_MAINTENANCE
+    if (allStatuses['REPORTED']) filtered['REPORTED'] = allStatuses['REPORTED']
+    if (allStatuses['ASSIGNED']) filtered['ASSIGNED'] = allStatuses['ASSIGNED']
+    if (allStatuses['UNDER_MAINTENANCE'])
+      filtered['UNDER_MAINTENANCE'] = allStatuses['UNDER_MAINTENANCE']
+  }
+  return filtered
+})
+
+// --- 業務邏輯 & 排序邏輯 ---
 const filteredTickets = computed(() => {
-  return tickets.value.filter((t) => {
+  // 1. 先進行篩選
+  const list = tickets.value.filter((t) => {
     const k = filters.keyword.toLowerCase()
     const textMatch =
       !k ||
@@ -155,6 +178,17 @@ const filteredTickets = computed(() => {
     const pMatch = !filters.priority || t.issuePriority === filters.priority
     const sMatch = !filters.status || t.issueStatus === filters.status
     return textMatch && pMatch && sMatch
+  })
+
+  // 2. 進行排序：緊急工單 (URGENT) 置頂
+  return list.sort((a, b) => {
+    // 如果 a 是緊急，b 不是，a 排前面 (-1)
+    if (a.issuePriority === 'URGENT' && b.issuePriority !== 'URGENT') return -1
+    // 如果 b 是緊急，a 不是，b 排前面 (1)
+    if (b.issuePriority === 'URGENT' && a.issuePriority !== 'URGENT') return 1
+
+    // 如果優先級相同，依照 ID 倒序 (新的在上面)
+    return b.ticketId - a.ticketId
   })
 })
 
@@ -288,86 +322,102 @@ const submitResolve = async () => {
   }
 }
 
-// 查看工單詳情
+// 查看工單詳情 (UI 優化版)
 const viewTicketDetail = (row) => {
+  // 準備變數
+  const staffName = row.assignedStaff ? row.assignedStaff.staffName : '未指派'
+  const staffColor = row.assignedStaff ? '#409eff' : '#909399' // 藍色或灰色
+
+  // 處理維修結果區塊
+  let resultHtml = ''
+  if (row.issueStatus === 'RESOLVED' && row.resultType) {
+    const rConfig = resultConfig[row.resultType] || { text: row.resultType, icon: '' }
+    // 簡單的灰色背景區塊
+    resultHtml = `
+      <div style="margin-top: 15px; padding: 12px; background: #f4f4f5; border-radius: 8px; border-left: 4px solid #909399;">
+        <div style="font-weight: bold; color: #606266; margin-bottom: 4px;">維修結果：${rConfig.text}</div>
+        <div style="font-size: 13px; color: #909399;">${row.resolveNote || '無備註'}</div>
+      </div>
+    `
+  }
+
   Swal.fire({
-    title: `<span style="font-size: 18px;">工單 #${row.ticketId}</span>`,
+    // 標題簡潔化
+    title: `<div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size: 20px; font-weight:700;">工單 #${row.ticketId}</span>
+              <span style="font-size: 14px; font-weight:400; color:#909399;">${row.issueType}</span>
+            </div>`,
     html: `
-      <div style="text-align: left; padding: 16px 0;">
-        <div style="display: grid; gap: 12px;">
-          <div style="padding: 14px; background: #f5f7fa; border-radius: 10px;">
-            <p style="margin: 0 0 4px; color: #909399; font-size: 12px;">問題類型</p>
-            <p style="margin: 0; font-size: 16px; font-weight: 600;">${row.issueType}</p>
+      <div style="text-align: left; padding: 0 10px;">
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 12px; color: #909399; margin-bottom: 4px;">問題描述</div>
+          <div style="padding: 12px; background: #fff; border: 1px solid #e4e7ed; border-radius: 8px; color: #606266; min-height: 40px;">
+            ${row.issueDesc || '無詳細描述'}
           </div>
-          <div style="padding: 14px; background: #fef0f0; border-radius: 10px; border-left: 4px solid #f56c6c;">
-            <p style="margin: 0 0 4px; color: #909399; font-size: 12px;">問題描述</p>
-            <p style="margin: 0; font-size: 14px; color: #606266;">${row.issueDesc || '無詳細描述'}</p>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div style="padding: 14px; background: #ecf5ff; border-radius: 10px; text-align: center;">
-              <p style="margin: 0 0 4px; color: #909399; font-size: 12px;">優先級</p>
-              <p style="margin: 0; font-size: 20px;">${getPriorityIcon(row.issuePriority)} ${getPriorityText(row.issuePriority)}</p>
-            </div>
-            <div style="padding: 14px; background: #f0f9eb; border-radius: 10px; text-align: center;">
-              <p style="margin: 0 0 4px; color: #909399; font-size: 12px;">狀態</p>
-              <p style="margin: 0; font-size: 20px;">${getStatusIcon(row.issueStatus)} ${getStatusText(row.issueStatus)}</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div>
+            <div style="font-size: 12px; color: #909399; margin-bottom: 4px;">優先級</div>
+            <div style="font-size: 16px; font-weight: 600;">
+              ${priorityIcon[row.issuePriority]} ${priorityText[row.issuePriority]}
             </div>
           </div>
-          
-          <!-- ★ B) 新增：LOG 指示區 -->
-          <div style="margin-top: 8px; padding: 14px; background: linear-gradient(135deg, #fff5e6 0%, #ffe8cc 100%); border-radius: 10px; border-left: 4px solid #e6a23c;">
-            <p style="margin: 0 0 8px; color: #606266; font-size: 13px; display: flex; align-items: center;">
-              <span style="font-size: 18px; margin-right: 6px;">📜</span>
-              <strong>歷程記錄</strong>
-            </p>
-            <p style="margin: 0 0 10px; color: #909399; font-size: 12px;">查看工單的操作紀錄</p>
-            <button 
-              id="btn-open-log" 
-              style="width: 100%; padding: 10px; background: #e6a23c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s;"
-              onmouseover="this.style.background='#d9940d'"
-              onmouseout="this.style.background='#e6a23c'"
-            >
-              <i class="fas fa-history" style="margin-right: 6px;"></i>查看歷程
-            </button>
+          <div>
+            <div style="font-size: 12px; color: #909399; margin-bottom: 4px;">目前狀態</div>
+            <div style="font-size: 16px; font-weight: 600;">
+              ${statusIcon[row.issueStatus]} ${statusText[row.issueStatus]}
+            </div>
           </div>
+        </div>
+
+        <div style="margin-bottom: 16px; padding-top: 12px; border-top: 1px solid #ebeef5;">
+          <div style="font-size: 12px; color: #909399; margin-bottom: 4px;">負責人員</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 32px; height: 32px; background: ${staffColor}; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-user"></i>
+            </div>
+            <span style="font-size: 15px; font-weight: 500; color: #303133;">${staffName}</span>
+          </div>
+        </div>
+
+        ${resultHtml}
+
+        <div style="margin-top: 20px;">
+           <button id="btn-view-log" style="width: 100%; padding: 10px; border: 1px dashed #dcdfe6; background: #fff; color: #606266; border-radius: 6px; cursor: pointer; transition: all 0.3s;">
+             <i class="fas fa-history mr-1"></i> 查看完整歷程
+           </button>
         </div>
       </div>
     `,
-    confirmButtonText: '關閉',
-    confirmButtonColor: '#909399',
-    showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
-    hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' },
-    width: 480,
-    // ★ B) 綁定按鈕事件
+    showConfirmButton: false,
+    showCloseButton: true,
+    width: 450,
     didOpen: () => {
-      const btn = document.getElementById('btn-open-log')
-      if (btn) {
-        btn.addEventListener('click', () => {
-          Swal.close()
-          openLogDialog(row.ticketId)
-        })
-      }
+      // 綁定歷程按鈕
+      document.getElementById('btn-view-log')?.addEventListener('click', () => {
+        Swal.close()
+        openLogDialog(row.ticketId)
+      })
     },
   })
 }
 
-// 切換模式時重新抓資料
-// ====== Task 4: 地圖小視窗功能 ======
+// 地圖小視窗功能
 const showLocationMap = async (stationName, lat, lng) => {
-  // 檢查經緯度是否有效
   if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
     await Swal.fire({
       icon: 'warning',
       title: '位置資訊不完整',
       text: `站點「${stationName}」暫無準確的地理位置資訊`,
       confirmButtonText: '了解',
-      confirmButtonColor: '#e6a23c'
+      confirmButtonColor: '#e6a23c',
     })
     return
   }
 
-  const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`
-  
+  const mapUrl = `http://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`
+
   await Swal.fire({
     title: `<div style="display: flex; align-items: center; gap: 12px; justify-content: center;">
       <i class="fas fa-map-marker-alt" style="color: #e6a23c; font-size: 24px;"></i>
@@ -401,14 +451,14 @@ const showLocationMap = async (stationName, lat, lng) => {
     confirmButtonText: '<i class="fas fa-times mr-1"></i>關閉',
     confirmButtonColor: '#909399',
     customClass: {
-      popup: 'custom-map-popup'
+      popup: 'custom-map-popup',
     },
     showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
-    hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' }
+    hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' },
   })
 }
 
-// [修正] 移除舊的 destroy 邏輯，只負責重抓資料
+// 切換模式時重新抓資料
 watch(
   () => props.historyMode,
   () => {
@@ -418,11 +468,9 @@ watch(
 
 onMounted(() => {
   fetchTickets()
-  fetchAssetStats() // 載入資產健康度統計
+  fetchAssetStats()
   setTimeout(() => (pageVisible.value = true), 100)
 })
-
-// [修正] 移除 onBeforeUnmount，因為圖表銷毀已交由 TicketCharts 元件處理
 </script>
 
 <template>
@@ -518,27 +566,29 @@ onMounted(() => {
 
             <TicketCharts :tickets="filteredTickets" class="mb-4" />
 
-            <!-- ====== 資產健康度統計區塊 ====== -->
             <el-card shadow="hover" class="mb-4 asset-stats-card" v-if="!historyMode">
               <template #header>
                 <div class="card-header-content">
                   <div class="header-left">
-                    <span class="header-icon" style="background: linear-gradient(135deg, #67c23a, #95d475);">
+                    <span
+                      class="header-icon"
+                      style="background: linear-gradient(135deg, #67c23a, #95d475)"
+                    >
                       <i class="fas fa-heartbeat"></i>
                     </span>
                     <span class="header-text">資產健康度統計</span>
-                    <el-tag type="success" effect="light" size="small" class="ml-2" round>
-                      最近 7 天
-                    </el-tag>
+                    <el-tag type="success" effect="light" size="small" class="ml-2" round
+                      >最近 7 天</el-tag
+                    >
                   </div>
                   <div class="header-right">
                     <el-radio-group v-model="assetStatsTab" size="small">
-                      <el-radio-button value="SPOT">
-                        <i class="fas fa-desktop mr-1"></i> 機台
-                      </el-radio-button>
-                      <el-radio-button value="SEAT">
-                        <i class="fas fa-chair mr-1"></i> 椅子
-                      </el-radio-button>
+                      <el-radio-button value="SPOT"
+                        ><i class="fas fa-desktop mr-1"></i> 機台</el-radio-button
+                      >
+                      <el-radio-button value="SEAT"
+                        ><i class="fas fa-chair mr-1"></i> 椅子</el-radio-button
+                      >
                     </el-radio-group>
                     <el-button type="info" plain size="small" @click="fetchAssetStats" class="ml-2">
                       <i class="fas fa-sync-alt"></i>
@@ -548,86 +598,87 @@ onMounted(() => {
               </template>
 
               <el-skeleton :rows="4" animated v-if="assetStatsLoading" />
-              
               <el-empty v-else-if="assetStats.length === 0" description="暫無統計資料" />
-
-              <el-table
-                v-else
-                :data="assetStats"
-                stripe
-                style="width: 100%"
-                max-height="400"
-              >
+              <el-table v-else :data="assetStats" stripe style="width: 100%" max-height="400">
                 <el-table-column prop="assetName" label="資產名稱" min-width="150" fixed>
                   <template #default="{ row }">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <i :class="row.assetType === 'SPOT' ? 'fas fa-desktop' : 'fas fa-chair'" 
-                         :style="{ color: row.assetType === 'SPOT' ? '#409eff' : '#e6a23c' }"></i>
+                    <div style="display: flex; align-items: center; gap: 8px">
+                      <i
+                        :class="row.assetType === 'SPOT' ? 'fas fa-desktop' : 'fas fa-chair'"
+                        :style="{ color: row.assetType === 'SPOT' ? '#409eff' : '#e6a23c' }"
+                      ></i>
                       <span>{{ row.assetName || '未知資產#' + row.assetId }}</span>
                     </div>
                   </template>
                 </el-table-column>
-
                 <el-table-column label="維修次數" width="100" align="center">
                   <template #default="{ row }">
-                    <el-tag :type="row.repairCount > 0 ? 'danger' : 'info'" effect="light" size="small">
-                      {{ row.repairCount || 0 }}
-                    </el-tag>
+                    <el-tag
+                      :type="row.repairCount > 0 ? 'danger' : 'info'"
+                      effect="light"
+                      size="small"
+                      >{{ row.repairCount || 0 }}</el-tag
+                    >
                   </template>
                 </el-table-column>
-
                 <el-table-column label="保養次數" width="100" align="center">
                   <template #default="{ row }">
-                    <el-tag type="primary" effect="light" size="small">
-                      {{ row.maintainCount || 0 }}
-                    </el-tag>
+                    <el-tag type="primary" effect="light" size="small">{{
+                      row.maintainCount || 0
+                    }}</el-tag>
                   </template>
                 </el-table-column>
-
                 <el-table-column label="未結案" width="90" align="center">
                   <template #default="{ row }">
-                    <el-tag :type="row.openCount > 0 ? 'warning' : 'success'" effect="plain" size="small">
-                      {{ row.openCount || 0 }}
-                    </el-tag>
+                    <el-tag
+                      :type="row.openCount > 0 ? 'warning' : 'success'"
+                      effect="plain"
+                      size="small"
+                      >{{ row.openCount || 0 }}</el-tag
+                    >
                   </template>
                 </el-table-column>
-
                 <el-table-column label="妥善率" width="140" align="center">
                   <template #default="{ row }">
-                    <el-progress 
-                      :percentage="Math.round((row.availability || 0) * 100)" 
+                    <el-progress
+                      :percentage="Math.round((row.availability || 0) * 100)"
                       :status="getAvailabilityStatus(row.availability)"
                       :stroke-width="10"
-                      style="width: 100px; display: inline-block;"
+                      style="width: 100px; display: inline-block"
                     />
-                    <span style="margin-left: 8px; font-size: 12px; color: #606266;">
-                      {{ formatPercent(row.availability) }}
-                    </span>
+                    <span style="margin-left: 8px; font-size: 12px; color: #606266">{{
+                      formatPercent(row.availability)
+                    }}</span>
                   </template>
                 </el-table-column>
-
                 <el-table-column label="故障率(/天)" width="110" align="center">
                   <template #default="{ row }">
-                    <span :style="{ color: row.failureRatePerDay > 0.5 ? '#f56c6c' : '#67c23a', fontWeight: 'bold' }">
-                      {{ formatRate(row.failureRatePerDay) }}
-                    </span>
+                    <span
+                      :style="{
+                        color: row.failureRatePerDay > 0.5 ? '#f56c6c' : '#67c23a',
+                        fontWeight: 'bold',
+                      }"
+                      >{{ formatRate(row.failureRatePerDay) }}</span
+                    >
                   </template>
                 </el-table-column>
-
                 <el-table-column label="維修率" width="100" align="center">
                   <template #default="{ row }">
-                    <el-tag :type="row.repairRate >= 1 ? 'success' : row.repairRate > 0 ? 'warning' : 'info'" 
-                            effect="plain" size="small">
-                      {{ formatPercent(row.repairRate) }}
-                    </el-tag>
+                    <el-tag
+                      :type="
+                        row.repairRate >= 1 ? 'success' : row.repairRate > 0 ? 'warning' : 'info'
+                      "
+                      effect="plain"
+                      size="small"
+                      >{{ formatPercent(row.repairRate) }}</el-tag
+                    >
                   </template>
                 </el-table-column>
-
                 <el-table-column label="停機時間" width="100" align="center">
                   <template #default="{ row }">
-                    <span style="color: #909399; font-size: 12px;">
-                      {{ row.downtimeMinutes || 0 }} 分鐘
-                    </span>
+                    <span style="color: #909399; font-size: 12px"
+                      >{{ row.downtimeMinutes || 0 }} 分鐘</span
+                    >
                   </template>
                 </el-table-column>
               </el-table>
@@ -674,7 +725,7 @@ onMounted(() => {
                   class="filter-select"
                 >
                   <el-option
-                    v-for="(val, key) in statusText"
+                    v-for="(val, key) in availableStatusOptions"
                     :key="key"
                     :label="`${statusIcon[key]} ${val}`"
                     :value="key"
@@ -704,40 +755,44 @@ onMounted(() => {
 
                 <el-table-column label="維修目標" width="180" align="center">
                   <template #default="{ row }">
-                    <!-- 椅子維修 -->
-                    <div v-if="row.seatsId" class="target-cell">
+                    <div v-if="row.seatsId" class="target-cell seat-target">
                       <div class="target-main">
-                        <i class="fas fa-chair" style="color: #e6a23c;"></i>
+                        <i class="fas fa-chair" style="color: #e6a23c"></i>
                         <span>椅子 #{{ row.seatsId }}</span>
                       </div>
                       <div v-if="row.seat && row.seat.spotId" class="target-station">
-                        <span 
-                          class="station-link" 
-                          @click="showLocationMap(
-                            row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`,
-                            row.rentalSpot ? row.rentalSpot.latitude : null,
-                            row.rentalSpot ? row.rentalSpot.longitude : null
-                          )"
+                        <span
+                          class="station-link"
+                          @click="
+                            showLocationMap(
+                              row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`,
+                              row.rentalSpot ? row.rentalSpot.latitude : null,
+                              row.rentalSpot ? row.rentalSpot.longitude : null,
+                            )
+                          "
                         >
                           <i class="fas fa-map-marker-alt mr-1"></i>
-                          {{ row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}` }}
+                          {{
+                            row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`
+                          }}
                         </span>
                       </div>
                     </div>
-                    <!-- 機台維修 -->
-                    <div v-else class="target-cell">
+                    <div v-else class="target-cell spot-target">
                       <div class="target-main">
-                        <i class="fas fa-desktop" style="color: #409eff;"></i>
+                        <i class="fas fa-desktop" style="color: #409eff"></i>
                         <span>機台 #{{ row.spotId }}</span>
                       </div>
                       <div v-if="row.rentalSpot" class="target-station">
-                        <span 
-                          class="station-link" 
-                          @click="showLocationMap(
-                            row.rentalSpot.spotName,
-                            row.rentalSpot.latitude,
-                            row.rentalSpot.longitude
-                          )"
+                        <span
+                          class="station-link"
+                          @click="
+                            showLocationMap(
+                              row.rentalSpot.spotName,
+                              row.rentalSpot.latitude,
+                              row.rentalSpot.longitude,
+                            )
+                          "
                         >
                           <i class="fas fa-map-marker-alt mr-1"></i>
                           {{ row.rentalSpot.spotName }}
@@ -773,7 +828,7 @@ onMounted(() => {
                       :type="getPriorityTag(row.issuePriority)"
                       effect="dark"
                       round
-                      class="priority-tag"
+                      style="border: none; white-space: nowrap"
                     >
                       {{ priorityIcon[row.issuePriority] }} {{ priorityText[row.issuePriority] }}
                     </el-tag>
@@ -829,7 +884,6 @@ onMounted(() => {
                         </el-button>
                       </el-tooltip>
 
-                      <!-- ★ (2A) 修復：編輯按鈕加入 disabled 和動態 tooltip -->
                       <el-tooltip
                         v-if="!historyMode"
                         :content="getEditTooltip(row)"
@@ -900,20 +954,17 @@ onMounted(() => {
                 <template #empty>
                   <el-empty description="目前沒有相關工單資料">
                     <template #image>
-                      <div class="empty-icon">
-                        <i class="fas fa-clipboard"></i>
-                      </div>
+                      <div class="empty-icon"><i class="fas fa-clipboard"></i></div>
                     </template>
                     <router-link to="/admin/mtif-form" v-if="!historyMode">
-                      <el-button type="primary">
-                        <i class="fas fa-plus mr-1"></i> 建立第一張工單
-                      </el-button>
+                      <el-button type="primary"
+                        ><i class="fas fa-plus mr-1"></i> 建立第一張工單</el-button
+                      >
                     </router-link>
                   </el-empty>
                 </template>
               </el-table>
 
-              <!-- ★ 問題C修復：v-if 改為 v-show，避免 pageSize 變大時元件被銷毀 -->
               <div class="pagination-wrapper" v-show="paginationTotal > 0">
                 <el-pagination
                   v-model:current-page="currentPage"
@@ -929,7 +980,7 @@ onMounted(() => {
             <div class="tips-bar mt-3">
               <el-alert type="info" :closable="false" show-icon>
                 <template #title>
-                  <span>💡 小提示：雙擊表格列可快速查看工單詳情 | 緊急工單會優先顯示紅色標記</span>
+                  <span>💡 小提示：雙擊表格列可快速查看工單詳情 | 緊急工單會優先置頂顯示</span>
                 </template>
               </el-alert>
             </div>
@@ -938,32 +989,34 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- ★ A) 新增：Log Dialog（查看工單歷程） -->
     <el-dialog
       v-model="logDialogVisible"
       :title="`工單 #${currentLogTicketId}｜歷程`"
       width="760px"
       destroy-on-close
+      append-to-body
+      align-center
     >
       <TicketTimeline v-if="currentLogTicketId" :ticketId="currentLogTicketId" />
     </el-dialog>
 
-    <!-- 原有的 Resolve Dialog -->
     <el-dialog
       v-model="showResolveDialog"
       title=""
       width="500px"
       center
       destroy-on-close
+      align-center
       class="resolve-dialog"
     >
       <template #header>
         <div class="dialog-header">
-          <span class="dialog-icon"><i class="fas fa-check-circle" style="color: #67c23a; font-size: 24px;"></i></span>
+          <span class="dialog-icon"
+            ><i class="fas fa-check-circle" style="color: #67c23a; font-size: 24px"></i
+          ></span>
           <span class="dialog-title">工單結案確認</span>
         </div>
       </template>
-
       <el-form label-position="top" class="resolve-form">
         <el-form-item label="維修結果">
           <div class="result-cards">
@@ -991,18 +1044,18 @@ onMounted(() => {
           />
         </el-form-item>
       </el-form>
-
       <template #footer>
         <el-button @click="showResolveDialog = false" size="large">取消</el-button>
-        <el-button type="primary" @click="submitResolve" size="large" class="confirm-btn">
-          <i class="fas fa-check mr-1"></i> 確認結案
-        </el-button>
+        <el-button type="primary" @click="submitResolve" size="large" class="confirm-btn"
+          ><i class="fas fa-check mr-1"></i> 確認結案</el-button
+        >
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
+/* 頁面容器 */
 .ticket-list-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
@@ -1036,15 +1089,12 @@ onMounted(() => {
   transition: all 0.4s ease;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
-
 .title-icon:hover {
   transform: scale(1.1) rotate(10deg);
 }
-
 .title-icon.active-mode {
   background: linear-gradient(135deg, #409eff 0%, #79bbff 100%);
 }
-
 .title-icon.history-mode {
   background: linear-gradient(135deg, #909399 0%, #c0c4cc 100%);
 }
@@ -1053,14 +1103,12 @@ onMounted(() => {
   flex: 1;
   min-width: 200px;
 }
-
 .title-content h1 {
   margin: 0;
   font-size: 1.7rem;
   font-weight: 700;
   color: #303133;
 }
-
 .title-content .subtitle {
   margin: 6px 0 0;
   font-size: 0.9rem;
@@ -1071,19 +1119,16 @@ onMounted(() => {
   display: flex;
   gap: 10px;
 }
-
 .action-btn {
   border-radius: 10px;
   font-weight: 500;
   transition: all 0.3s ease;
 }
-
 .add-btn {
   background: linear-gradient(135deg, #67c23a 0%, #95d475 100%);
   border: none;
   box-shadow: 0 4px 15px rgba(103, 194, 58, 0.3);
 }
-
 .add-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(103, 194, 58, 0.4);
@@ -1103,12 +1148,10 @@ onMounted(() => {
   overflow: hidden;
   margin-bottom: 16px;
 }
-
 .stat-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
-
 .stat-icon {
   width: 50px;
   height: 50px;
@@ -1120,11 +1163,9 @@ onMounted(() => {
   color: white;
   z-index: 1;
 }
-
 .stat-icon.pulse {
   animation: pulse 1.5s infinite;
 }
-
 @keyframes pulse {
   0%,
   100% {
@@ -1134,7 +1175,6 @@ onMounted(() => {
     transform: scale(1.1);
   }
 }
-
 .total-card .stat-icon {
   background: linear-gradient(135deg, #409eff 0%, #79bbff 100%);
 }
@@ -1147,14 +1187,12 @@ onMounted(() => {
 .resolved-card .stat-icon {
   background: linear-gradient(135deg, #67c23a 0%, #95d475 100%);
 }
-
 .stat-info h3 {
   margin: 0;
   font-size: 1.8rem;
   font-weight: 700;
   color: #303133;
 }
-
 .stat-info span {
   font-size: 0.85rem;
   color: #909399;
@@ -1167,19 +1205,16 @@ onMounted(() => {
   border: none;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
-
 .card-header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
 .header-left {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
 .header-icon {
   width: 40px;
   height: 40px;
@@ -1191,7 +1226,6 @@ onMounted(() => {
   color: white;
   font-size: 16px;
 }
-
 .header-text {
   font-weight: 600;
   font-size: 1.1rem;
@@ -1208,28 +1242,22 @@ onMounted(() => {
   background: #f8f9fa;
   border-radius: 12px;
 }
-
 .filter-input {
   width: 280px;
 }
-
 .filter-input :deep(.el-input__wrapper) {
   border-radius: 10px;
 }
-
 .filter-select {
   width: 140px;
 }
-
 .filter-select :deep(.el-input__wrapper) {
   border-radius: 10px;
 }
-
 .refresh-btn {
   border-radius: 10px;
   transition: all 0.3s ease;
 }
-
 .refresh-btn:hover {
   transform: rotate(180deg);
 }
@@ -1238,114 +1266,117 @@ onMounted(() => {
 .custom-table {
   --el-table-header-bg-color: #f8f9fa;
 }
-
 .id-tag {
   font-weight: 600;
-}
-
-/* ID 淡化顯示 */
-.id-tag-subtle {
-  font-size: 12px;
-  color: #c0c4cc;
-  font-weight: 400;
-  font-family: 'Courier New', monospace;
 }
 
 /* 維修目標欄位樣式 */
 .target-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 2px;
   padding: 6px 10px;
   border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
   transition: all 0.3s ease;
+  text-align: center;
 }
-
-.target-cell i {
-  font-size: 14px;
-}
-
 .seat-target {
   background: linear-gradient(135deg, #f0f9eb 0%, #e1f3d8 100%);
   color: #67c23a;
 }
-
 .seat-target:hover {
   box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
 }
-
 .spot-target {
   background: linear-gradient(135deg, #ecf5ff 0%, #d9ecff 100%);
   color: #409eff;
 }
-
 .spot-target:hover {
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
-
-.type-cell {
+.target-main {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 4px;
+}
+.target-station {
+  font-size: 11px;
+}
+.station-link {
+  color: #409eff;
   cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+}
+.station-link:hover {
+  color: #66b1ff;
+  background: #ecf5ff;
+  transform: translateY(-1px);
+}
+
+.type-cell {
+  cursor: pointer;
+  transition: color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 4px 8px;
   border-radius: 6px;
-  transition: all 0.3s ease;
 }
-
 .type-cell:hover {
+  color: #409eff;
   background: #ecf5ff;
 }
-
-.type-cell .type-icon {
-  color: #e6a23c;
+.type-icon {
+  margin-right: 6px;
+  color: #f56c6c;
 }
-
 .desc-cell {
   color: #606266;
   font-size: 13px;
 }
 
-.priority-tag,
-.status-tag {
-  font-weight: 500;
+/* Tag 不換行 */
+:deep(.el-tag) {
+  white-space: nowrap;
 }
 
-/* 操作按鈕 */
 .action-buttons {
   display: flex;
   justify-content: center;
   gap: 6px;
   flex-wrap: wrap;
 }
-
 .action-btn-item {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
 .action-btn-item:hover {
   transform: scale(1.2);
 }
 
-/* 空狀態 */
 .empty-icon {
   font-size: 64px;
   color: #dcdfe6;
   margin-bottom: 16px;
 }
-
-/* 分頁 */
 .pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding-top: 20px;
+  padding: 20px;
+  text-align: center;
   border-top: 1px solid #ebeef5;
+  background: #fafafa;
   margin-top: 20px;
 }
-
-/* 提示欄 */
 .tips-bar :deep(.el-alert) {
   border-radius: 12px;
 }
@@ -1354,34 +1385,28 @@ onMounted(() => {
 .resolve-dialog :deep(.el-dialog) {
   border-radius: 16px;
 }
-
 .dialog-header {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
 }
-
 .dialog-icon {
   font-size: 28px;
 }
-
 .dialog-title {
   font-size: 18px;
   font-weight: 600;
   color: #303133;
 }
-
 .resolve-form {
   padding: 10px 0;
 }
-
 .result-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
-
 .result-card {
   display: flex;
   flex-direction: column;
@@ -1393,29 +1418,24 @@ onMounted(() => {
   transition: all 0.3s ease;
   border: 2px solid transparent;
 }
-
 .result-card:hover {
   background: #ecf5ff;
   transform: translateY(-2px);
 }
-
 .result-card.active {
   border-color: var(--card-color);
   background: white;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
-
 .result-icon {
   font-size: 24px;
   margin-bottom: 6px;
 }
-
 .result-text {
   font-size: 12px;
   color: #606266;
   font-weight: 500;
 }
-
 .confirm-btn {
   background: linear-gradient(135deg, #67c23a 0%, #95d475 100%);
   border: none;
@@ -1437,7 +1457,6 @@ onMounted(() => {
   transform: translateY(-20px);
   opacity: 0;
 }
-
 .zoom-fade-enter-active {
   transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -1473,106 +1492,6 @@ onMounted(() => {
   width: 100%;
 }
 
-/* Task 4: 新增樣式 */
-.target-cell {
-  text-align: center;
-}
-
-.target-main {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-weight: 500;
-  color: #303133;
-  margin-bottom: 4px;
-}
-
-.target-station {
-  font-size: 11px;
-}
-
-.station-link {
-  color: #409eff;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-}
-
-.station-link:hover {
-  color: #66b1ff;
-  background: #ecf5ff;
-  transform: translateY(-1px);
-}
-
-.type-cell {
-  cursor: pointer;
-  transition: color 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.type-cell:hover {
-  color: #409eff;
-}
-
-.type-icon {
-  margin-right: 6px;
-  color: #f56c6c;
-}
-
-.desc-cell {
-  color: #606266;
-  font-size: 13px;
-}
-
-.priority-tag {
-  font-weight: 500;
-}
-
-.status-tag {
-  font-weight: 500;
-}
-
-.id-tag {
-  font-weight: 600;
-  font-family: monospace;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 4px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.action-btn-item {
-  transition: all 0.3s ease;
-}
-
-.action-btn-item:hover {
-  transform: translateY(-2px);
-}
-
-.empty-icon {
-  font-size: 64px;
-  color: #c0c4cc;
-}
-
-.pagination-wrapper {
-  padding: 20px;
-  text-align: center;
-  border-top: 1px solid #ebeef5;
-  background: #fafafa;
-  margin-top: 20px;
-}
-
-/* 地圖彈窗樣式 */
 :global(.custom-map-popup) {
   border-radius: 16px !important;
   overflow: hidden !important;

@@ -1,14 +1,22 @@
 package com.example.backend.controller.spot;
 
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.model.spot.Seat;
 import com.example.backend.service.spot.SeatService;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * [重構] 座位 (Seat) 資源的統一控制器
@@ -55,6 +63,13 @@ public class SeatController {
             @RequestParam(required = false) Integer spotId,
             @RequestParam(required = false) String serialNumber) {
         return seatService.findByCondition(seatsName, seatsType, seatsStatus, spotId, serialNumber);
+    }
+
+    // 根據 spotId 查詢座位數量 (GET /seats/count-by-spot)
+    @GetMapping("/count-by-spot")
+    public ResponseEntity<Long> getSeatCountBySpotId(@RequestParam("spotId") Integer spotId) {
+        long count = seatService.countBySpotId(spotId);
+        return ResponseEntity.ok(count);
     }
 
     // endregion
@@ -111,4 +126,5 @@ public class SeatController {
     }
 
     // endregion
+
 }
