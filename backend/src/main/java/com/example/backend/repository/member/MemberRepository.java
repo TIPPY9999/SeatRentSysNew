@@ -26,4 +26,8 @@ public interface MemberRepository extends JpaRepository<Member, Integer> {
 
     // 讓 CustomOAuth2UserService 可以用 Email 檢查會員是否存在
     Optional<Member> findByMemEmail(String memEmail);
+
+    // --- 新增這行給忘記密碼功能使用 ---
+    // 直接回傳 Member 物件，方便 Service 調用
+    Member findByMemEmailIgnoreCase(String memEmail);
 }

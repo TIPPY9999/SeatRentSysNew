@@ -93,17 +93,24 @@ const particlesOptions = {
 </template>
 
 <style scoped>
-/* 版面容器 */
+/* 版面容器*/
 .auth-layout {
   position: relative;
-  /* 強制高度為視窗高度，防止出現網頁卷軸 */
-  height: 100vh;
+  /* 修正：改用 min-height 並移除溢出隱藏/自動設定，讓外層自然捲動 */
+  min-height: 100vh; 
   width: 100%;
-  overflow: hidden; /* 超出範圍的部分隱藏 */
+  
   display: flex;
   justify-content: center;
-  align-items: center;
+  /* 修正：使用 flex-start 配合 padding，確保長表單頂部不被切掉 */
+  align-items: flex-start; 
+  
+  /* 針對各種裝置的呼吸空間 */
+  padding: 60px 15px; 
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  
+  /* 確保背景層不會因為 padding 而跑位 */
+  box-sizing: border-box;
 }
 
 /* ========== 背景圖設定區 ========== */
@@ -136,19 +143,23 @@ const particlesOptions = {
   z-index: -1;
 }
 
-/* 內容容器 */
+/* 內容容器*/
 .auth-container {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 480px; /* 稍微縮窄一點，看起來比較精緻 */
-  padding: 10px; /* 減少內距 (原本20px) */
+  /* 修正：限制最大寬度，但在手機上自動撐滿 */
+  max-width: 480px; 
+  
+  /* 關鍵：利用 margin 達成垂直與水平的靈活置中 */
+  margin: auto; 
+
   display: flex;
   flex-direction: column;
   align-items: center;
-
-  /* 如果螢幕真的很矮(例如手機)，允許容器內部捲動，但盡量不要 */
-  max-height: 100vh;
+  
+  /* 確保在極端窄的螢幕下不會爆版 */
+  word-wrap: break-word;
 }
 
 /* Header & Logo */

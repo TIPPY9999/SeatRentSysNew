@@ -42,3 +42,16 @@ spring:
       "[hibernate.default_schema]": dbo
       "[hibernate.dialect]": org.hibernate.dialect.SQLServerDialect
       "[hibernate.jdbc.lob.non_contextual_creation]": true
+
+  # --- 新增郵件發送設定 ---
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: alan123149@gmail.com
+    password: nyjctvblehdjzxbc
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true

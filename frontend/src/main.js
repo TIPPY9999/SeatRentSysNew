@@ -51,6 +51,7 @@ axios.interceptors.response.use(
       status === 401 &&
       !url.includes('/login') &&
       !url.includes('/oauth2') &&
+      !url.includes('/api/auth/me') &&
       !isAuthExpiredDialogShowing
     ) {
       // 如果是在首頁 (#/)，通常是靜態展示，我們就默默清理掉過期資訊就好，不跳彈窗
