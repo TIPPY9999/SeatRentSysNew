@@ -6,17 +6,11 @@ import Swal from 'sweetalert2'
 import { usePagination } from '@/composables/maintenance/usePagination'
 import { useScheduleConfig } from '@/composables/maintenance/useScheduleConfig'
 import ScheduleCalendar from '@/components/maintenance/ScheduleCalendar.vue'
-import { Calendar, List, Clock, TrendCharts } from '@element-plus/icons-vue'
+import { Calendar, List, Clock } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const {
-  scheduleTypeConfig,
-  dayOfWeekConfig,
-  formatDateTime,
-  formatScheduleDetail,
-  getRelativeTime,
-  getPriorityTag,
-} = useScheduleConfig()
+const { scheduleTypeConfig, formatDateTime, formatScheduleDetail, getRelativeTime } =
+  useScheduleConfig()
 
 // ====== 資料狀態 ======
 const schedules = ref([])
@@ -73,17 +67,23 @@ const upcomingSchedules = computed(() => {
     .slice(0, 5)
 })
 
-// ====== 篩選邏輯 ======
+// ====== 篩選邏輯（✅ 強化搜尋欄位） ======
 const filteredList = computed(() => {
   const key = searchText.value.trim().toLowerCase()
-  let list = schedules.value.filter((s) => s.isActive === true)
+  const list = schedules.value.filter((s) => s.isActive === true)
+
   if (!key) return list
-  return list.filter(
-    (s) =>
-      s.title?.toLowerCase().includes(key) ||
-      s.issueType?.toLowerCase().includes(key) ||
-      String(s.scheduleId).includes(key),
-  )
+
+  return list.filter((s) => {
+    const idHit = String(s.scheduleId).includes(key)
+    const titleHit = (s.title || '').toLowerCase().includes(key)
+    const issueTypeHit = (s.issueType || '').toLowerCase().includes(key)
+    const targetTypeHit = (s.targetType || '').toLowerCase().includes(key)
+    const staffHit = (s.assignedStaffName || '').toLowerCase().includes(key)
+    const scheduleTypeHit = (s.scheduleType || '').toLowerCase().includes(key)
+
+    return idHit || titleHit || issueTypeHit || targetTypeHit || staffHit || scheduleTypeHit
+  })
 })
 
 // ====== 分頁 ======
@@ -98,10 +98,58 @@ watch(searchText, () => resetPagination())
 const handleCreate = () => router.push('/admin/maintenance/schedule/create')
 const handleEdit = (row) => router.push(`/admin/maintenance/schedule/edit/${row.scheduleId}`)
 
-// ★ Bug1 修復：改為 before-change 模式，確認成功才切換
+// ✅ 【修復】Demo 排程生成函式 - 補全資料結構避免 undefined
+const handleCreateDemoSchedules = () => {
+  // 真實人員清單
+  const staffList = ['陳國榮', '王怡君', '林志豪', '張美玲']
+
+  // 隨機挑選
+  const randomStaff = staffList[Math.floor(Math.random() * staffList.length)]
+  const targetTypes = ['SPOT', 'SEATS']
+  const randomTarget = targetTypes[Math.floor(Math.random() * targetTypes.length)]
+  const scheduleTypes = ['DAILY', 'WEEKLY', 'MONTHLY']
+  const randomScheduleType = scheduleTypes[Math.floor(Math.random() * scheduleTypes.length)]
+  
+  const now = new Date()
+  const nextDate = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 明天
+
+  // ✅ 關鍵：補上 weekDay 和 dayOfMonth，避免頻率欄位顯示 undefined
+  const oneDemoSchedule = {
+    scheduleId: `DEMO_${Date.now()}`,
+    title: `[Demo] ${randomTarget === 'SPOT' ? '機台' : '椅子'}${randomScheduleType === 'DAILY' ? '每日' : randomScheduleType === 'WEEKLY' ? '每週' : '每月'}檢查`,
+    scheduleType: randomScheduleType,
+    issueType: '例行檢查',
+    targetType: randomTarget,
+    executeTime: '10:00',
+    weekDay: 1, // ✅ 必須：每週星期幾（1=週一）
+    dayOfMonth: 1, // ✅ 必須：每月第幾日
+    nextExecuteAt: nextDate.toISOString(),
+    isActive: true,
+    assignedStaffId: null, // Mock 資料不需真實 ID
+    assignedStaffName: randomStaff,
+    description: `【演示用】此排程由 ${randomStaff} 負責，系統自動生成。`,
+  }
+
+  // 插入陣列最前方
+  schedules.value.unshift(oneDemoSchedule)
+
+  // ✅ 輕量 Toast 提示（右上角）
+  Swal.fire({
+    icon: 'success',
+    title: '已新增 Demo 排程',
+    html: `<b style="color: #67c23a">${randomStaff}</b> 負責`,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 1800,
+    toast: true,
+    timerProgressBar: true,
+  })
+}
+
+// ★ switch：確認成功才切換
 const handleToggleConfirm = async (row) => {
   const action = row.isActive ? '停用' : '啟用'
-  
+
   const result = await Swal.fire({
     title: `確定要${action}此排程嗎？`,
     html: `
@@ -117,35 +165,27 @@ const handleToggleConfirm = async (row) => {
     cancelButtonText: '取消',
   })
 
-  if (!result.isConfirmed) {
-    return false // 返回 false，switch 不會切換
-  }
+  if (!result.isConfirmed) return false
 
   try {
     await maintenanceApi.toggleSchedule(row.scheduleId)
-    
-    // ★ 成功後重新載入資料
     await fetchSchedules()
-    
-    // ★ 如果是停用，提示已移到停用清單
-    if (row.isActive) {
-      await Swal.fire({
-        icon: 'success',
-        title: `已${action}`,
-        html: '<p style="color: #909399; font-size: 13px;">排程已移至「已停用」清單</p>',
-        timer: 1500,
-        showConfirmButton: false
-      })
-    } else {
-      await Swal.fire({ icon: 'success', title: `已${action}`, timer: 1000, showConfirmButton: false })
-    }
-    
-    return true // 返回 true，讓 switch 切換
+
+    await Swal.fire({
+      icon: 'success',
+      title: `已${action}`,
+      html: row.isActive
+        ? '<p style="color: #909399; font-size: 13px;">排程已移至「已停用」清單</p>'
+        : '',
+      timer: row.isActive ? 1500 : 1000,
+      showConfirmButton: false,
+    })
+    return true
   } catch (error) {
     console.error('Toggle failed:', error)
     const errorMsg = error?.response?.data?.message || `${action}失敗，請稍後再試`
     Swal.fire('錯誤', errorMsg, 'error')
-    return false // 失敗不切換
+    return false
   }
 }
 
@@ -239,6 +279,9 @@ onMounted(fetchSchedules)
               <el-button type="warning" plain @click="openDeletedDialog">
                 <i class="fas fa-trash-alt mr-1"></i> 已停用
               </el-button>
+              <el-button type="success" plain @click="handleCreateDemoSchedules">
+                <i class="fas fa-magic mr-1"></i> Demo 排程
+              </el-button>
             </el-button-group>
             <el-button type="primary" @click="handleCreate">
               <i class="fas fa-plus mr-1"></i> 新增排程
@@ -299,10 +342,10 @@ onMounted(fetchSchedules)
                   <div class="toolbar">
                     <el-input
                       v-model="searchText"
-                      placeholder="搜尋標題、問題類型..."
+                      placeholder="搜尋：標題 / 類型 / 人員 / ID / 目標..."
                       clearable
                       prefix-icon="Search"
-                      style="width: 280px"
+                      style="width: 320px"
                     />
                     <div class="toolbar-right">
                       <el-radio-group v-model="viewMode" size="small">
@@ -328,7 +371,20 @@ onMounted(fetchSchedules)
                       style="width: 100%"
                       :header-cell-style="{ background: '#f5f7fa', fontWeight: 'bold' }"
                     >
-                      <el-table-column prop="scheduleId" label="ID" width="60" align="center" />
+                      <el-table-column prop="scheduleId" label="ID" width="60" align="center">
+                        <template #default="{ row }">
+                          <!-- ✅ 修復：Demo ID 顯示為綠色 tag，避免過長數字影響版面 -->
+                          <el-tag
+                            v-if="String(row.scheduleId).startsWith('DEMO')"
+                            type="success"
+                            size="small"
+                            effect="light"
+                          >
+                            Demo
+                          </el-tag>
+                          <span v-else>{{ row.scheduleId }}</span>
+                        </template>
+                      </el-table-column>
 
                       <el-table-column prop="title" label="排程標題" min-width="160">
                         <template #default="{ row }">
@@ -367,13 +423,18 @@ onMounted(fetchSchedules)
                         </template>
                       </el-table-column>
 
-                      <el-table-column label="負責人員" width="100" align="center">
+                      <el-table-column label="負責人員" width="110" align="center">
                         <template #default="{ row }">
-                          <el-tag v-if="row.assignedStaffId" type="success" size="small" effect="plain">
+                          <el-tag
+                            v-if="row.assignedStaffId"
+                            type="success"
+                            size="small"
+                            effect="plain"
+                          >
                             <i class="fas fa-user mr-1"></i>
                             {{ row.assignedStaffName || `#${row.assignedStaffId}` }}
                           </el-tag>
-                          <span v-else style="color: #909399; font-size: 12px;">未指派</span>
+                          <span v-else style="color: #909399; font-size: 12px">未指派</span>
                         </template>
                       </el-table-column>
 
@@ -382,7 +443,13 @@ onMounted(fetchSchedules)
                           <div class="next-exec-cell">
                             <span class="datetime">{{ formatDateTime(row.nextExecuteAt) }}</span>
                             <el-tag
-                              :type="getRelativeTime(row.nextExecuteAt).isOverdue ? 'danger' : getRelativeTime(row.nextExecuteAt).isSoon ? 'warning' : 'info'"
+                              :type="
+                                getRelativeTime(row.nextExecuteAt).isOverdue
+                                  ? 'danger'
+                                  : getRelativeTime(row.nextExecuteAt).isSoon
+                                    ? 'warning'
+                                    : 'info'
+                              "
                               size="small"
                               effect="plain"
                               class="relative-tag"
@@ -407,7 +474,13 @@ onMounted(fetchSchedules)
                       <el-table-column label="操作" width="100" align="center">
                         <template #default="{ row }">
                           <el-button-group>
-                            <el-button size="small" type="primary" @click="handleEdit(row)">
+                            <!-- ✅ 修復：Demo 排程禁用編輯按鈕，防止 API 報錯 -->
+                            <el-button
+                              size="small"
+                              type="primary"
+                              @click="handleEdit(row)"
+                              :disabled="String(row.scheduleId).startsWith('DEMO')"
+                            >
                               <i class="fas fa-edit"></i>
                             </el-button>
                             <el-button size="small" type="danger" @click="handleDelete(row)">
@@ -431,10 +504,10 @@ onMounted(fetchSchedules)
                     </div>
                   </div>
 
-                  <!-- 日曆視圖 -->
+                  <!-- ✅ 日曆視圖：吃搜尋後 filteredList -->
                   <div v-show="viewMode === 'calendar'">
                     <ScheduleCalendar
-                      :schedules="schedules"
+                      :schedules="filteredList"
                       @click-schedule="handleCalendarScheduleClick"
                     />
                   </div>
@@ -546,11 +619,21 @@ onMounted(fetchSchedules)
 .stat-card:hover {
   transform: translateY(-3px);
 }
-.stat-total :deep(.el-statistic__head) { color: #409eff; }
-.stat-upcoming :deep(.el-statistic__head) { color: #f56c6c; }
-.stat-daily :deep(.el-statistic__head) { color: #67c23a; }
-.stat-weekly :deep(.el-statistic__head) { color: #409eff; }
-.stat-monthly :deep(.el-statistic__head) { color: #e6a23c; }
+.stat-total :deep(.el-statistic__head) {
+  color: #409eff;
+}
+.stat-upcoming :deep(.el-statistic__head) {
+  color: #f56c6c;
+}
+.stat-daily :deep(.el-statistic__head) {
+  color: #67c23a;
+}
+.stat-weekly :deep(.el-statistic__head) {
+  color: #409eff;
+}
+.stat-monthly :deep(.el-statistic__head) {
+  color: #e6a23c;
+}
 
 .stat-card :deep(.el-statistic__content) {
   font-size: 1.8rem;
@@ -640,11 +723,21 @@ onMounted(fetchSchedules)
 }
 
 /* ====== 工具類 ====== */
-.mr-1 { margin-right: 4px; }
-.mr-2 { margin-right: 8px; }
-.ml-2 { margin-left: 8px; }
-.ml-auto { margin-left: auto; }
-.mb-4 { margin-bottom: 1rem; }
+.mr-1 {
+  margin-right: 4px;
+}
+.mr-2 {
+  margin-right: 8px;
+}
+.ml-2 {
+  margin-left: 8px;
+}
+.ml-auto {
+  margin-left: auto;
+}
+.mb-4 {
+  margin-bottom: 1rem;
+}
 
 /* ====== 動畫 ====== */
 .fade-slide-enter-active,
@@ -658,5 +751,7 @@ onMounted(fetchSchedules)
 </style>
 
 <style>
-.swal2-container { z-index: 20000 !important; }
+.swal2-container {
+  z-index: 20000 !important;
+}
 </style>

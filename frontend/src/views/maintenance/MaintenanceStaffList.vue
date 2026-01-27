@@ -5,6 +5,14 @@ import Swal from 'sweetalert2'
 import { useRouter } from 'vue-router'
 import { usePagination } from '@/composables/maintenance/usePagination'
 import { InfoFilled, Right, Delete, Check } from '@element-plus/icons-vue'
+// ✅ 【修正】引入統一的人員狀態計算邏輯 (避免重複實作、確保統計卡與列表一致)
+import {
+  computeStaffStatus,
+  computeStaffTaskStats,
+  computeOverallStaffStats,
+  isCompletedStatus,
+  isMaintenanceTask,
+} from '@/composables/maintenance/useStaffStatus'
 
 const router = useRouter()
 const staffList = ref([])
@@ -12,6 +20,24 @@ const searchText = ref('')
 const loading = ref(true)
 const pageVisible = ref(false)
 const sortConfig = ref({ prop: 'staffId', order: 'ascending' })
+
+// ✅ 修正：狀態中文化映射表（不改後端，僅前端顯示轉換）
+const STATUS_LABEL = {
+  REPORTED: '已回報',
+  ASSIGNED: '已指派',
+  UNDER_MAINTENANCE: '維修中',
+  UNDER_MAINT: '維修中',
+  UNDER_MAINTAIN: '保養中',
+  IN_PROGRESS: '處理中',
+  RESOLVED: '已結案',
+  COMPLETED: '已完成',
+  CANCELLED: '已取消',
+  PENDING: '待處理',
+  ON_HOLD: '暫停',
+}
+
+// ✅ 修正：安全轉換狀態為中文（找不到則顯示原值或 '-'）
+const statusText = (status) => STATUS_LABEL[status] ?? status ?? '-'
 
 // ====== el-table 跑版修正：強制重新計算欄寬 ======
 const tableRef = ref(null)
@@ -30,7 +56,13 @@ const allTickets = ref([])
 const ticketLoading = ref(false)
 
 // ====== 狀態篩選（全部 / 維護中 / 維修中 / 閒置中）======
-const statusFilter = ref('ALL') // 'ALL' | 'MAINTAINING' | 'REPAIRING' | 'ASSIGNED' | 'IDLE'
+const statusFilter = ref('ALL') // 'ALL' | 'UNDER_MAINTENANCE' | 'ASSIGNED' | 'IDLE'
+
+// ====== ✅ 【新增】人員詳情視窗狀態 ======
+const detailDialogVisible = ref(false)
+const detailCurrentView = ref('profile') // 'profile' | 'tasks'
+const detailCurrentStaff = ref(null)
+const detailCurrentTaskType = ref('') // 'repair-pending' | 'maintenance-pending' | ...
 
 // ====== 轉移工單 Dialog 狀態 ======
 const showTransferDialog = ref(false)
@@ -48,19 +80,7 @@ const availableTargetStaff = computed(() => {
   )
 })
 
-/** 判斷是否保養任務（你原本就有概念，我保留並集中） */
-const isMaintenanceTask = (issueType) => {
-  if (!issueType) return false
-  const keywords = ['保養', '例行', '檢查']
-  return keywords.some((k) => String(issueType).includes(k))
-}
-
-/** 判斷是否已完成（你原本就有概念，我保留並集中） */
-const isCompletedStatus = (status) => {
-  return ['RESOLVED', 'CLOSED', 'CANCELLED'].includes(status)
-}
-
-/** 取回 staff + tickets（一次建狀態） */
+// ✅ 【修正】API 資料讀取
 const fetchStaff = async () => {
   try {
     loading.value = true
@@ -85,67 +105,20 @@ const fetchTickets = async () => {
   }
 }
 
-/** 建立 staffId -> 工單統計（未完成：維修 / 保養；完成：維修 / 保養） */
+// ✅ 【修正】使用統一的狀態計算函式 (取代原本的重複邏輯)
+// 人員任務統計 Map (staffId -> 任務統計)
 const staffTicketStatMap = computed(() => {
   const map = new Map()
-  for (const t of allTickets.value) {
-    const staffId = t.assignedStaffId
-    if (!staffId) continue
-
-    if (!map.has(staffId)) {
-      map.set(staffId, {
-        repairCurrent: 0,
-        maintainCurrent: 0,
-        repairAssigned: 0,
-        maintainAssigned: 0,
-        repairDone: 0,
-        maintainDone: 0,
-      })
-    }
-    const stat = map.get(staffId)
-    const maintenance = isMaintenanceTask(t.issueType)
-    const status = t.issueStatus
-    const done = isCompletedStatus(status)
-    const assigned = status === 'ASSIGNED'
-    const inProgress = status === 'UNDER_MAINTENANCE'
-
-    if (maintenance) {
-      if (inProgress) stat.maintainCurrent++
-      else if (assigned) stat.maintainAssigned++
-      else if (done) stat.maintainDone++
-    } else {
-      if (inProgress) stat.repairCurrent++
-      else if (assigned) stat.repairAssigned++
-      else if (done) stat.repairDone++
-    }
-  }
+  staffList.value.forEach((staff) => {
+    const stats = computeStaffTaskStats(staff.staffId, allTickets.value)
+    map.set(staff.staffId, stats)
+  })
   return map
 })
 
-/** 人員目前狀態（維護中 > 維修中 > 閒置中） */
+// ✅ 【修正】人員即時狀態計算 (統一呼叫 composable)
 const getStaffWorkStatus = (staffId) => {
-  const stat = staffTicketStatMap.value.get(staffId) || {
-    repairCurrent: 0,
-    maintainCurrent: 0,
-    repairAssigned: 0,
-    maintainAssigned: 0,
-    repairDone: 0,
-    maintainDone: 0,
-  }
-
-  if (stat.maintainCurrent > 0) {
-    return { key: 'MAINTAINING', text: '維護中', tagType: 'info', icon: 'fas fa-clipboard-check' }
-  }
-  if (stat.repairCurrent > 0) {
-    return { key: 'REPAIRING', text: '維修中', tagType: 'warning', icon: 'fas fa-wrench' }
-  }
-
-  const assignedTotal = stat.maintainAssigned + stat.repairAssigned
-  if (assignedTotal > 0) {
-    return { key: 'ASSIGNED', text: '已指派', tagType: 'primary', icon: 'fas fa-user-check' }
-  }
-
-  return { key: 'IDLE', text: '閒置中', tagType: 'success', icon: 'fas fa-mug-hot' }
+  return computeStaffStatus(staffId, allTickets.value)
 }
 
 /** ====== 刪除人員（含防呆轉移邏輯）====== */
@@ -203,294 +176,123 @@ const handleDelete = async (row) => {
   }
 }
 
-/** ====== 重要：四卡點擊 -> 歷史清單（不依賴不存在的 API，改用 allTickets 篩）====== */
-const showHistoryModal = async (staffId, cardType, staffName) => {
-  // 保證 tickets 已載入（避免第一次點擊沒資料）
+/** ====== 移除不必要的 showHistoryModal (已改用 el-dialog 內部導覽) ====== */
+// 此函式已整合到 handleViewTasks，不再需要
+
+// ✅ 【修正】人員詳情視窗 (改用 el-dialog + 內部導覽)
+const viewDetail = async (row) => {
+  // 確保 tickets 有資料
   if (!allTickets.value.length && !ticketLoading.value) {
     await fetchTickets()
   }
 
-  // 先定義查詢條件
-  let title = ''
-  let iconClass = ''
-  let headerGrad = ''
+  detailCurrentStaff.value = row
+  detailCurrentView.value = 'profile'
+  detailDialogVisible.value = true
+}
+
+// 點擊任務卡片 (切換到任務列表 view)
+const handleViewTasks = (cardType) => {
+  detailCurrentTaskType.value = cardType
+  detailCurrentView.value = 'tasks'
+}
+
+// 計算任務列表資料 (根據 taskType 篩選)
+const detailTaskList = computed(() => {
+  if (!detailCurrentStaff.value || !detailCurrentTaskType.value) return []
+
+  const staffId = detailCurrentStaff.value.staffId
+  const cardType = detailCurrentTaskType.value
   const matchFn = (t) => t.assignedStaffId === staffId
 
-  const getTargetLabel = (t) => {
-    // 你現在列表顯示是：椅子#seatsId 或 機台#spotId
-    // 這裡沿用：若 seatsId 有值，顯示 椅子#xxx，否則 機台#yyy
-    if (t.seatsId) return `椅子 #${t.seatsId}`
-    if (t.spotId) return `機台 #${t.spotId}`
-    return '未指定'
-  }
-
-  // 依卡片類型篩 tickets
   let filtered = []
   switch (cardType) {
     case 'repair-pending':
-      title = '待修任務'
-      iconClass = 'fas fa-wrench'
-      headerGrad = 'linear-gradient(135deg,#f7b55f 0%,#f3d19e 100%)'
       filtered = allTickets.value.filter(
-        (t) => matchFn(t) && !isMaintenanceTask(t.issueType) && !isCompletedStatus(t.issueStatus),
+        (t) =>
+          matchFn(t) &&
+          !isMaintenanceTask(t.issueType, t.issueDesc) &&
+          !isCompletedStatus(t.issueStatus),
       )
       break
     case 'maintenance-pending':
-      title = '待保養任務'
-      iconClass = 'fas fa-clipboard-list'
-      headerGrad = 'linear-gradient(135deg,#6aa8ff 0%,#a0cfff 100%)'
       filtered = allTickets.value.filter(
-        (t) => matchFn(t) && isMaintenanceTask(t.issueType) && !isCompletedStatus(t.issueStatus),
+        (t) =>
+          matchFn(t) &&
+          isMaintenanceTask(t.issueType, t.issueDesc) &&
+          !isCompletedStatus(t.issueStatus),
       )
       break
     case 'repair-completed':
-      title = '維修完成'
-      iconClass = 'fas fa-check-circle'
-      headerGrad = 'linear-gradient(135deg,#74d39a 0%,#b3e19d 100%)'
       filtered = allTickets.value.filter(
-        (t) => matchFn(t) && !isMaintenanceTask(t.issueType) && isCompletedStatus(t.issueStatus),
+        (t) =>
+          matchFn(t) &&
+          !isMaintenanceTask(t.issueType, t.issueDesc) &&
+          isCompletedStatus(t.issueStatus),
       )
       break
     case 'maintenance-completed':
-      title = '保養完成'
-      iconClass = 'fas fa-flag-checkered'
-      headerGrad = 'linear-gradient(135deg,#9aa0a6 0%,#c0c4cc 100%)'
       filtered = allTickets.value.filter(
-        (t) => matchFn(t) && isMaintenanceTask(t.issueType) && isCompletedStatus(t.issueStatus),
+        (t) =>
+          matchFn(t) &&
+          isMaintenanceTask(t.issueType, t.issueDesc) &&
+          isCompletedStatus(t.issueStatus),
       )
       break
     default:
-      title = '工單紀錄'
-      iconClass = 'fas fa-ticket-alt'
-      headerGrad = 'linear-gradient(135deg,#79bbff 0%,#c6e2ff 100%)'
       filtered = allTickets.value.filter((t) => matchFn(t))
   }
 
-  // 排序：最新在上（用 reportedAt / startAt / resolvedAt）
+  // 排序：最新在上
   const getTime = (t) => new Date(t.reportedAt || t.startAt || t.resolvedAt || 0).getTime()
   filtered.sort((a, b) => getTime(b) - getTime(a))
 
-  const displayTickets = filtered.slice(0, 12)
+  return filtered
+})
 
-  const buildRow = (t) => {
-    const date = t.reportedAt ? new Date(t.reportedAt).toLocaleString('zh-TW') : '-'
-    const target = getTargetLabel(t)
-    const desc = t.issueDesc || '無描述'
-    const result = t.resolveNote || '-'
-    const status = t.issueStatus || '-'
-    return `
-      <tr style="border-bottom: 1px solid #ebeef5;">
-        <td style="padding:10px 8px;"><span style="display:inline-block;background:#f4f4f5;border:1px solid #e9e9eb;border-radius:8px;padding:2px 8px;font-size:12px;">#${t.ticketId}</span></td>
-        <td style="padding:10px 8px;font-size:12px;color:#606266;">${date}</td>
-        <td style="padding:10px 8px;font-size:12px;color:#303133;">${target}</td>
-        <td style="padding:10px 8px;font-size:12px;color:#606266;" title="${desc}">${desc.length > 24 ? desc.slice(0, 24) + '…' : desc}</td>
-        <td style="padding:10px 8px;font-size:12px;color:#606266;" title="${result}">${result.length > 18 ? result.slice(0, 18) + '…' : result}</td>
-        <td style="padding:10px 8px;font-size:12px;color:#909399;">${status}</td>
-      </tr>
-    `
+// 任務類型標題對應
+const taskTypeTitle = computed(() => {
+  const map = {
+    'repair-pending': '待修任務',
+    'maintenance-pending': '待保養任務',
+    'repair-completed': '維修完成',
+    'maintenance-completed': '保養完成',
   }
+  return map[detailCurrentTaskType.value] || '工單列表'
+})
 
-  const tableHtml =
-    displayTickets.length === 0
-      ? `
-        <div style="text-align:center;padding:34px 10px;color:#909399;">
-          <div style="width:72px;height:72px;margin:0 auto 14px;border-radius:18px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;">
-            <i class="fas fa-inbox" style="font-size:34px;opacity:.5;"></i>
-          </div>
-          <div style="font-size:14px;">暫無 ${title} 記錄</div>
-        </div>
-      `
-      : `
-        <div style="max-height:420px;overflow:auto;border:1px solid #ebeef5;border-radius:12px;">
-          <table style="width:100%;border-collapse:collapse;">
-            <thead>
-              <tr style="background:#f8f9fa;border-bottom:1px solid #ebeef5;">
-                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:10%;">工單</th>
-                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:18%;">時間</th>
-                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:14%;">目標</th>
-                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:28%;">描述</th>
-                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:20%;">結果</th>
-                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:10%;">狀態</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${displayTickets.map(buildRow).join('')}
-            </tbody>
-          </table>
-        </div>
-        ${
-          filtered.length > 12
-            ? `<div style="text-align:center;margin-top:10px;font-size:12px;color:#909399;">顯示最近 12 筆，共 ${filtered.length} 筆</div>`
-            : ''
-        }
-      `
+// 任務類型圖示對應
+const taskTypeIcon = computed(() => {
+  const map = {
+    'repair-pending': 'fas fa-wrench',
+    'maintenance-pending': 'fas fa-clipboard-list',
+    'repair-completed': 'fas fa-check-circle',
+    'maintenance-completed': 'fas fa-flag-checkered',
+  }
+  return map[detailCurrentTaskType.value] || 'fas fa-ticket-alt'
+})
 
-  await Swal.fire({
-    title: `
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
-        <div style="width:40px;height:40px;border-radius:12px;background:${headerGrad};display:flex;align-items:center;justify-content:center;color:white;">
-          <i class="${iconClass}"></i>
-        </div>
-        <div style="font-size:16px;font-weight:700;color:#303133;">${staffName} · ${title}</div>
-      </div>
-    `,
-    html: tableHtml,
-    width: '92%',
-    maxWidth: '1050px',
-    confirmButtonText: '關閉',
-    confirmButtonColor: '#606266',
-    showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
-    hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' },
-    customClass: { popup: 'custom-swal-popup' },
-  })
+// 返回人員詳情
+const backToProfile = () => {
+  detailCurrentView.value = 'profile'
 }
 
-/** ★ 查看詳情（UI 收斂 + 四卡可點擊） */
-const viewDetail = async (row) => {
-  // 確保 tickets 有資料（否則卡片數字會永遠 0）
-  if (!allTickets.value.length && !ticketLoading.value) {
-    await fetchTickets()
-  }
-
-  const stat = staffTicketStatMap.value.get(row.staffId) || {
-    repairCurrent: 0,
-    maintainCurrent: 0,
-    repairDone: 0,
-    maintainDone: 0,
-  }
-
-  const status = getStaffWorkStatus(row.staffId)
-
-  Swal.fire({
-    title: `
-      <div style="display:flex;align-items:center;gap:12px;justify-content:flex-start;">
-        <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#4f9cff 0%,#8cc5ff 100%);display:flex;align-items:center;justify-content:center;color:white;font-size:20px;font-weight:800;box-shadow:0 8px 22px rgba(79,156,255,.25);">
-          ${row.staffName?.charAt(0) || '?'}
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
-          <div style="font-size:18px;font-weight:800;color:#303133;line-height:1;">${row.staffName}</div>
-          <div style="font-size:12px;color:#909399;display:flex;align-items:center;gap:8px;">
-            <span style="display:inline-flex;align-items:center;gap:6px;background:#f5f7fa;border:1px solid #ebeef5;border-radius:999px;padding:2px 10px;">
-              <i class="${status.icon}" style="opacity:.85;"></i> ${status.text}
-            </span>
-            <span>·</span>
-            <span>建立：${row.createdAt ? new Date(row.createdAt).toLocaleDateString('zh-TW') : '-'}</span>
-          </div>
-        </div>
-      </div>
-    `,
-    html: `
-      <div style="text-align:left;margin-top:14px;">
-        <!-- 四張卡：統一色系（不那麼刺眼） -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-          <div data-card-type="repair-pending" style="padding:14px;border-radius:14px;background:linear-gradient(135deg,#f6b26b 0%,#f9e0c7 100%);color:#1f2d3d;cursor:pointer;border:1px solid rgba(255,255,255,.7);">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div style="font-size:12px;opacity:.85;"><i class="fas fa-wrench mr-1"></i>待修任務</div>
-              <div style="width:32px;height:32px;border-radius:12px;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;">
-                <i class="fas fa-arrow-right" style="opacity:.7;"></i>
-              </div>
-            </div>
-            <div style="font-size:26px;font-weight:900;margin-top:6px;">${stat.repairCurrent}</div>
-          </div>
-
-          <div data-card-type="maintenance-pending" style="padding:14px;border-radius:14px;background:linear-gradient(135deg,#6aa8ff 0%,#d6e9ff 100%);color:#1f2d3d;cursor:pointer;border:1px solid rgba(255,255,255,.7);">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div style="font-size:12px;opacity:.85;"><i class="fas fa-clipboard-list mr-1"></i>待保養</div>
-              <div style="width:32px;height:32px;border-radius:12px;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;">
-                <i class="fas fa-arrow-right" style="opacity:.7;"></i>
-              </div>
-            </div>
-            <div style="font-size:26px;font-weight:900;margin-top:6px;">${stat.maintainCurrent}</div>
-          </div>
-
-          <div data-card-type="repair-completed" style="padding:14px;border-radius:14px;background:linear-gradient(135deg,#79d7a7 0%,#e4f7ea 100%);color:#1f2d3d;cursor:pointer;border:1px solid rgba(255,255,255,.7);">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div style="font-size:12px;opacity:.85;"><i class="fas fa-check-circle mr-1"></i>維修完成</div>
-              <div style="width:32px;height:32px;border-radius:12px;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;">
-                <i class="fas fa-arrow-right" style="opacity:.7;"></i>
-              </div>
-            </div>
-            <div style="font-size:26px;font-weight:900;margin-top:6px;">${stat.repairDone}</div>
-          </div>
-
-          <div data-card-type="maintenance-completed" style="padding:14px;border-radius:14px;background:linear-gradient(135deg,#aeb4bb 0%,#eef0f2 100%);color:#1f2d3d;cursor:pointer;border:1px solid rgba(255,255,255,.7);">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div style="font-size:12px;opacity:.85;"><i class="fas fa-flag-checkered mr-1"></i>保養完成</div>
-              <div style="width:32px;height:32px;border-radius:12px;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;">
-                <i class="fas fa-arrow-right" style="opacity:.7;"></i>
-              </div>
-            </div>
-            <div style="font-size:26px;font-weight:900;margin-top:6px;">${stat.maintainDone}</div>
-          </div>
-        </div>
-
-        <!-- 資料卡：更一致的灰白底 + 左側色條 -->
-        <div style="display:grid;gap:12px;">
-          <div style="padding:12px 14px;border-radius:14px;background:#f5f7fa;border:1px solid #ebeef5;">
-            <div style="font-size:12px;color:#909399;">所屬公司</div>
-            <div style="font-size:14px;font-weight:700;color:#303133;margin-top:4px;">
-              <i class="fas fa-building mr-2" style="color:#409eff;"></i>${row.staffCompany || '未填寫'}
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div style="padding:12px 14px;border-radius:14px;background:#ffffff;border:1px solid #ebeef5;">
-              <div style="font-size:12px;color:#909399;">聯絡電話</div>
-              <div style="font-size:14px;font-weight:700;color:#303133;margin-top:4px;">
-                <i class="fas fa-phone mr-2" style="color:#67c23a;"></i>${row.staffPhone || '-'}
-              </div>
-            </div>
-            <div style="padding:12px 14px;border-radius:14px;background:#ffffff;border:1px solid #ebeef5;">
-              <div style="font-size:12px;color:#909399;">電子郵件</div>
-              <div style="font-size:14px;font-weight:700;color:#303133;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                <i class="fas fa-envelope mr-2" style="color:#e6a23c;"></i>${row.staffEmail || '-'}
-              </div>
-            </div>
-          </div>
-
-          <div style="padding:12px 14px;border-radius:14px;background:#fffaf0;border:1px solid #f3e1c8;">
-            <div style="font-size:12px;color:#909399;">備註說明</div>
-            <div style="font-size:13px;color:#606266;margin-top:4px;line-height:1.5;">
-              ${row.staffNote || '無備註'}
-            </div>
-          </div>
-        </div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: '<i class="fas fa-edit mr-1"></i> 編輯資料',
-    cancelButtonText: '關閉',
-    confirmButtonColor: '#409eff',
-    cancelButtonColor: '#909399',
-    width: 560,
-    showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
-    hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' },
-    // ✅ 這裡是關鍵：把四張卡的 click 綁定起來
-    didRender: (popup) => {
-      const cards = popup.querySelectorAll('[data-card-type]')
-      cards.forEach((card) => {
-        card.addEventListener('click', () => {
-          const cardType = card.getAttribute('data-card-type')
-          showHistoryModal(row.staffId, cardType, row.staffName)
-        })
-        // 小互動：hover 提升（不用 inline onmouseover）
-        card.addEventListener('mouseenter', () => {
-          card.style.transform = 'translateY(-2px)'
-          card.style.boxShadow = '0 10px 26px rgba(0,0,0,.10)'
-          card.style.transition = 'all .18s ease'
-        })
-        card.addEventListener('mouseleave', () => {
-          card.style.transform = 'translateY(0)'
-          card.style.boxShadow = 'none'
-        })
-      })
-    },
-  }).then((result) => {
-    if (result.isConfirmed) {
-      router.push(`/admin/staff-form/${row.staffId}`)
-    }
-  })
+// 關閉詳情視窗
+const closeDetailDialog = () => {
+  detailDialogVisible.value = false
+  detailCurrentView.value = 'profile'
+  detailCurrentStaff.value = null
+  detailCurrentTaskType.value = ''
 }
+
+// 格式化目標標籤
+const getTargetLabel = (t) => {
+  if (t.seatsId) return `椅子 #${t.seatsId}`
+  if (t.spotId) return `機台 #${t.spotId}`
+  return '未指定'
+}
+
+// ✅ 【移除】舊的 Swal 程式碼片段已清除，改用 el-dialog (見 template 區塊)
 
 const handleAddNew = () => {
   Swal.fire({
@@ -567,6 +369,7 @@ const filteredList = computed(() => {
 
   const activeStaff = staffList.value.filter((s) => s.isActive === true)
 
+  // ✅ 【修正】狀態篩選邏輯 (使用統一的 computeStaffStatus)
   const statusFiltered =
     statusFilter.value === 'ALL'
       ? activeStaff
@@ -605,34 +408,18 @@ const formatDate = (row, column, cellValue) => {
   return new Date(cellValue).toLocaleDateString('zh-TW')
 }
 
-// ====== 統計卡片數字（以 filteredList / staffList + 狀態 map 計）=====
+// ✅ 【修正】統計卡片數字 (使用統一的狀態計算，確保與列表一致)
 const activeCount = computed(() => staffList.value.filter((s) => s.isActive).length)
-const maintainingCount = computed(
-  () =>
-    staffList.value.filter((s) => s.isActive && getStaffWorkStatus(s.staffId).key === 'MAINTAINING')
-      .length,
-)
 
-// 維修中
-const repairingCount = computed(
-  () =>
-    staffList.value.filter((s) => s.isActive && getStaffWorkStatus(s.staffId).key === 'REPAIRING')
-      .length,
-)
+// 使用統一的 computeOverallStaffStats 計算整體狀態統計
+const overallStats = computed(() => {
+  const activeStaff = staffList.value.filter((s) => s.isActive)
+  return computeOverallStaffStats(activeStaff, allTickets.value)
+})
 
-// 閒置中
-const idleCount = computed(
-  () =>
-    staffList.value.filter((s) => s.isActive && getStaffWorkStatus(s.staffId).key === 'IDLE')
-      .length,
-)
-
-// 已指派（不論是否在職）
-const assignedCount = computed(
-  () =>
-    staffList.value.filter((s) => s.isActive && getStaffWorkStatus(s.staffId).key === 'ASSIGNED')
-      .length,
-)
+const maintainingCount = computed(() => overallStats.value.underMaintenance)
+const assignedCount = computed(() => overallStats.value.assigned)
+const idleCount = computed(() => overallStats.value.idle)
 
 onMounted(async () => {
   await fetchStaff()
@@ -700,22 +487,7 @@ onMounted(async () => {
               </el-col>
 
               <el-col :xs="12" :sm="8" :md="6" :lg="4">
-                <div class="stat-card filter-card" @click="statusFilter = 'MAINTAINING'">
-                  <div
-                    class="stat-icon"
-                    style="background: linear-gradient(135deg, #409eff 0%, #79bbff 100%)"
-                  >
-                    <i class="fas fa-clipboard-check"></i>
-                  </div>
-                  <div class="stat-info">
-                    <h3>{{ maintainingCount }}</h3>
-                    <span>維護中</span>
-                  </div>
-                </div>
-              </el-col>
-
-              <el-col :xs="12" :sm="8" :md="6" :lg="4">
-                <div class="stat-card filter-card" @click="statusFilter = 'REPAIRING'">
+                <div class="stat-card filter-card" @click="statusFilter = 'UNDER_MAINTENANCE'">
                   <div
                     class="stat-icon"
                     style="background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%)"
@@ -723,7 +495,7 @@ onMounted(async () => {
                     <i class="fas fa-wrench"></i>
                   </div>
                   <div class="stat-info">
-                    <h3>{{ repairingCount }}</h3>
+                    <h3>{{ maintainingCount }}</h3>
                     <span>維修中</span>
                   </div>
                 </div>
@@ -761,7 +533,10 @@ onMounted(async () => {
 
               <el-col :xs="12" :sm="8" :md="6" :lg="4">
                 <div class="stat-card filter-card">
-                  <div class="stat-icon">
+                  <div
+                    class="stat-icon"
+                    style="background: linear-gradient(135deg, #909399 0%, #c0c4cc 100%)"
+                  >
                     <i class="fas fa-search"></i>
                   </div>
                   <div class="stat-info">
@@ -794,19 +569,10 @@ onMounted(async () => {
                         全部
                       </el-tag>
                       <el-tag
-                        :effect="statusFilter === 'MAINTAINING' ? 'dark' : 'plain'"
-                        type="info"
-                        round
-                        @click="statusFilter = 'MAINTAINING'"
-                        style="cursor: pointer"
-                      >
-                        維護中
-                      </el-tag>
-                      <el-tag
-                        :effect="statusFilter === 'REPAIRING' ? 'dark' : 'plain'"
+                        :effect="statusFilter === 'UNDER_MAINTENANCE' ? 'dark' : 'plain'"
                         type="warning"
                         round
-                        @click="statusFilter = 'REPAIRING'"
+                        @click="statusFilter = 'UNDER_MAINTENANCE'"
                         style="cursor: pointer"
                       >
                         維修中
@@ -1057,6 +823,7 @@ onMounted(async () => {
     </section>
 
     <!-- ========== 轉移工單並刪除 Dialog ========== -->
+    <!-- ✅ 修正：Dialog teleported 防裁切 -->
     <el-dialog
       v-model="showTransferDialog"
       title="轉移工單並刪除人員"
@@ -1064,6 +831,11 @@ onMounted(async () => {
       :close-on-click-modal="false"
       :close-on-press-escape="!transferLoading"
       @close="closeTransferDialog"
+      :teleported="true"
+      append-to-body
+      :modal-append-to-body="true"
+      :align-center="true"
+      class="mt-transfer-dialog"
     >
       <div class="transfer-dialog-content">
         <el-alert type="warning" :closable="false" show-icon class="mb-4">
@@ -1130,6 +902,217 @@ onMounted(async () => {
         >
           <el-icon v-if="!transferLoading"><Check /></el-icon>
           確認轉移並刪除
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ========== ✅ 【新增】人員詳情 Dialog (支援內部導覽) ========== -->
+    <!-- ✅ 修正：Dialog teleported 防裁切 + 位置居中 -->
+    <el-dialog
+      v-model="detailDialogVisible"
+      :title="detailCurrentView === 'profile' ? '人員詳情' : taskTypeTitle"
+      width="720px"
+      :close-on-click-modal="false"
+      @close="closeDetailDialog"
+      :teleported="true"
+      append-to-body
+      :modal-append-to-body="true"
+      :align-center="true"
+      top="6vh"
+      class="mt-staffDetail-dialog"
+    >
+      <!-- Profile View -->
+      <div v-if="detailCurrentView === 'profile' && detailCurrentStaff" class="mt-staffDetail">
+        <!-- ✅ UI 修復：人員基本資訊頭部 - 改用專用 class 避免撞名 -->
+        <div class="mt-staffDetail__header">
+          <div class="mt-staffDetail__avatar">
+            {{ detailCurrentStaff.staffName?.charAt(0) || '?' }}
+          </div>
+          <div class="mt-staffDetail__info">
+            <h3 class="mt-staffDetail__name">{{ detailCurrentStaff.staffName }}</h3>
+            <el-tag :type="getStaffWorkStatus(detailCurrentStaff.staffId).tagType" size="small">
+              <i :class="getStaffWorkStatus(detailCurrentStaff.staffId).icon" class="mr-1"></i>
+              {{ getStaffWorkStatus(detailCurrentStaff.staffId).text }}
+            </el-tag>
+          </div>
+        </div>
+
+        <!-- ✅ UI 修復：任務統計四卡 - 使用 el-row/el-col 確保穩定佈局，避免 class 撞名 -->
+        <el-row :gutter="12" class="mt-staffDetail__statGrid">
+          <el-col :xs="12" :sm="12" :md="12">
+            <div class="mt-statCard mt-statCard--repair" @click="handleViewTasks('repair-pending')">
+              <div class="mt-statCard__left">
+                <div class="mt-statCard__icon mt-statCard__icon--repair">
+                  <i class="fas fa-wrench"></i>
+                </div>
+                <span class="mt-statCard__label">待修任務</span>
+              </div>
+              <div class="mt-statCard__value">
+                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.repairCurrent || 0 }}
+              </div>
+            </div>
+          </el-col>
+
+          <el-col :xs="12" :sm="12" :md="12">
+            <div
+              class="mt-statCard mt-statCard--maintenance"
+              @click="handleViewTasks('maintenance-pending')"
+            >
+              <div class="mt-statCard__left">
+                <div class="mt-statCard__icon mt-statCard__icon--maintenance">
+                  <i class="fas fa-clipboard-list"></i>
+                </div>
+                <span class="mt-statCard__label">待保養</span>
+              </div>
+              <div class="mt-statCard__value">
+                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.maintainCurrent || 0 }}
+              </div>
+            </div>
+          </el-col>
+
+          <el-col :xs="12" :sm="12" :md="12">
+            <div
+              class="mt-statCard mt-statCard--completed"
+              @click="handleViewTasks('repair-completed')"
+            >
+              <div class="mt-statCard__left">
+                <div class="mt-statCard__icon mt-statCard__icon--completed">
+                  <i class="fas fa-check-circle"></i>
+                </div>
+                <span class="mt-statCard__label">維修完成</span>
+              </div>
+              <div class="mt-statCard__value">
+                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.repairDone || 0 }}
+              </div>
+            </div>
+          </el-col>
+
+          <el-col :xs="12" :sm="12" :md="12">
+            <div
+              class="mt-statCard mt-statCard--done"
+              @click="handleViewTasks('maintenance-completed')"
+            >
+              <div class="mt-statCard__left">
+                <div class="mt-statCard__icon mt-statCard__icon--done">
+                  <i class="fas fa-flag-checkered"></i>
+                </div>
+                <span class="mt-statCard__label">保養完成</span>
+              </div>
+              <div class="mt-statCard__value">
+                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.maintainDone || 0 }}
+              </div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <!-- ✅ UI 修復：人員資料區 - 優化 descriptions 樣式 -->
+        <div class="mt-staffDetail__infoSection">
+          <el-descriptions :column="1" border class="mt-staffDetail__descriptions">
+            <el-descriptions-item
+              label="所屬公司"
+              label-align="right"
+              label-class-name="mt-desc-label"
+            >
+              <i class="fas fa-building mr-2" style="color: #409eff"></i>
+              {{ detailCurrentStaff.staffCompany || '未填寫' }}
+            </el-descriptions-item>
+            <el-descriptions-item
+              label="聯絡電話"
+              label-align="right"
+              label-class-name="mt-desc-label"
+            >
+              <i class="fas fa-phone mr-2" style="color: #67c23a"></i>
+              {{ detailCurrentStaff.staffPhone || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item
+              label="電子郵件"
+              label-align="right"
+              label-class-name="mt-desc-label"
+            >
+              <i class="fas fa-envelope mr-2" style="color: #e6a23c"></i>
+              {{ detailCurrentStaff.staffEmail || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item
+              label="備註說明"
+              label-align="right"
+              label-class-name="mt-desc-label"
+            >
+              {{ detailCurrentStaff.staffNote || '無備註' }}
+            </el-descriptions-item>
+            <el-descriptions-item
+              label="建立日期"
+              label-align="right"
+              label-class-name="mt-desc-label"
+            >
+              {{
+                detailCurrentStaff.createdAt
+                  ? new Date(detailCurrentStaff.createdAt).toLocaleDateString('zh-TW')
+                  : '-'
+              }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+      </div>
+
+      <!-- Tasks View -->
+      <div v-else-if="detailCurrentView === 'tasks' && detailCurrentStaff" class="mt-taskView">
+        <!-- ✅ UI 修復：返回按鈕區 -->
+        <div class="mt-taskView__backBtn">
+          <el-button @click="backToProfile" type="primary" plain size="small">
+            <i class="fas fa-arrow-left mr-1"></i> 返回人員詳情
+          </el-button>
+        </div>
+
+        <!-- ✅ UI 修復：加分項 - 任務列表標頭 -->
+        <div class="mt-taskView__listHeader">
+          <div class="mt-taskView__listTitle">
+            <i :class="taskTypeIcon" class="mr-2"></i>
+            <span>{{ taskTypeTitle }}</span>
+          </div>
+          <el-tag type="info" size="small" effect="plain">
+            共 {{ detailTaskList.length }} 筆
+          </el-tag>
+        </div>
+
+        <!-- 任務列表 -->
+        <div v-if="detailTaskList.length > 0" class="mt-taskView__list">
+          <el-table :data="detailTaskList" stripe max-height="400">
+            <el-table-column prop="ticketId" label="工單" width="80" align="center">
+              <template #default="{ row }">
+                <el-tag size="small">#{{ row.ticketId }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="目標" width="100">
+              <template #default="{ row }">
+                {{ getTargetLabel(row) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="issueDesc" label="描述" min-width="150" show-overflow-tooltip />
+            <el-table-column label="狀態" width="100" align="center">
+              <template #default="{ row }">
+                <!-- ✅ 修正：狀態顯示中文，保留原本的 tag 樣式邏輯 -->
+                <el-tag :type="row.issueStatus === 'RESOLVED' ? 'success' : 'info'" size="small">
+                  {{ statusText(row.issueStatus) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="時間" width="110">
+              <template #default="{ row }">
+                {{ row.reportedAt ? new Date(row.reportedAt).toLocaleDateString('zh-TW') : '-' }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        <el-empty v-else description="暫無任務記錄" />
+      </div>
+
+      <template #footer v-if="detailCurrentView === 'profile'">
+        <el-button @click="closeDetailDialog">關閉</el-button>
+        <el-button
+          type="primary"
+          @click="router.push(`/admin/staff-form/${detailCurrentStaff?.staffId}`)"
+        >
+          <i class="fas fa-edit mr-1"></i> 編輯資料
         </el-button>
       </template>
     </el-dialog>
@@ -1593,5 +1576,357 @@ onMounted(async () => {
 :deep(.el-dialog__footer) {
   border-top: 1px solid #ebeef5;
   padding-top: 15px;
+}
+
+/* ========== ✅ 【新增】人員詳情 Dialog 樣式 ========== */
+/* ✅ UI 修復：使用 mt- 前綴避免與 AdminLTE 全域 CSS 撞名 */
+
+/* 詳情容器 */
+.mt-staffDetail {
+  padding: 0;
+}
+
+/* 人員頭部資訊卡 */
+.mt-staffDetail__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.mt-staffDetail__avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #409eff 0%, #79bbff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 26px;
+  font-weight: 800;
+  box-shadow: 0 4px 15px rgba(64, 158, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.mt-staffDetail__info {
+  flex: 1;
+}
+
+.mt-staffDetail__name {
+  margin: 0 0 10px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #303133;
+  line-height: 1.2;
+}
+
+/* ✅ UI 修復：統計卡片 Grid - 使用 BEM 命名避免撞名 */
+.mt-staffDetail__statGrid {
+  margin-bottom: 24px;
+}
+
+/* 單張統計卡 */
+.mt-statCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  height: 100%;
+  min-height: 88px;
+}
+
+.mt-statCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.mt-statCard:active {
+  transform: translateY(-1px);
+}
+
+/* 左側：icon + 標籤 */
+.mt-statCard__left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mt-statCard__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.mt-statCard__icon--repair {
+  background: linear-gradient(135deg, #f6b26b 0%, #f9cf9d 100%);
+}
+
+.mt-statCard__icon--maintenance {
+  background: linear-gradient(135deg, #6aa8ff 0%, #91bfff 100%);
+}
+
+.mt-statCard__icon--completed {
+  background: linear-gradient(135deg, #79d7a7 0%, #a3e4c1 100%);
+}
+
+.mt-statCard__icon--done {
+  background: linear-gradient(135deg, #a0a6ad 0%, #c4c8cd 100%);
+}
+
+.mt-statCard__label {
+  font-size: 13px;
+  color: #606266;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* 右側：大數字 */
+.mt-statCard__value {
+  font-size: 32px;
+  font-weight: 900;
+  color: #303133;
+  line-height: 1;
+  margin-left: 12px;
+}
+
+/* 不同類型卡片背景色 */
+.mt-statCard--repair {
+  background: linear-gradient(135deg, #fff9f0 0%, #fef6ed 100%);
+}
+
+.mt-statCard--maintenance {
+  background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+}
+
+.mt-statCard--completed {
+  background: linear-gradient(135deg, #f0fdf4 0%, #e6faf0 100%);
+}
+
+.mt-statCard--done {
+  background: linear-gradient(135deg, #f5f7fa 0%, #eef1f5 100%);
+}
+
+/* ✅ UI 修復：人員資料區 - 優化 descriptions 樣式 */
+.mt-staffDetail__infoSection {
+  margin-top: 0;
+}
+
+.mt-staffDetail__descriptions :deep(.el-descriptions__label) {
+  width: 100px;
+  font-weight: 600;
+  color: #606266;
+  background-color: #fafafa;
+}
+
+.mt-staffDetail__descriptions :deep(.el-descriptions__content) {
+  color: #303133;
+}
+
+.mt-staffDetail__descriptions :deep(.el-descriptions__cell) {
+  padding: 12px 16px;
+}
+
+/* ✅ UI 修復：Tasks View 樣式 */
+.mt-taskView {
+  padding: 0;
+}
+
+.mt-taskView__backBtn {
+  margin-bottom: 16px;
+}
+
+.mt-taskView__listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  border: 1px solid #e4e7ed;
+}
+
+.mt-taskView__listTitle {
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.mt-taskView__list {
+  margin-top: 0;
+}
+
+/* ✅ UI 修復：響應式設計 - 手機單欄或兩欄 */
+@media (max-width: 576px) {
+  .mt-staffDetail__header {
+    flex-direction: column;
+    text-align: center;
+    padding: 16px;
+  }
+
+  .mt-staffDetail__avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 22px;
+  }
+
+  .mt-staffDetail__name {
+    font-size: 18px;
+  }
+
+  .mt-statCard {
+    padding: 14px 16px;
+    min-height: 80px;
+  }
+
+  .mt-statCard__icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .mt-statCard__label {
+    font-size: 12px;
+  }
+
+  .mt-statCard__value {
+    font-size: 26px;
+  }
+
+  .mt-taskView__listHeader {
+    padding: 12px 14px;
+  }
+
+  .mt-taskView__listTitle {
+    font-size: 14px;
+  }
+}
+
+/* ✅ 修正：Dialog 內部可滾動防超出視窗被裁切 */
+:deep(.mt-staffDetail-dialog .el-dialog__body) {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+:deep(.mt-transfer-dialog .el-dialog__body) {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ========== 舊的詳情樣式（已棄用，保留以防回溯需要）========== */
+.detail-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.detail-profile-header .avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #409eff 0%, #79bbff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  font-weight: 800;
+  box-shadow: 0 4px 15px rgba(64, 158, 255, 0.3);
+}
+
+.detail-profile-header .info h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #303133;
+}
+
+.detail-task-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.detail-task-cards .task-card {
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.detail-task-cards .task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.detail-task-cards .task-card.repair-pending {
+  background: linear-gradient(135deg, #f6b26b 0%, #f9e0c7 100%);
+  color: #1f2d3d;
+}
+
+.detail-task-cards .task-card.maintenance-pending {
+  background: linear-gradient(135deg, #6aa8ff 0%, #d6e9ff 100%);
+  color: #1f2d3d;
+}
+
+.detail-task-cards .task-card.repair-completed {
+  background: linear-gradient(135deg, #79d7a7 0%, #e4f7ea 100%);
+  color: #1f2d3d;
+}
+
+.detail-task-cards .task-card.maintenance-completed {
+  background: linear-gradient(135deg, #aeb4bb 0%, #eef0f2 100%);
+  color: #1f2d3d;
+}
+
+.detail-task-cards .task-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  opacity: 0.85;
+  margin-bottom: 8px;
+}
+
+.detail-task-cards .task-card .card-value {
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.detail-info-section {
+  margin-top: 16px;
+}
+
+.detail-back-btn {
+  margin-bottom: 16px;
+}
+
+.detail-task-list {
+  margin-top: 12px;
 }
 </style>

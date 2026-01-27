@@ -824,11 +824,12 @@ onMounted(() => {
 
                 <el-table-column prop="issuePriority" label="優先級" width="110" align="center">
                   <template #default="{ row }">
+                    <!-- ✅ 【修正】優先級 badge 文字顏色對比度 (深色背景使用白字) -->
                     <el-tag
                       :type="getPriorityTag(row.issuePriority)"
                       effect="dark"
                       round
-                      style="border: none; white-space: nowrap"
+                      style="border: none; white-space: nowrap; color: white; font-weight: 600"
                     >
                       {{ priorityIcon[row.issuePriority] }} {{ priorityText[row.issuePriority] }}
                     </el-tag>
