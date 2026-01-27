@@ -49,10 +49,7 @@ const routes = [
     name: 'entrance',
     component: MainLayout,
     children: [
-      {
-        path: 'SearchSpot',
-        component: () => import('@/views/rec/RecRentUserSearchPage.vue'),
-      },
+
 
       // 會員頁面
       {
@@ -73,6 +70,10 @@ const routes = [
         path: 'rent/:action?',
         name: 'rec-rent-user',
         component: () => import('@/views/rec/RecRentUserPage.vue'),
+      },
+      {
+        path: 'SearchSpot',
+        component: () => import('@/views/rec/RecRentUserSearchPage.vue'),
       },
 
       // 將 'rec-rent-record' 路由重定向至帶有 action 參數的標準租借路由
@@ -274,6 +275,11 @@ const routes = [
         path: 'rec-rent',
         name: 'rec-rent',
         component: () => import('@/views/rec/RecRentMgnPage.vue'),
+      },
+      {
+        path: 'rec-chart',
+        name: 'rec-chart',
+        component: () => import('@/views/rec/RecRentMgnChartPage.vue'),
       },
 
       // [功能] 維修管理 (Maintenance)

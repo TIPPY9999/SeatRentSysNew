@@ -96,7 +96,6 @@ const logout = () => {
         </li>
 
         <!-- ✅ 產品化：未登入才顯示「會員登入」 -->
-        <!-- 若你堅持要一直顯示，把 v-if 移除即可 -->
         <li class="menu-item" v-if="!memberAuthStore.isLogin && !adminAuthStore.isLogin">
           <router-link to="/login" class="member-info">
             <span class="icon-wrapper">
@@ -116,11 +115,11 @@ const logout = () => {
               width: '100%',
             }"
             :aria-disabled="!uidClickable"
-          ><span class="icon-wrapper" style="font-size: 120%;">歡迎</span>
+          >
+            <span class="icon-wrapper" style="font-size: 130%; font-weight: 400">您好 </span>
             <span class="menu-text">
-              
               <span v-if="displayUID">{{ displayUID }}</span>
-              <span v-else> 尚未登入 </span>
+              <span v-else> 訪客 </span>
             </span>
           </div>
         </li>
@@ -132,52 +131,46 @@ const logout = () => {
           <span class="menu-text">@Seat借還</span>
         </li>
 
-        <li class="menu-item">
-          <router-link to="/mall" class="member-info">
-            <span class="icon-wrapper">
-              <el-icon><Ticket /></el-icon>
-            </span>
-            <span class="menu-text">商家優惠</span>
-          </router-link>
+        <li class="menu-item" @click="router.push('/mall')">
+          <span class="icon-wrapper">
+            <el-icon><Ticket /></el-icon>
+          </span>
+          <span class="menu-text">商家優惠</span>
         </li>
 
-        <li class="menu-item">
-          <router-link to="/snake" class="member-info">
-            <span class="icon-wrapper">
-              <el-icon><SwitchFilled /></el-icon>
-            </span>
-            <span class="menu-text">小遊戲</span>
-          </router-link>
+        <li class="menu-item" @click="router.push('/snake')">
+          <span class="icon-wrapper">
+            <el-icon><SwitchFilled /></el-icon>
+          </span>
+          <span class="menu-text">小遊戲</span>
         </li>
 
-        <li class="menu-item">
+        <li class="menu-item" @click="router.push('')">
           <span class="icon-wrapper">
             <el-icon><MapLocation /></el-icon>
           </span>
           <span class="menu-text">猜你喜歡</span>
         </li>
 
-        <li class="menu-item">
+        <li class="menu-item" @click="router.push('')">
           <span class="icon-wrapper">
             <el-icon><Comment /></el-icon>
           </span>
           <span class="menu-text">分享討論</span>
         </li>
 
-        <li class="menu-item">
+        <li class="menu-item" @click="router.push('')">
           <span class="icon-wrapper">
             <el-icon><Phone /></el-icon>
           </span>
           <span class="menu-text">客服支援</span>
         </li>
 
-        <li class="menu-item">
-          <router-link to="/payment" class="member-info">
+        <li class="menu-item" @click="router.push('')">
             <span class="icon-wrapper">
               <el-icon><StarFilled /></el-icon>
             </span>
             <span class="menu-text">支持我們</span>
-          </router-link>
         </li>
 
         <li class="menu-item" @click="logout">
@@ -187,6 +180,16 @@ const logout = () => {
           <span class="menu-text">登出</span>
         </li>
       </ul>
+
+      <!-- ✅ 管理員快捷入口：保留你原本邏輯 -->
+      <div class="menu-admin" v-if="adminAuthStore.isLogin">
+        <router-link to="/admin" class="member-info">
+          <span class="icon-wrapper">
+            <el-icon><Tools /></el-icon>
+          </span>
+          <span class="menu-text">後台管理</span>
+        </router-link>
+      </div>
 
       <!-- 收合按鈕 -->
       <div class="sidebar-footer">
@@ -200,16 +203,6 @@ const logout = () => {
             <DArrowRight v-if="isSidebarCollapsed" />
           </el-icon>
         </button>
-      </div>
-
-      <!-- ✅ 管理員快捷入口：保留你原本邏輯 -->
-      <div class="menu-admin" v-if="adminAuthStore.isLogin">
-        <router-link to="/admin" class="member-info">
-          <span class="icon-wrapper">
-            <el-icon><Tools /></el-icon>
-          </span>
-          <span class="menu-text">後台管理</span>
-        </router-link>
       </div>
     </aside>
 
@@ -226,15 +219,15 @@ const logout = () => {
   --sidebar-width-expanded: 200px;
   --sidebar-width-collapsed: 70px;
 }
-
-/* --- 2. 主佈局 --- */
-
-.logo {
-  font-size: 22px;
-  font-weight: 600;
-  margin: 0 px;
-  padding: 0;
+/* --- 4. 主內容容器 --- */
+.main-content-area {
+  flex-grow: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow-y: auto; /* 如果內容超長，允許滾動 */
 }
+/* --- 2. 主佈局 --- */
 .page-wrapper {
   display: flex;
   height: 100vh; /* 改為 100vh 佔滿整個視窗高度 */
@@ -359,14 +352,5 @@ const logout = () => {
 .toggle-btn:hover {
   background-color: #ecf5ff;
   color: #409eff;
-}
-
-/* --- 4. 主內容容器 --- */
-.main-content-area {
-  flex-grow: 1;
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow-y: auto; /* 如果內容超長，允許滾動 */
 }
 </style>
