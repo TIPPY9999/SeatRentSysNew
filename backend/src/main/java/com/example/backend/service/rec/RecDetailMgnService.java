@@ -1,21 +1,27 @@
 package com.example.backend.service.rec;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.backend.dto.rec.DailyOrderCountDTO;
+import com.example.backend.dto.rec.HourlyOrderCountDTO;
+import com.example.backend.dto.rec.MonthlyOrderCountDTO;
+import com.example.backend.dto.rec.OrderStatusStatsDTO;
+import com.example.backend.dto.rec.RentalDurationDTO;
+import com.example.backend.dto.rec.RentalDurationStatsDTO;
 import com.example.backend.model.rec.RecRent;
 import com.example.backend.model.rec.RentDetails;
 import com.example.backend.repository.rec.RecRentRepository;
 import com.example.backend.repository.rec.RentDetailsRepository;
 import com.example.backend.repository.rec.RentDetailsSpecs;
-import com.example.backend.dto.rec.MonthlyOrderCountDTO;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -94,5 +100,62 @@ public class RecDetailMgnService {
                 ((Number) row[1]).intValue(), // 月份
                 ((Number) row[2]).longValue() // 訂單計數
         )).collect(Collectors.toList());
+    }
+
+    // 獲取訂單狀態統計數據（圓餅圖）
+    public List<OrderStatusStatsDTO> getOrderStatusStats(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+        List<Object[]> results = detailRepos.findOrderStatusStats(startDateTime, endDateTime);
+        return results.stream()
+                .map(row -> new OrderStatusStatsDTO((String) row[0], ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+    }
+
+    // 獲取訂單租借時長數據（散佈圖）
+    public List<RentalDurationDTO> getRentalDurations(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+        List<Object[]> results = detailRepos.findRentalDurations(startDateTime, endDateTime);
+        return results.stream().map(row -> {
+            String recId = (String) row[0];
+            LocalDateTime rentTime = (LocalDateTime) row[1];
+            LocalDateTime returnTime = (LocalDateTime) row[2];
+            // 計算租借時長（分鐘）
+            long durationInMinutes = Duration.between(rentTime, returnTime).toMinutes();
+            return new RentalDurationDTO(recId, rentTime, durationInMinutes);
+        }).collect(Collectors.toList());
+    }
+
+    // 獲取每小時訂單統計
+    public List<HourlyOrderCountDTO> getHourlyOrderCounts(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+        List<Object[]> results = detailRepos.findHourlyOrderCounts(startDateTime, endDateTime);
+        return results.stream()
+                .map(row -> new HourlyOrderCountDTO(((Number) row[0]).intValue(), ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+    }
+
+    // 獲取每日訂單統計
+    public List<DailyOrderCountDTO> getDailyOrderCounts(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+        List<Object[]> results = detailRepos.findDailyOrderCounts(startDateTime, endDateTime);
+        return results.stream()
+                .map(row -> new DailyOrderCountDTO((String) row[0], ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+    }
+
+    // 獲取租借時長統計 (30分鐘間隔)
+    public List<RentalDurationStatsDTO> getRentalDurationStats(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+        List<Object[]> results = detailRepos.findRentalDurationStatsIn30MinIntervals(startDateTime, endDateTime);
+        return results.stream()
+                .map(row -> new RentalDurationStatsDTO(
+                        row[0] != null ? ((Number) row[0]).intValue() : 0,
+                        row[1] != null ? ((Number) row[1]).longValue() : 0L))
+                .collect(Collectors.toList());
     }
 }
