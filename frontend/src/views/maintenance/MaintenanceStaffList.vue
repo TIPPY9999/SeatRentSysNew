@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import maintenanceApi from '@/api/modules/maintenance'
 import Swal from 'sweetalert2'
 import { useRouter } from 'vue-router'
@@ -13,6 +13,25 @@ const loading = ref(true)
 const pageVisible = ref(false)
 const sortConfig = ref({ prop: 'staffId', order: 'ascending' })
 
+// ====== el-table 跑版修正：強制重新計算欄寬 ======
+const tableRef = ref(null)
+
+const doLayoutSafe = async () => {
+  await nextTick()
+  tableRef.value?.doLayout?.()
+}
+
+const onResize = () => doLayoutSafe()
+window.addEventListener('resize', onResize)
+onBeforeUnmount(() => window.removeEventListener('resize', onResize))
+
+// ====== 工單快取（用一次 API 建立 staff 狀態）======
+const allTickets = ref([])
+const ticketLoading = ref(false)
+
+// ====== 狀態篩選（全部 / 維護中 / 維修中 / 閒置中）======
+const statusFilter = ref('ALL') // 'ALL' | 'MAINTAINING' | 'REPAIRING' | 'ASSIGNED' | 'IDLE'
+
 // ====== 轉移工單 Dialog 狀態 ======
 const showTransferDialog = ref(false)
 const transferForm = ref({
@@ -22,18 +41,31 @@ const transferForm = ref({
 })
 const transferLoading = ref(false)
 
-// ★ 問題4修復：計算可選的接手人員 (排除要刪除的人 且 必須是啟用中的人員)
+// ★ 計算可選接手人員：排除要刪除的人 + 必須啟用中
 const availableTargetStaff = computed(() => {
-  return staffList.value.filter((s) => 
-    s.staffId !== transferForm.value.deleteStaffId && s.isActive === true
+  return staffList.value.filter(
+    (s) => s.staffId !== transferForm.value.deleteStaffId && s.isActive === true,
   )
 })
 
+/** 判斷是否保養任務（你原本就有概念，我保留並集中） */
+const isMaintenanceTask = (issueType) => {
+  if (!issueType) return false
+  const keywords = ['保養', '例行', '檢查']
+  return keywords.some((k) => String(issueType).includes(k))
+}
+
+/** 判斷是否已完成（你原本就有概念，我保留並集中） */
+const isCompletedStatus = (status) => {
+  return ['RESOLVED', 'CLOSED', 'CANCELLED'].includes(status)
+}
+
+/** 取回 staff + tickets（一次建狀態） */
 const fetchStaff = async () => {
   try {
     loading.value = true
     const res = await maintenanceApi.getAllStaff()
-    staffList.value = res.data
+    staffList.value = res.data || []
   } catch {
     // 錯誤已由 http.js 攔截器處理
   } finally {
@@ -41,7 +73,82 @@ const fetchStaff = async () => {
   }
 }
 
-// ====== 刪除人員（含防呆轉移邏輯）======
+const fetchTickets = async () => {
+  try {
+    ticketLoading.value = true
+    const res = await maintenanceApi.getAllTickets()
+    allTickets.value = res.data || []
+  } catch {
+    allTickets.value = []
+  } finally {
+    ticketLoading.value = false
+  }
+}
+
+/** 建立 staffId -> 工單統計（未完成：維修 / 保養；完成：維修 / 保養） */
+const staffTicketStatMap = computed(() => {
+  const map = new Map()
+  for (const t of allTickets.value) {
+    const staffId = t.assignedStaffId
+    if (!staffId) continue
+
+    if (!map.has(staffId)) {
+      map.set(staffId, {
+        repairCurrent: 0,
+        maintainCurrent: 0,
+        repairAssigned: 0,
+        maintainAssigned: 0,
+        repairDone: 0,
+        maintainDone: 0,
+      })
+    }
+    const stat = map.get(staffId)
+    const maintenance = isMaintenanceTask(t.issueType)
+    const status = t.issueStatus
+    const done = isCompletedStatus(status)
+    const assigned = status === 'ASSIGNED'
+    const inProgress = status === 'UNDER_MAINTENANCE'
+
+    if (maintenance) {
+      if (inProgress) stat.maintainCurrent++
+      else if (assigned) stat.maintainAssigned++
+      else if (done) stat.maintainDone++
+    } else {
+      if (inProgress) stat.repairCurrent++
+      else if (assigned) stat.repairAssigned++
+      else if (done) stat.repairDone++
+    }
+  }
+  return map
+})
+
+/** 人員目前狀態（維護中 > 維修中 > 閒置中） */
+const getStaffWorkStatus = (staffId) => {
+  const stat = staffTicketStatMap.value.get(staffId) || {
+    repairCurrent: 0,
+    maintainCurrent: 0,
+    repairAssigned: 0,
+    maintainAssigned: 0,
+    repairDone: 0,
+    maintainDone: 0,
+  }
+
+  if (stat.maintainCurrent > 0) {
+    return { key: 'MAINTAINING', text: '維護中', tagType: 'info', icon: 'fas fa-clipboard-check' }
+  }
+  if (stat.repairCurrent > 0) {
+    return { key: 'REPAIRING', text: '維修中', tagType: 'warning', icon: 'fas fa-wrench' }
+  }
+
+  const assignedTotal = stat.maintainAssigned + stat.repairAssigned
+  if (assignedTotal > 0) {
+    return { key: 'ASSIGNED', text: '已指派', tagType: 'primary', icon: 'fas fa-user-check' }
+  }
+
+  return { key: 'IDLE', text: '閒置中', tagType: 'success', icon: 'fas fa-mug-hot' }
+}
+
+/** ====== 刪除人員（含防呆轉移邏輯）====== */
 const handleDelete = async (row) => {
   const result = await Swal.fire({
     title: '確定要停用此人員嗎？',
@@ -63,22 +170,12 @@ const handleDelete = async (row) => {
     showClass: { popup: 'animate__animated animate__fadeInDown animate__faster' },
     hideClass: { popup: 'animate__animated animate__fadeOutUp animate__faster' },
     customClass: { popup: 'custom-swal-popup' },
-    didRender: (popup) => {
-      // Task 1 & 2: 為統計卡片添加點擊事件
-      const cards = popup.querySelectorAll('[data-card-type]')
-      cards.forEach(card => {
-        card.addEventListener('click', () => {
-          const cardType = card.getAttribute('data-card-type')
-          showHistoryModal(row.staffId, cardType, row.staffName)
-        })
-      })
-    }
   })
 
   if (result.isConfirmed) {
     try {
       await maintenanceApi.deleteStaff(row.staffId)
-      fetchStaff()
+      await fetchStaff()
       await Swal.fire({
         icon: 'success',
         title: '停用成功',
@@ -89,14 +186,12 @@ const handleDelete = async (row) => {
         showClass: { popup: 'animate__animated animate__bounceIn' },
       })
     } catch (error) {
-      // 檢查是否有未完成工單（根據後端錯誤訊息）
       const errorMsg = error?.response?.data?.message || error?.message || ''
       if (
         errorMsg.includes('未完成') ||
         errorMsg.includes('工單') ||
         error?.response?.status === 400
       ) {
-        // 開啟轉移 Dialog
         transferForm.value = {
           deleteStaffId: row.staffId,
           deleteStaffName: row.staffName,
@@ -104,138 +199,311 @@ const handleDelete = async (row) => {
         }
         showTransferDialog.value = true
       }
-      // 其他錯誤已由 http.js 攔截器處理
     }
   }
 }
 
-// ====== Task 2: 歷史工單查詢 Modal ======
+/** ====== 重要：四卡點擊 -> 歷史清單（不依賴不存在的 API，改用 allTickets 篩）====== */
 const showHistoryModal = async (staffId, cardType, staffName) => {
-  try {
-    // 根據卡片類型決定查詢的狀態
-    let statuses = []
-    let title = ''
-    let iconClass = ''
-    let colorClass = ''
-    
-    switch (cardType) {
-      case 'repair-pending':
-        statuses = ['REPORTED', 'ASSIGNED', 'UNDER_MAINTENANCE']
-        title = '待修任務'
-        iconClass = 'fas fa-wrench'
-        colorClass = 'text-warning'
-        break
-      case 'maintenance-pending':
-        statuses = ['SCHEDULED'] // 根據你的系統調整
-        title = '待保養任務'
-        iconClass = 'fas fa-clipboard-list'
-        colorClass = 'text-info'
-        break
-      case 'repair-completed':
-        statuses = ['RESOLVED']
-        title = '已完成維修'
-        iconClass = 'fas fa-check-circle'
-        colorClass = 'text-success'
-        break
-      case 'maintenance-completed':
-        statuses = ['COMPLETED'] // 根據你的系統調整
-        title = '已完成保養'
-        iconClass = 'fas fa-flag-checkered'
-        colorClass = 'text-secondary'
-        break
-    }
+  // 保證 tickets 已載入（避免第一次點擊沒資料）
+  if (!allTickets.value.length && !ticketLoading.value) {
+    await fetchTickets()
+  }
 
-    // 呼叫 API 查詢工單
-    const response = await maintenanceApi.getTicketsByStaff(staffId, statuses)
-    const tickets = response.data || []
+  // 先定義查詢條件
+  let title = ''
+  let iconClass = ''
+  let headerGrad = ''
+  const matchFn = (t) => t.assignedStaffId === staffId
 
-    // 限制顯示最近 10 筆避免過多資料
-    const displayTickets = tickets.slice(0, 10)
+  const getTargetLabel = (t) => {
+    // 你現在列表顯示是：椅子#seatsId 或 機台#spotId
+    // 這裡沿用：若 seatsId 有值，顯示 椅子#xxx，否則 機台#yyy
+    if (t.seatsId) return `椅子 #${t.seatsId}`
+    if (t.spotId) return `機台 #${t.spotId}`
+    return '未指定'
+  }
 
-    let tableHtml = ''
-    if (displayTickets.length === 0) {
-      tableHtml = `
-        <div style="text-align: center; padding: 40px; color: #909399;">
-          <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
-          <p>暫無${title}記錄</p>
+  // 依卡片類型篩 tickets
+  let filtered = []
+  switch (cardType) {
+    case 'repair-pending':
+      title = '待修任務'
+      iconClass = 'fas fa-wrench'
+      headerGrad = 'linear-gradient(135deg,#f7b55f 0%,#f3d19e 100%)'
+      filtered = allTickets.value.filter(
+        (t) => matchFn(t) && !isMaintenanceTask(t.issueType) && !isCompletedStatus(t.issueStatus),
+      )
+      break
+    case 'maintenance-pending':
+      title = '待保養任務'
+      iconClass = 'fas fa-clipboard-list'
+      headerGrad = 'linear-gradient(135deg,#6aa8ff 0%,#a0cfff 100%)'
+      filtered = allTickets.value.filter(
+        (t) => matchFn(t) && isMaintenanceTask(t.issueType) && !isCompletedStatus(t.issueStatus),
+      )
+      break
+    case 'repair-completed':
+      title = '維修完成'
+      iconClass = 'fas fa-check-circle'
+      headerGrad = 'linear-gradient(135deg,#74d39a 0%,#b3e19d 100%)'
+      filtered = allTickets.value.filter(
+        (t) => matchFn(t) && !isMaintenanceTask(t.issueType) && isCompletedStatus(t.issueStatus),
+      )
+      break
+    case 'maintenance-completed':
+      title = '保養完成'
+      iconClass = 'fas fa-flag-checkered'
+      headerGrad = 'linear-gradient(135deg,#9aa0a6 0%,#c0c4cc 100%)'
+      filtered = allTickets.value.filter(
+        (t) => matchFn(t) && isMaintenanceTask(t.issueType) && isCompletedStatus(t.issueStatus),
+      )
+      break
+    default:
+      title = '工單紀錄'
+      iconClass = 'fas fa-ticket-alt'
+      headerGrad = 'linear-gradient(135deg,#79bbff 0%,#c6e2ff 100%)'
+      filtered = allTickets.value.filter((t) => matchFn(t))
+  }
+
+  // 排序：最新在上（用 reportedAt / startAt / resolvedAt）
+  const getTime = (t) => new Date(t.reportedAt || t.startAt || t.resolvedAt || 0).getTime()
+  filtered.sort((a, b) => getTime(b) - getTime(a))
+
+  const displayTickets = filtered.slice(0, 12)
+
+  const buildRow = (t) => {
+    const date = t.reportedAt ? new Date(t.reportedAt).toLocaleString('zh-TW') : '-'
+    const target = getTargetLabel(t)
+    const desc = t.issueDesc || '無描述'
+    const result = t.resolveNote || '-'
+    const status = t.issueStatus || '-'
+    return `
+      <tr style="border-bottom: 1px solid #ebeef5;">
+        <td style="padding:10px 8px;"><span style="display:inline-block;background:#f4f4f5;border:1px solid #e9e9eb;border-radius:8px;padding:2px 8px;font-size:12px;">#${t.ticketId}</span></td>
+        <td style="padding:10px 8px;font-size:12px;color:#606266;">${date}</td>
+        <td style="padding:10px 8px;font-size:12px;color:#303133;">${target}</td>
+        <td style="padding:10px 8px;font-size:12px;color:#606266;" title="${desc}">${desc.length > 24 ? desc.slice(0, 24) + '…' : desc}</td>
+        <td style="padding:10px 8px;font-size:12px;color:#606266;" title="${result}">${result.length > 18 ? result.slice(0, 18) + '…' : result}</td>
+        <td style="padding:10px 8px;font-size:12px;color:#909399;">${status}</td>
+      </tr>
+    `
+  }
+
+  const tableHtml =
+    displayTickets.length === 0
+      ? `
+        <div style="text-align:center;padding:34px 10px;color:#909399;">
+          <div style="width:72px;height:72px;margin:0 auto 14px;border-radius:18px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;">
+            <i class="fas fa-inbox" style="font-size:34px;opacity:.5;"></i>
+          </div>
+          <div style="font-size:14px;">暫無 ${title} 記錄</div>
         </div>
       `
-    } else {
-      tableHtml = `
-        <div style="max-height: 400px; overflow-y: auto;">
-          <table class="table table-hover table-sm">
-            <thead class="thead-light">
-              <tr>
-                <th style="width: 15%;"><i class="fas fa-ticket-alt mr-1"></i>工單編號</th>
-                <th style="width: 20%;"><i class="fas fa-calendar mr-1"></i>日期</th>
-                <th style="width: 25%;"><i class="fas fa-map-marker-alt mr-1"></i>維修目標</th>
-                <th style="width: 25%;"><i class="fas fa-exclamation-triangle mr-1"></i>問題描述</th>
-                <th style="width: 15%;"><i class="fas fa-clipboard-check mr-1"></i>處理結果</th>
+      : `
+        <div style="max-height:420px;overflow:auto;border:1px solid #ebeef5;border-radius:12px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f8f9fa;border-bottom:1px solid #ebeef5;">
+                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:10%;">工單</th>
+                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:18%;">時間</th>
+                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:14%;">目標</th>
+                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:28%;">描述</th>
+                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:20%;">結果</th>
+                <th style="text-align:left;padding:10px 8px;font-size:12px;color:#303133;width:10%;">狀態</th>
               </tr>
             </thead>
             <tbody>
-      `
-      
-      displayTickets.forEach(ticket => {
-        const date = ticket.reportedAt ? new Date(ticket.reportedAt).toLocaleDateString('zh-TW') : '-'
-        const target = ticket.spotId ? `機台 #${ticket.spotId}${ticket.seatsId ? ` - 座位 #${ticket.seatsId}` : ''}` : '未指定'
-        const description = ticket.issueDesc || '無描述'
-        const result = ticket.resolveNote || (ticket.issueStatus === 'RESOLVED' ? '已完成' : '處理中')
-        
-        tableHtml += `
-          <tr>
-            <td><span class="badge badge-secondary">#${ticket.ticketId}</span></td>
-            <td><small>${date}</small></td>
-            <td><small>${target}</small></td>
-            <td><small title="${description}">${description.length > 20 ? description.substring(0, 20) + '...' : description}</small></td>
-            <td><small>${result.length > 15 ? result.substring(0, 15) + '...' : result}</small></td>
-          </tr>
-        `
-      })
-      
-      tableHtml += `
+              ${displayTickets.map(buildRow).join('')}
             </tbody>
           </table>
         </div>
+        ${
+          filtered.length > 12
+            ? `<div style="text-align:center;margin-top:10px;font-size:12px;color:#909399;">顯示最近 12 筆，共 ${filtered.length} 筆</div>`
+            : ''
+        }
       `
-      
-      if (tickets.length > 10) {
-        tableHtml += `
-          <div style="text-align: center; margin-top: 12px; color: #909399; font-size: 12px;">
-            <i class="fas fa-info-circle mr-1"></i>
-            顯示最近 10 筆，共 ${tickets.length} 筆記錄
-          </div>
-        `
-      }
-    }
 
-    await Swal.fire({
-      title: `<div style="display: flex; align-items: center; gap: 12px; justify-content: center;">
-        <i class="${iconClass} ${colorClass}" style="font-size: 24px;"></i>
-        <span>${staffName} - ${title}</span>
-      </div>`,
-      html: tableHtml,
-      width: '90%',
-      maxWidth: '1000px',
-      showConfirmButton: true,
-      confirmButtonText: '<i class="fas fa-times mr-1"></i>關閉',
-      customClass: {
-        popup: 'custom-swal-popup',
-        confirmButton: 'btn btn-secondary'
-      },
-      showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
-      hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' }
-    })
-  } catch (error) {
-    console.error('查詢工單歷史失敗:', error)
-    await Swal.fire({
-      icon: 'error',
-      title: '查詢失敗',
-      text: '無法載入工單歷史記錄',
-      timer: 2000,
-      showConfirmButton: false
-    })
+  await Swal.fire({
+    title: `
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+        <div style="width:40px;height:40px;border-radius:12px;background:${headerGrad};display:flex;align-items:center;justify-content:center;color:white;">
+          <i class="${iconClass}"></i>
+        </div>
+        <div style="font-size:16px;font-weight:700;color:#303133;">${staffName} · ${title}</div>
+      </div>
+    `,
+    html: tableHtml,
+    width: '92%',
+    maxWidth: '1050px',
+    confirmButtonText: '關閉',
+    confirmButtonColor: '#606266',
+    showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
+    hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' },
+    customClass: { popup: 'custom-swal-popup' },
+  })
+}
+
+/** ★ 查看詳情（UI 收斂 + 四卡可點擊） */
+const viewDetail = async (row) => {
+  // 確保 tickets 有資料（否則卡片數字會永遠 0）
+  if (!allTickets.value.length && !ticketLoading.value) {
+    await fetchTickets()
   }
+
+  const stat = staffTicketStatMap.value.get(row.staffId) || {
+    repairCurrent: 0,
+    maintainCurrent: 0,
+    repairDone: 0,
+    maintainDone: 0,
+  }
+
+  const status = getStaffWorkStatus(row.staffId)
+
+  Swal.fire({
+    title: `
+      <div style="display:flex;align-items:center;gap:12px;justify-content:flex-start;">
+        <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#4f9cff 0%,#8cc5ff 100%);display:flex;align-items:center;justify-content:center;color:white;font-size:20px;font-weight:800;box-shadow:0 8px 22px rgba(79,156,255,.25);">
+          ${row.staffName?.charAt(0) || '?'}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+          <div style="font-size:18px;font-weight:800;color:#303133;line-height:1;">${row.staffName}</div>
+          <div style="font-size:12px;color:#909399;display:flex;align-items:center;gap:8px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;background:#f5f7fa;border:1px solid #ebeef5;border-radius:999px;padding:2px 10px;">
+              <i class="${status.icon}" style="opacity:.85;"></i> ${status.text}
+            </span>
+            <span>·</span>
+            <span>建立：${row.createdAt ? new Date(row.createdAt).toLocaleDateString('zh-TW') : '-'}</span>
+          </div>
+        </div>
+      </div>
+    `,
+    html: `
+      <div style="text-align:left;margin-top:14px;">
+        <!-- 四張卡：統一色系（不那麼刺眼） -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div data-card-type="repair-pending" style="padding:14px;border-radius:14px;background:linear-gradient(135deg,#f6b26b 0%,#f9e0c7 100%);color:#1f2d3d;cursor:pointer;border:1px solid rgba(255,255,255,.7);">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:12px;opacity:.85;"><i class="fas fa-wrench mr-1"></i>待修任務</div>
+              <div style="width:32px;height:32px;border-radius:12px;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-arrow-right" style="opacity:.7;"></i>
+              </div>
+            </div>
+            <div style="font-size:26px;font-weight:900;margin-top:6px;">${stat.repairCurrent}</div>
+          </div>
+
+          <div data-card-type="maintenance-pending" style="padding:14px;border-radius:14px;background:linear-gradient(135deg,#6aa8ff 0%,#d6e9ff 100%);color:#1f2d3d;cursor:pointer;border:1px solid rgba(255,255,255,.7);">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:12px;opacity:.85;"><i class="fas fa-clipboard-list mr-1"></i>待保養</div>
+              <div style="width:32px;height:32px;border-radius:12px;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-arrow-right" style="opacity:.7;"></i>
+              </div>
+            </div>
+            <div style="font-size:26px;font-weight:900;margin-top:6px;">${stat.maintainCurrent}</div>
+          </div>
+
+          <div data-card-type="repair-completed" style="padding:14px;border-radius:14px;background:linear-gradient(135deg,#79d7a7 0%,#e4f7ea 100%);color:#1f2d3d;cursor:pointer;border:1px solid rgba(255,255,255,.7);">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:12px;opacity:.85;"><i class="fas fa-check-circle mr-1"></i>維修完成</div>
+              <div style="width:32px;height:32px;border-radius:12px;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-arrow-right" style="opacity:.7;"></i>
+              </div>
+            </div>
+            <div style="font-size:26px;font-weight:900;margin-top:6px;">${stat.repairDone}</div>
+          </div>
+
+          <div data-card-type="maintenance-completed" style="padding:14px;border-radius:14px;background:linear-gradient(135deg,#aeb4bb 0%,#eef0f2 100%);color:#1f2d3d;cursor:pointer;border:1px solid rgba(255,255,255,.7);">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:12px;opacity:.85;"><i class="fas fa-flag-checkered mr-1"></i>保養完成</div>
+              <div style="width:32px;height:32px;border-radius:12px;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-arrow-right" style="opacity:.7;"></i>
+              </div>
+            </div>
+            <div style="font-size:26px;font-weight:900;margin-top:6px;">${stat.maintainDone}</div>
+          </div>
+        </div>
+
+        <!-- 資料卡：更一致的灰白底 + 左側色條 -->
+        <div style="display:grid;gap:12px;">
+          <div style="padding:12px 14px;border-radius:14px;background:#f5f7fa;border:1px solid #ebeef5;">
+            <div style="font-size:12px;color:#909399;">所屬公司</div>
+            <div style="font-size:14px;font-weight:700;color:#303133;margin-top:4px;">
+              <i class="fas fa-building mr-2" style="color:#409eff;"></i>${row.staffCompany || '未填寫'}
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="padding:12px 14px;border-radius:14px;background:#ffffff;border:1px solid #ebeef5;">
+              <div style="font-size:12px;color:#909399;">聯絡電話</div>
+              <div style="font-size:14px;font-weight:700;color:#303133;margin-top:4px;">
+                <i class="fas fa-phone mr-2" style="color:#67c23a;"></i>${row.staffPhone || '-'}
+              </div>
+            </div>
+            <div style="padding:12px 14px;border-radius:14px;background:#ffffff;border:1px solid #ebeef5;">
+              <div style="font-size:12px;color:#909399;">電子郵件</div>
+              <div style="font-size:14px;font-weight:700;color:#303133;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                <i class="fas fa-envelope mr-2" style="color:#e6a23c;"></i>${row.staffEmail || '-'}
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:12px 14px;border-radius:14px;background:#fffaf0;border:1px solid #f3e1c8;">
+            <div style="font-size:12px;color:#909399;">備註說明</div>
+            <div style="font-size:13px;color:#606266;margin-top:4px;line-height:1.5;">
+              ${row.staffNote || '無備註'}
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="fas fa-edit mr-1"></i> 編輯資料',
+    cancelButtonText: '關閉',
+    confirmButtonColor: '#409eff',
+    cancelButtonColor: '#909399',
+    width: 560,
+    showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
+    hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' },
+    // ✅ 這裡是關鍵：把四張卡的 click 綁定起來
+    didRender: (popup) => {
+      const cards = popup.querySelectorAll('[data-card-type]')
+      cards.forEach((card) => {
+        card.addEventListener('click', () => {
+          const cardType = card.getAttribute('data-card-type')
+          showHistoryModal(row.staffId, cardType, row.staffName)
+        })
+        // 小互動：hover 提升（不用 inline onmouseover）
+        card.addEventListener('mouseenter', () => {
+          card.style.transform = 'translateY(-2px)'
+          card.style.boxShadow = '0 10px 26px rgba(0,0,0,.10)'
+          card.style.transition = 'all .18s ease'
+        })
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = 'translateY(0)'
+          card.style.boxShadow = 'none'
+        })
+      })
+    },
+  }).then((result) => {
+    if (result.isConfirmed) {
+      router.push(`/admin/staff-form/${row.staffId}`)
+    }
+  })
+}
+
+const handleAddNew = () => {
+  Swal.fire({
+    title: '新增維護人員',
+    text: '即將前往新增人員表單',
+    icon: 'info',
+    timer: 600,
+    timerProgressBar: true,
+    showConfirmButton: false,
+    showClass: { popup: 'animate__animated animate__fadeInRight animate__faster' },
+  }).then(() => {
+    router.push('/admin/staff-form')
+  })
 }
 
 // ====== 執行轉移並刪除 ======
@@ -258,7 +526,7 @@ const handleTransferAndDelete = async () => {
     )
 
     showTransferDialog.value = false
-    fetchStaff()
+    await fetchStaff()
 
     const targetStaff = staffList.value.find((s) => s.staffId === transferForm.value.targetStaffId)
 
@@ -293,13 +561,19 @@ const closeTransferDialog = () => {
   }
 }
 
+/** 先過濾 active，再過濾狀態，再做搜尋 */
 const filteredList = computed(() => {
   const key = searchText.value.trim().toLowerCase()
-  // ★ 修正：只顯示啟用中的人員 (isActive = true)
+
   const activeStaff = staffList.value.filter((s) => s.isActive === true)
 
-  if (!key) return activeStaff
-  return activeStaff.filter(
+  const statusFiltered =
+    statusFilter.value === 'ALL'
+      ? activeStaff
+      : activeStaff.filter((s) => getStaffWorkStatus(s.staffId).key === statusFilter.value)
+
+  if (!key) return statusFiltered
+  return statusFiltered.filter(
     (s) =>
       (s.staffName || '').toLowerCase().includes(key) ||
       (s.staffCompany || '').toLowerCase().includes(key) ||
@@ -317,9 +591,13 @@ const {
   resetPagination,
 } = usePagination(filteredList, { defaultPageSize: 10 })
 
-// 搜尋時重置分頁
-watch(searchText, () => {
+watch([searchText, statusFilter], () => {
   resetPagination()
+  doLayoutSafe()
+})
+
+watch([currentPage, pageSize], () => {
+  doLayoutSafe()
 })
 
 const formatDate = (row, column, cellValue) => {
@@ -327,159 +605,43 @@ const formatDate = (row, column, cellValue) => {
   return new Date(cellValue).toLocaleDateString('zh-TW')
 }
 
-// ★ 任務3：快速檢視人員詳情（增強版 - 區分維修與保養）
-const viewDetail = async (row) => {
-  // ★ 任務3：拆分為維修與保養統計
-  let repairCurrent = 0    // 維修 + 未完成
-  let maintainCurrent = 0  // 保養 + 未完成
-  let repairDone = 0       // 維修 + 已完成
-  let maintainDone = 0     // 保養 + 已完成
+// ====== 統計卡片數字（以 filteredList / staffList + 狀態 map 計）=====
+const activeCount = computed(() => staffList.value.filter((s) => s.isActive).length)
+const maintainingCount = computed(
+  () =>
+    staffList.value.filter((s) => s.isActive && getStaffWorkStatus(s.staffId).key === 'MAINTAINING')
+      .length,
+)
 
-  // ★ 任務3：判斷是否為保養任務
-  const isMaintenance = (issueType) => {
-    if (!issueType) return false
-    const keywords = ['保養', '例行', '檢查']
-    return keywords.some(keyword => issueType.includes(keyword))
-  }
+// 維修中
+const repairingCount = computed(
+  () =>
+    staffList.value.filter((s) => s.isActive && getStaffWorkStatus(s.staffId).key === 'REPAIRING')
+      .length,
+)
 
-  // ★ 任務3：判斷是否已完成
-  const isCompleted = (status) => {
-    return ['RESOLVED', 'CLOSED', 'CANCELLED'].includes(status)
-  }
+// 閒置中
+const idleCount = computed(
+  () =>
+    staffList.value.filter((s) => s.isActive && getStaffWorkStatus(s.staffId).key === 'IDLE')
+      .length,
+)
 
-  try {
-    const res = await maintenanceApi.getAllTickets()
-    const allTickets = res.data || []
+// 已指派（不論是否在職）
+const assignedCount = computed(
+  () =>
+    staffList.value.filter((s) => s.isActive && getStaffWorkStatus(s.staffId).key === 'ASSIGNED')
+      .length,
+)
 
-    // ★ 任務3：分類統計該人員的工單
-    const staffTickets = allTickets.filter(t => t.assignedStaffId === row.staffId)
-    
-    staffTickets.forEach(ticket => {
-      const isMaintenanceTask = isMaintenance(ticket.issueType)
-      const isDone = isCompleted(ticket.issueStatus)
-      
-      if (isMaintenanceTask) {
-        // 保養類任務
-        if (isDone) {
-          maintainDone++
-        } else {
-          maintainCurrent++
-        }
-      } else {
-        // 維修類任務
-        if (isDone) {
-          repairDone++
-        } else {
-          repairCurrent++
-        }
-      }
-    })
-  } catch {
-    // 統計失敗時保持為 0
-  }
-
-  Swal.fire({
-    title: `<div style="display: flex; align-items: center; gap: 12px;">
-      <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; font-weight: bold;">
-        ${row.staffName?.charAt(0) || '?'}
-      </div>
-      <span>${row.staffName}</span>
-    </div>`,
-    html: `
-      <div style="text-align: left; margin-top: 20px;">
-        <div style="display: grid; gap: 12px;">
-          <!-- ★ 任務3：2x2 Grid 統計卡片 -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
-            <!-- 左上：待修任務 -->
-            <div data-card-type="repair-pending" style="padding: 16px; background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%); border-radius: 10px; text-align: center; color: white; cursor: pointer; transition: all 0.3s ease;" 
-                 onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 25px rgba(230, 162, 60, 0.3)';" 
-                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
-              <p style="margin: 0; font-size: 12px; opacity: 0.9;"><i class="fas fa-wrench mr-1"></i>待修任務</p>
-              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${repairCurrent}</p>
-            </div>
-            <!-- 右上：待保養 -->
-            <div data-card-type="maintenance-pending" style="padding: 16px; background: linear-gradient(135deg, #409eff 0%, #79bbff 100%); border-radius: 10px; text-align: center; color: white; cursor: pointer; transition: all 0.3s ease;"
-                 onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 25px rgba(64, 158, 255, 0.3)';" 
-                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
-              <p style="margin: 0; font-size: 12px; opacity: 0.9;"><i class="fas fa-clipboard-list mr-1"></i>待保養</p>
-              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${maintainCurrent}</p>
-            </div>
-            <!-- 左下：維修完成 -->
-            <div data-card-type="repair-completed" style="padding: 16px; background: linear-gradient(135deg, #67c23a 0%, #95d475 100%); border-radius: 10px; text-align: center; color: white; cursor: pointer; transition: all 0.3s ease;"
-                 onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 25px rgba(103, 194, 58, 0.3)';" 
-                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
-              <p style="margin: 0; font-size: 12px; opacity: 0.9;"><i class="fas fa-check-circle mr-1"></i>維修完成</p>
-              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${repairDone}</p>
-            </div>
-            <!-- 右下：保養完成 -->
-            <div data-card-type="maintenance-completed" style="padding: 16px; background: linear-gradient(135deg, #909399 0%, #c0c4cc 100%); border-radius: 10px; text-align: center; color: white; cursor: pointer; transition: all 0.3s ease;"
-                 onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 25px rgba(144, 147, 153, 0.3)';" 
-                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
-              <p style="margin: 0; font-size: 12px; opacity: 0.9;"><i class="fas fa-flag-checkered mr-1"></i>保養完成</p>
-              <p style="margin: 4px 0 0; font-size: 24px; font-weight: bold;">${maintainDone}</p>
-            </div>
-          </div>
-          
-          <div style="padding: 14px; background: linear-gradient(135deg, #f0f9eb 0%, #e1f3d8 100%); border-radius: 10px; border-left: 4px solid #67c23a;">
-            <p style="margin: 0; font-size: 12px; color: #909399;">所屬公司</p>
-            <p style="margin: 4px 0 0; font-size: 15px; color: #303133; font-weight: 500;">
-              <i class="fas fa-building mr-2" style="color: #67c23a;"></i>${row.staffCompany || '未填寫'}
-            </p>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div style="padding: 14px; background: #f5f7fa; border-radius: 10px;">
-              <p style="margin: 0; font-size: 12px; color: #909399;">聯絡電話</p>
-              <p style="margin: 4px 0 0; font-size: 14px; color: #303133;">
-                <i class="fas fa-phone mr-2" style="color: #409eff;"></i>${row.staffPhone || '-'}
-              </p>
-            </div>
-            <div style="padding: 14px; background: #f5f7fa; border-radius: 10px;">
-              <p style="margin: 0; font-size: 12px; color: #909399;">電子郵件</p>
-              <p style="margin: 4px 0 0; font-size: 14px; color: #303133; overflow: hidden; text-overflow: ellipsis;">
-                <i class="fas fa-envelope mr-2" style="color: #e6a23c;"></i>${row.staffEmail || '-'}
-              </p>
-            </div>
-          </div>
-          <div style="padding: 14px; background: #fdf6ec; border-radius: 10px; border-left: 4px solid #e6a23c;">
-            <p style="margin: 0; font-size: 12px; color: #909399;">備註說明</p>
-            <p style="margin: 4px 0 0; font-size: 14px; color: #606266;">
-              ${row.staffNote || '無備註'}
-            </p>
-          </div>
-        </div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: '<i class="fas fa-edit mr-1"></i> 編輯資料',
-    cancelButtonText: '關閉',
-    confirmButtonColor: '#409eff',
-    showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
-    hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' },
-    width: 520,
-  }).then((result) => {
-    if (result.isConfirmed) {
-      router.push(`/admin/staff-form/${row.staffId}`)
-    }
-  })
-}
-
-const handleAddNew = () => {
-  Swal.fire({
-    title: '新增維護人員',
-    text: '即將前往新增人員表單',
-    icon: 'info',
-    timer: 600,
-    timerProgressBar: true,
-    showConfirmButton: false,
-    showClass: { popup: 'animate__animated animate__fadeInRight animate__faster' },
-  }).then(() => {
-    router.push('/admin/staff-form')
-  })
-}
-
-onMounted(() => {
-  fetchStaff()
-  setTimeout(() => (pageVisible.value = true), 100)
+onMounted(async () => {
+  await fetchStaff()
+  await fetchTickets() // ✅ 重要：先載 tickets，名單才能即時有狀態
+  setTimeout(() => {
+    pageVisible.value = true
+    // ✅ 等 transition / DOM 完整後再 layout
+    setTimeout(() => doLayoutSafe(), 150)
+  }, 100)
 })
 </script>
 
@@ -522,22 +684,81 @@ onMounted(() => {
       <div class="container-fluid">
         <transition name="zoom-fade" appear>
           <div v-show="pageVisible">
-            <!-- 統計卡片列 -->
+            <!-- 統計卡片列：新增 3 張狀態卡 -->
             <el-row :gutter="20" class="mb-4">
               <el-col :xs="12" :sm="8" :md="6" :lg="4">
-                <div class="stat-card active-card" @click="searchText = ''">
+                <div class="stat-card active-card" @click="statusFilter = 'ALL'">
                   <div class="stat-icon pulse-animation">
                     <i class="fas fa-user-check"></i>
                   </div>
                   <div class="stat-info">
-                    <h3>{{ staffList.filter((s) => s.isActive).length }}</h3>
+                    <h3>{{ activeCount }}</h3>
                     <span>在職人員</span>
                   </div>
-                  <div class="stat-bg-icon">
-                    <i class="fas fa-users"></i>
+                  <div class="stat-bg-icon"><i class="fas fa-users"></i></div>
+                </div>
+              </el-col>
+
+              <el-col :xs="12" :sm="8" :md="6" :lg="4">
+                <div class="stat-card filter-card" @click="statusFilter = 'MAINTAINING'">
+                  <div
+                    class="stat-icon"
+                    style="background: linear-gradient(135deg, #409eff 0%, #79bbff 100%)"
+                  >
+                    <i class="fas fa-clipboard-check"></i>
+                  </div>
+                  <div class="stat-info">
+                    <h3>{{ maintainingCount }}</h3>
+                    <span>維護中</span>
                   </div>
                 </div>
               </el-col>
+
+              <el-col :xs="12" :sm="8" :md="6" :lg="4">
+                <div class="stat-card filter-card" @click="statusFilter = 'REPAIRING'">
+                  <div
+                    class="stat-icon"
+                    style="background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%)"
+                  >
+                    <i class="fas fa-wrench"></i>
+                  </div>
+                  <div class="stat-info">
+                    <h3>{{ repairingCount }}</h3>
+                    <span>維修中</span>
+                  </div>
+                </div>
+              </el-col>
+
+              <el-col :xs="12" :sm="8" :md="6" :lg="4">
+                <div class="stat-card filter-card" @click="statusFilter = 'ASSIGNED'">
+                  <div
+                    class="stat-icon"
+                    style="background: linear-gradient(135deg, #409eff 0%, #a0cfff 100%)"
+                  >
+                    <i class="fas fa-user-check"></i>
+                  </div>
+                  <div class="stat-info">
+                    <h3>{{ assignedCount }}</h3>
+                    <span>已指派</span>
+                  </div>
+                </div>
+              </el-col>
+
+              <el-col :xs="12" :sm="8" :md="6" :lg="4">
+                <div class="stat-card filter-card" @click="statusFilter = 'IDLE'">
+                  <div
+                    class="stat-icon"
+                    style="background: linear-gradient(135deg, #67c23a 0%, #95d475 100%)"
+                  >
+                    <i class="fas fa-mug-hot"></i>
+                  </div>
+                  <div class="stat-info">
+                    <h3>{{ idleCount }}</h3>
+                    <span>閒置中</span>
+                  </div>
+                </div>
+              </el-col>
+
               <el-col :xs="12" :sm="8" :md="6" :lg="4">
                 <div class="stat-card filter-card">
                   <div class="stat-icon">
@@ -560,11 +781,64 @@ onMounted(() => {
                       <i class="fas fa-list-ul"></i>
                     </span>
                     <span class="header-text">人員名單</span>
+
+                    <!-- 狀態 filter pills -->
+                    <div class="ml-2" style="display: flex; gap: 6px; flex-wrap: wrap">
+                      <el-tag
+                        :effect="statusFilter === 'ALL' ? 'dark' : 'plain'"
+                        type="info"
+                        round
+                        @click="statusFilter = 'ALL'"
+                        style="cursor: pointer"
+                      >
+                        全部
+                      </el-tag>
+                      <el-tag
+                        :effect="statusFilter === 'MAINTAINING' ? 'dark' : 'plain'"
+                        type="info"
+                        round
+                        @click="statusFilter = 'MAINTAINING'"
+                        style="cursor: pointer"
+                      >
+                        維護中
+                      </el-tag>
+                      <el-tag
+                        :effect="statusFilter === 'REPAIRING' ? 'dark' : 'plain'"
+                        type="warning"
+                        round
+                        @click="statusFilter = 'REPAIRING'"
+                        style="cursor: pointer"
+                      >
+                        維修中
+                      </el-tag>
+
+                      <el-tag
+                        :effect="statusFilter === 'ASSIGNED' ? 'dark' : 'plain'"
+                        type="primary"
+                        round
+                        @click="statusFilter = 'ASSIGNED'"
+                        style="cursor: pointer"
+                      >
+                        已指派
+                      </el-tag>
+
+                      <el-tag
+                        :effect="statusFilter === 'IDLE' ? 'dark' : 'plain'"
+                        type="success"
+                        round
+                        @click="statusFilter = 'IDLE'"
+                        style="cursor: pointer"
+                      >
+                        閒置中
+                      </el-tag>
+                    </div>
+
                     <el-tag type="success" effect="light" size="small" class="ml-2" round>
                       <i class="fas fa-circle" style="font-size: 6px; margin-right: 4px"></i>
                       {{ filteredList.length }} 位
                     </el-tag>
                   </div>
+
                   <div class="header-right">
                     <el-input
                       v-model="searchText"
@@ -574,7 +848,15 @@ onMounted(() => {
                       class="search-input"
                     >
                       <template #append>
-                        <el-button icon="Refresh" @click="fetchStaff" />
+                        <el-button
+                          icon="Refresh"
+                          @click="
+                            () => {
+                              fetchStaff()
+                              fetchTickets()
+                            }
+                          "
+                        />
                       </template>
                     </el-input>
                   </div>
@@ -588,12 +870,16 @@ onMounted(() => {
 
               <!-- 資料表格 -->
               <el-table
+                ref="tableRef"
                 v-else
                 :data="paginatedList"
                 stripe
                 highlight-current-row
-                style="width: 100%"
                 class="custom-table"
+                style="width: 100%"
+                table-layout="fixed"
+                :header-cell-style="{ boxSizing: 'border-box' }"
+                :cell-style="{ boxSizing: 'border-box' }"
                 @row-dblclick="viewDetail"
               >
                 <el-table-column prop="staffId" label="ID" width="70" align="center" sortable>
@@ -602,7 +888,7 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column prop="staffName" label="姓名" width="150" sortable>
+                <el-table-column prop="staffName" label="姓名" width="160" sortable>
                   <template #default="{ row }">
                     <div class="name-cell" @click="viewDetail(row)">
                       <div class="name-avatar">
@@ -613,6 +899,19 @@ onMounted(() => {
                         <span class="status-dot active"></span>
                       </div>
                     </div>
+                  </template>
+                </el-table-column>
+
+                <!-- ✅ 新增欄位：目前狀態 -->
+                <el-table-column label="目前狀態" width="120" align="center">
+                  <template #default="{ row }">
+                    <el-tag :type="getStaffWorkStatus(row.staffId).tagType" effect="light" round>
+                      <i
+                        :class="getStaffWorkStatus(row.staffId).icon"
+                        style="margin-right: 6px"
+                      ></i>
+                      {{ getStaffWorkStatus(row.staffId).text }}
+                    </el-tag>
                   </template>
                 </el-table-column>
 
@@ -667,7 +966,7 @@ onMounted(() => {
                   :formatter="formatDate"
                 />
 
-                <el-table-column label="操作" width="180" align="center" fixed="right">
+                <el-table-column label="操作" width="180" align="center">
                   <template #default="{ row }">
                     <div class="action-buttons">
                       <el-tooltip content="查看詳情" placement="top">
@@ -707,22 +1006,32 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <!-- 空狀態 -->
                 <template #empty>
-                  <el-empty description="目前沒有人員資料">
+                  <el-empty
+                    :description="
+                      statusFilter === 'ALL' && !searchText
+                        ? '目前沒有人員資料'
+                        : '沒有符合條件的人員'
+                    "
+                  >
                     <template #image>
                       <div class="empty-icon">
                         <i class="fas fa-users-slash"></i>
                       </div>
                     </template>
-                    <el-button type="primary" @click="handleAddNew">
+
+                    <!-- ✅ 只有在「全部」且「完全沒資料」才顯示新增 -->
+                    <el-button
+                      v-if="statusFilter === 'ALL' && !searchText"
+                      type="primary"
+                      @click="handleAddNew"
+                    >
                       <i class="fas fa-plus mr-1"></i> 新增第一位人員
                     </el-button>
                   </el-empty>
                 </template>
               </el-table>
 
-              <!-- 分頁器 -->
               <div class="pagination-wrapper" v-if="showPagination">
                 <el-pagination
                   v-model:current-page="currentPage"
@@ -735,11 +1044,10 @@ onMounted(() => {
               </div>
             </el-card>
 
-            <!-- 快速操作提示 -->
             <div class="tips-bar mt-3">
               <el-alert type="info" :closable="false" show-icon>
                 <template #title>
-                  <span>💡 小提示：雙擊表格列可快速查看人員詳情</span>
+                  <span>💡 小提示：雙擊表格列可快速查看人員詳情；詳情四張卡可點進工單歷史</span>
                 </template>
               </el-alert>
             </div>
@@ -1045,6 +1353,19 @@ onMounted(() => {
 /* 表格樣式 */
 .custom-table {
   --el-table-header-bg-color: #f8f9fa;
+}
+
+/* 避免 scrollbar 有時出現有時消失造成欄寬抖動 */
+.custom-table :deep(.el-table__body-wrapper) {
+  overflow-y: scroll;
+}
+
+/* 保險：讓 header/body 計算一致 */
+.custom-table :deep(.el-table__header),
+.custom-table :deep(.el-table__body),
+.custom-table :deep(th),
+.custom-table :deep(td) {
+  box-sizing: border-box;
 }
 
 .name-cell {
