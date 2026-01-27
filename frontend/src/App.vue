@@ -3,6 +3,7 @@ import { onMounted } from 'vue';
 import { RouterView } from 'vue-router';
 import { useMemberAuthStore } from '@/stores/memberAuth';
 import { useAdminAuthStore } from '@/stores/adminAuth';
+import axios from 'axios';
 
 /**
  * App.vue：整個前端的「根容器」
@@ -13,9 +14,31 @@ import { useAdminAuthStore } from '@/stores/adminAuth';
  * 如果有，就將其恢復到 Pinia store 中。
  * 這可以確保用戶在重新整理頁面後，登入狀態得以保持。
  */
-onMounted(() => {
+onMounted(async() => {
   const memberAuthStore = useMemberAuthStore();
   const adminAuthStore = useAdminAuthStore();
+
+  // 不論本地是否有舊資料，只要後端有 Session，就以 Google 的為準
+  try {
+    const res = await axios.get('http://localhost:8080/api/auth/me', { withCredentials: true });
+    
+    if (res.data) {
+      // 找到 Google 登入資訊，直接寫入並覆蓋 localStorage
+      memberAuthStore.setMemberLogin(res.data);
+      localStorage.setItem('member_user', JSON.stringify(res.data));
+      localStorage.setItem('token', 'google-session-ok'); // 給予暫時 token
+      
+      // Google 登入時通常需確保管理員狀態是清空的，避免權限衝突
+      adminAuthStore.clearAdmin(); 
+      localStorage.removeItem('admin');
+      
+      console.log('App.vue: 已同步最新的 Google 會員資訊並覆蓋舊狀態。');
+      return; // 同步成功，直接結束邏輯
+    }
+  } catch (err) {
+    // 沒抓到 Google Session (例如 401)，才往下執行原本的恢復邏輯
+    console.log('App.vue: 無 Google Session，檢查本地儲存。');
+  }
 
   // 1. 恢復一般會員的登入狀態
   if (!memberAuthStore.isLogin) {

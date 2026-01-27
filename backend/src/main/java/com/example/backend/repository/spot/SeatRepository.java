@@ -27,4 +27,7 @@ public interface SeatRepository extends JpaRepository<Seat, Integer>, JpaSpecifi
 
     // 根據據點 ID 查詢該據點下的所有座位
     List<Seat> findBySpotId(Integer spotId);
+
+    // 根據據點 ID 查詢該據點下的座位數量
+    long countBySpotId(Integer spotId);
 }

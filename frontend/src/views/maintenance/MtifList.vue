@@ -32,7 +32,7 @@ const fetchAssetStats = async () => {
       title: '載入失敗',
       text: '無法取得資產健康度統計',
       timer: 2000,
-      showConfirmButton: false
+      showConfirmButton: false,
     })
   } finally {
     assetStatsLoading.value = false
@@ -361,13 +361,13 @@ const showLocationMap = async (stationName, lat, lng) => {
       title: '位置資訊不完整',
       text: `站點「${stationName}」暫無準確的地理位置資訊`,
       confirmButtonText: '了解',
-      confirmButtonColor: '#e6a23c'
+      confirmButtonColor: '#e6a23c',
     })
     return
   }
 
   const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`
-  
+
   await Swal.fire({
     title: `<div style="display: flex; align-items: center; gap: 12px; justify-content: center;">
       <i class="fas fa-map-marker-alt" style="color: #e6a23c; font-size: 24px;"></i>
@@ -401,10 +401,10 @@ const showLocationMap = async (stationName, lat, lng) => {
     confirmButtonText: '<i class="fas fa-times mr-1"></i>關閉',
     confirmButtonColor: '#909399',
     customClass: {
-      popup: 'custom-map-popup'
+      popup: 'custom-map-popup',
     },
     showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
-    hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' }
+    hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' },
   })
 }
 
@@ -523,7 +523,10 @@ onMounted(() => {
               <template #header>
                 <div class="card-header-content">
                   <div class="header-left">
-                    <span class="header-icon" style="background: linear-gradient(135deg, #67c23a, #95d475);">
+                    <span
+                      class="header-icon"
+                      style="background: linear-gradient(135deg, #67c23a, #95d475)"
+                    >
                       <i class="fas fa-heartbeat"></i>
                     </span>
                     <span class="header-text">資產健康度統計</span>
@@ -548,21 +551,17 @@ onMounted(() => {
               </template>
 
               <el-skeleton :rows="4" animated v-if="assetStatsLoading" />
-              
+
               <el-empty v-else-if="assetStats.length === 0" description="暫無統計資料" />
 
-              <el-table
-                v-else
-                :data="assetStats"
-                stripe
-                style="width: 100%"
-                max-height="400"
-              >
+              <el-table v-else :data="assetStats" stripe style="width: 100%" max-height="400">
                 <el-table-column prop="assetName" label="資產名稱" min-width="150" fixed>
                   <template #default="{ row }">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <i :class="row.assetType === 'SPOT' ? 'fas fa-desktop' : 'fas fa-chair'" 
-                         :style="{ color: row.assetType === 'SPOT' ? '#409eff' : '#e6a23c' }"></i>
+                    <div style="display: flex; align-items: center; gap: 8px">
+                      <i
+                        :class="row.assetType === 'SPOT' ? 'fas fa-desktop' : 'fas fa-chair'"
+                        :style="{ color: row.assetType === 'SPOT' ? '#409eff' : '#e6a23c' }"
+                      ></i>
                       <span>{{ row.assetName || '未知資產#' + row.assetId }}</span>
                     </div>
                   </template>
@@ -570,7 +569,11 @@ onMounted(() => {
 
                 <el-table-column label="維修次數" width="100" align="center">
                   <template #default="{ row }">
-                    <el-tag :type="row.repairCount > 0 ? 'danger' : 'info'" effect="light" size="small">
+                    <el-tag
+                      :type="row.repairCount > 0 ? 'danger' : 'info'"
+                      effect="light"
+                      size="small"
+                    >
                       {{ row.repairCount || 0 }}
                     </el-tag>
                   </template>
@@ -586,7 +589,11 @@ onMounted(() => {
 
                 <el-table-column label="未結案" width="90" align="center">
                   <template #default="{ row }">
-                    <el-tag :type="row.openCount > 0 ? 'warning' : 'success'" effect="plain" size="small">
+                    <el-tag
+                      :type="row.openCount > 0 ? 'warning' : 'success'"
+                      effect="plain"
+                      size="small"
+                    >
                       {{ row.openCount || 0 }}
                     </el-tag>
                   </template>
@@ -594,13 +601,13 @@ onMounted(() => {
 
                 <el-table-column label="妥善率" width="140" align="center">
                   <template #default="{ row }">
-                    <el-progress 
-                      :percentage="Math.round((row.availability || 0) * 100)" 
+                    <el-progress
+                      :percentage="Math.round((row.availability || 0) * 100)"
                       :status="getAvailabilityStatus(row.availability)"
                       :stroke-width="10"
-                      style="width: 100px; display: inline-block;"
+                      style="width: 100px; display: inline-block"
                     />
-                    <span style="margin-left: 8px; font-size: 12px; color: #606266;">
+                    <span style="margin-left: 8px; font-size: 12px; color: #606266">
                       {{ formatPercent(row.availability) }}
                     </span>
                   </template>
@@ -608,7 +615,12 @@ onMounted(() => {
 
                 <el-table-column label="故障率(/天)" width="110" align="center">
                   <template #default="{ row }">
-                    <span :style="{ color: row.failureRatePerDay > 0.5 ? '#f56c6c' : '#67c23a', fontWeight: 'bold' }">
+                    <span
+                      :style="{
+                        color: row.failureRatePerDay > 0.5 ? '#f56c6c' : '#67c23a',
+                        fontWeight: 'bold',
+                      }"
+                    >
                       {{ formatRate(row.failureRatePerDay) }}
                     </span>
                   </template>
@@ -616,8 +628,13 @@ onMounted(() => {
 
                 <el-table-column label="維修率" width="100" align="center">
                   <template #default="{ row }">
-                    <el-tag :type="row.repairRate >= 1 ? 'success' : row.repairRate > 0 ? 'warning' : 'info'" 
-                            effect="plain" size="small">
+                    <el-tag
+                      :type="
+                        row.repairRate >= 1 ? 'success' : row.repairRate > 0 ? 'warning' : 'info'
+                      "
+                      effect="plain"
+                      size="small"
+                    >
                       {{ formatPercent(row.repairRate) }}
                     </el-tag>
                   </template>
@@ -625,7 +642,7 @@ onMounted(() => {
 
                 <el-table-column label="停機時間" width="100" align="center">
                   <template #default="{ row }">
-                    <span style="color: #909399; font-size: 12px;">
+                    <span style="color: #909399; font-size: 12px">
                       {{ row.downtimeMinutes || 0 }} 分鐘
                     </span>
                   </template>
@@ -707,37 +724,43 @@ onMounted(() => {
                     <!-- 椅子維修 -->
                     <div v-if="row.seatsId" class="target-cell">
                       <div class="target-main">
-                        <i class="fas fa-chair" style="color: #e6a23c;"></i>
+                        <i class="fas fa-chair" style="color: #e6a23c"></i>
                         <span>椅子 #{{ row.seatsId }}</span>
                       </div>
                       <div v-if="row.seat && row.seat.spotId" class="target-station">
-                        <span 
-                          class="station-link" 
-                          @click="showLocationMap(
-                            row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`,
-                            row.rentalSpot ? row.rentalSpot.latitude : null,
-                            row.rentalSpot ? row.rentalSpot.longitude : null
-                          )"
+                        <span
+                          class="station-link"
+                          @click="
+                            showLocationMap(
+                              row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`,
+                              row.rentalSpot ? row.rentalSpot.latitude : null,
+                              row.rentalSpot ? row.rentalSpot.longitude : null,
+                            )
+                          "
                         >
                           <i class="fas fa-map-marker-alt mr-1"></i>
-                          {{ row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}` }}
+                          {{
+                            row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`
+                          }}
                         </span>
                       </div>
                     </div>
                     <!-- 機台維修 -->
                     <div v-else class="target-cell">
                       <div class="target-main">
-                        <i class="fas fa-desktop" style="color: #409eff;"></i>
+                        <i class="fas fa-desktop" style="color: #409eff"></i>
                         <span>機台 #{{ row.spotId }}</span>
                       </div>
                       <div v-if="row.rentalSpot" class="target-station">
-                        <span 
-                          class="station-link" 
-                          @click="showLocationMap(
-                            row.rentalSpot.spotName,
-                            row.rentalSpot.latitude,
-                            row.rentalSpot.longitude
-                          )"
+                        <span
+                          class="station-link"
+                          @click="
+                            showLocationMap(
+                              row.rentalSpot.spotName,
+                              row.rentalSpot.latitude,
+                              row.rentalSpot.longitude,
+                            )
+                          "
                         >
                           <i class="fas fa-map-marker-alt mr-1"></i>
                           {{ row.rentalSpot.spotName }}
@@ -944,6 +967,8 @@ onMounted(() => {
       :title="`工單 #${currentLogTicketId}｜歷程`"
       width="760px"
       destroy-on-close
+      append-to-body
+      align-center
     >
       <TicketTimeline v-if="currentLogTicketId" :ticketId="currentLogTicketId" />
     </el-dialog>
@@ -959,7 +984,9 @@ onMounted(() => {
     >
       <template #header>
         <div class="dialog-header">
-          <span class="dialog-icon"><i class="fas fa-check-circle" style="color: #67c23a; font-size: 24px;"></i></span>
+          <span class="dialog-icon"
+            ><i class="fas fa-check-circle" style="color: #67c23a; font-size: 24px"></i
+          ></span>
           <span class="dialog-title">工單結案確認</span>
         </div>
       </template>

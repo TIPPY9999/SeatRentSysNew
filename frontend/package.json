@@ -24,13 +24,15 @@
     "@tsparticles/vue3": "^3.0.1",
     "apexcharts": "^5.3.6",
     "axios": "^1.13.2",
+    "echarts": "^6.0.0",
     "element-plus": "^2.13.1",
     "flatpickr": "^4.6.13",
     "fullcalendar": "^6.1.20",
     "pinia": "^3.0.4",
     "sweetalert2": "^11.26.17",
     "vue": "^3.5.25",
-    "vue-router": "^4.6.3"
+    "vue-router": "^4.6.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.3",

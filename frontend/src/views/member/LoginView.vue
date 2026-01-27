@@ -76,7 +76,6 @@ const login = async () => {
         memInvoice: res.data.memInvoice,
       })
 
-
       //  [+] 將會員資料存入 localStorage，實現持久化登入
       localStorage.setItem('member_user', JSON.stringify(res.data))
 
@@ -99,7 +98,7 @@ const login = async () => {
     }
 
     // =========================
-    // 管理員登入
+    // 管理員登入 (最簡化修正版)
     // =========================
     const res = await axios.post(
       'http://localhost:8080/login/admin',
@@ -108,46 +107,39 @@ const login = async () => {
         admPassword: password.value,
       },
       {
-        withCredentials: true, // 如果後端有用 Session/Cookie 驗證，這行保留最安全
+        withCredentials: true,
       },
     )
 
-    /**
-     *  token 儲存（統一 localStorage）
-     * - 若後端有回 token 就用，沒有就給臨時值
-     */
+    // 1. 只清掉「會員」的資料，不要用 clear()
+    localStorage.removeItem('member_user')
+    memberAuthStore.clearMemberLogin()
+
+    // 2. 存入管理員 Token 與資料
     const token = res.data?.token || 'admin-login-ok'
     localStorage.setItem('token', token)
 
-    /**
-     *  admin 儲存（統一 localStorage + Pinia）
-     * - router/index.js 的後台守衛會檢查 localStorage.admin 是否存在
-     * - AdminLayout 會顯示 adminAuthStore.admin.name/username
-     * 所以：Pinia + localStorage 兩邊都要存
-     */
     const adminData = {
       username: res.data?.admUsername,
       name: res.data?.admName,
       role: res.data?.admRole,
     }
 
-    memberAuthStore.clearMemberLogin()
-    localStorage.removeItem('member_user')
-
+    // 3. 同步寫入 Pinia 和 LocalStorage
     adminAuthStore.setAdmin(adminData)
     localStorage.setItem('admin', JSON.stringify(adminData))
 
-    // 成功提示
+    // 4. 成功提示
     await Swal.fire({
       icon: 'success',
       title: '管理員登入成功',
       text: '歡迎回來！',
       showConfirmButton: false,
-      timer: 1200,
+      timer: 1000,
     })
 
     //  進後台（replace 避免回上一頁又回到登入頁）
-    router.push('/')
+    router.push('/admin')
   } catch (err) {
     console.error(err)
 
@@ -209,6 +201,12 @@ const particlesOptions = {
 const goRegister = () => {
   router.push('/register')
 }
+
+const loginWithGoogle = () => {
+  // 加上時間戳記 t=${Date.now()} 確保每次請求都是新的，不被瀏覽器緩存網址
+  const googleLoginUrl = `http://localhost:8080/oauth2/authorization/google?prompt=select_account&t=${Date.now()}`
+  window.location.href = googleLoginUrl
+}
 </script>
 
 <template>
@@ -260,14 +258,29 @@ const goRegister = () => {
               />
             </div>
 
-            <div
-              v-if="loginType === 'member'"
-              class="register-link"
-            >
+            <div v-if="loginType === 'member'" class="register-link">
               <span @click="goRegister">註冊會員</span>
             </div>
 
+            <div class="google-login-section">
+              <div class="divider">
+                <span>或使用第三方登入</span>
+              </div>
+
+              <button type="button" class="btn-google" @click="loginWithGoogle">
+                <img
+                  src="https://developers.google.com/static/identity/images/g-logo.png"
+                  alt="Google"
+                />
+                使用 Google 帳號登入
+              </button>
+            </div>
+
             <button type="submit" class="btn btn-primary btn-block">登入</button>
+            <div class="back-to-home" @click="router.push('/')">
+              <el-icon><ArrowLeft /></el-icon>
+              <span>返回首頁</span>
+            </div>
           </form>
         </div>
       </div>
@@ -276,6 +289,7 @@ const goRegister = () => {
 </template>
 
 <style scoped>
+/* ========== 登入頁面主容器 ========== */
 .login-page {
   position: relative;
   height: 100vh;
@@ -283,6 +297,7 @@ const goRegister = () => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  background: linear-gradient(135deg, #9db8d4 0%, #8aa5c1 100%);
 }
 
 /* 粒子背景：最底層 */
@@ -292,48 +307,226 @@ const goRegister = () => {
   z-index: 0;
 }
 
-/* 登入框：浮在上面 */
+/* ========== 登入框：Glassmorphism 風格 ========== */
 .login-box {
-  width: 360px;
+  width: 400px;
   position: relative;
   z-index: 10;
 }
 
+.login-box .card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.login-box .card-header {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  padding: 24px;
+  border-bottom: none;
+}
+
+.login-box .card-header h1 {
+  color: #ffffff;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.login-box .card-body {
+  padding: 28px;
+}
+
+/* ========== 登入切換按鈕 ========== */
 .login-switch {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 15px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .login-switch button {
-  padding: 6px 16px;
-  border: 1px solid #ccc;
-  background-color: #f3f4f6;
+  padding: 10px 24px;
+  border: 2px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #475569;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.login-switch button:hover {
+  background-color: #e2e8f0;
+  border-color: #cbd5e1;
 }
 
 .login-switch button.active {
-  background-color: #007bff;
-  color: #fff;
-  border-color: #007bff;
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  color: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+/* ========== 輸入欄位 ========== */
+.login-box .input-group {
+  margin-bottom: 16px;
+}
+
+.login-box .form-control {
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  background: #f8fafc;
+}
+
+.login-box .form-control:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+  outline: none;
+  background: #ffffff;
+}
+
+.login-box .form-control::placeholder {
+  color: #94a3b8;
+}
+
+/* ========== 註冊連結 ========== */
 .register-link {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 
 .register-link span {
-  font-size: 13px;
-  color: #007bff;
+  font-size: 14px;
+  color: #3b82f6;
   cursor: pointer;
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
 .register-link span:hover {
+  color: #1d4ed8;
   text-decoration: underline;
+}
+
+/* ========== 登入按鈕 (來自 HEAD) ========== */
+.login-box .btn-primary {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.login-box .btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.login-box .btn-primary:active {
+  transform: translateY(1px);
+}
+
+/* ========== Google 登入與返回首頁  ========== */
+.back-to-home {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 15px;
+  /* 與登入按鈕拉開距離 */
+  padding-top: 10px;
+  border-top: 1px inset #f0f0f0; /* 加一條淡淡的分隔線 */
+  color: #6c757d;
+  /* 灰色，不搶走登入按鈕的焦點 */
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s;
+  gap: 5px;
+}
+
+.back-to-home:hover {
+  color: #007bff;
+  /* 懸浮時變回藍色 */
+  text-decoration: underline;
+}
+
+/* 確保 el-icon 在文字中間 */
+.back-to-home .el-icon {
+  font-size: 12px;
+}
+
+.google-login-section {
+  margin-top: 20px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  color: #888;
+  font-size: 12px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #eee;
+}
+
+.divider span {
+  padding: 0 10px;
+}
+
+.btn-google {
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: #ffffff;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  color: #3c4043;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-google img {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-google:hover {
+  background-color: #f8f9fa;
+  box-shadow:
+    0 1px 2px 0 rgba(60, 64, 67, 0.3),
+    0 1px 3px 1px rgba(60, 64, 67, 0.15);
 }
 </style>

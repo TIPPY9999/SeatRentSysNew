@@ -1,6 +1,7 @@
 package com.example.backend.controller.rec;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.model.rec.RecRent;
 import com.example.backend.model.rec.RentDetails;
+import com.example.backend.model.spot.Seat;
 import com.example.backend.repository.rec.RecRentRepository;
 import com.example.backend.service.rec.RecDetailMgnService;
+import com.example.backend.service.spot.SeatService;
 
 import jakarta.transaction.Transactional;
 
@@ -31,15 +34,19 @@ import jakarta.transaction.Transactional;
 @Transactional
 public class RecRentController {
 
-    @Autowired
+    @Autowired // SQL view 的查詢
     private RecDetailMgnService recDetailService;
 
-    @Autowired
+    @Autowired // 實際的訂單TABLE
     private RecRentRepository rentRepos;
+
+    @Autowired // 座位 TABLE 的操作服務
+    private SeatService seatService;
 
     // 1. 查詢全部或依條件搜尋
     @GetMapping
     public List<RentDetails> searchRents(
+            @RequestParam(required = false) Integer recSeqId,
             @RequestParam(required = false) String recId,
             @RequestParam(required = false) Integer memId,
             @RequestParam(required = false) String memName,
@@ -56,7 +63,8 @@ public class RecRentController {
         }
 
         // 否則，呼叫 search service
-        return recDetailService.search(recId, memId, memName, recStatus, spotId, spotName, rentDate, returnDate);
+        return recDetailService.search(recSeqId, recId, memId, memName, recStatus, spotId, spotName, rentDate,
+                returnDate);
     }
 
     // 2. 依訂單PK (recSeqId) 查詢
@@ -73,23 +81,123 @@ public class RecRentController {
 
         // recSeqId 會由資料庫自動產生
         // recId 會由資料庫自動計算
+
+        // 說明: 設定租借開始時間為當前伺服器時間，以確保資料的準確性並防止null值。
+        recRent.setRecRentDT2(LocalDateTime.now());
+
         RecRent savedRent = rentRepos.save(recRent);
+
+        // 說明: 租借訂單建立成功後，同步更新該座位的 spotId 為 0 (表示已被租用，不在任何可選地點上)
+        // 由於整個 Controller 已標記為 @Transactional，此操作將與上面的訂單新增在同一個資料庫交易中，確保資料一致性。
+        Integer seatId = Integer.valueOf(savedRent.getSeatsId());
+        if (seatId != null) {
+            Seat seatToUpdate = seatService.selectById(seatId);
+            if (seatToUpdate != null) {
+                seatToUpdate.setSpotId(null);
+                seatService.update(seatToUpdate);
+            }
+        }
 
         // 4. 返回 201 Created 狀態碼以及已儲存的訂單物件
         return new ResponseEntity<>(savedRent, HttpStatus.CREATED);
     }
 
-    // 5. 更新訂單
-    @PutMapping("/{id}")
-    public RecRent update(@PathVariable String id, @RequestBody RecRent recRent) {
-        // 確保 ID 一致
-        recRent.setRecId(id);
-        return rentRepos.save(recRent);
+    // 5. 依訂單業務ID (recId) 更新
+    @PutMapping("/{recId}")
+    public ResponseEntity<RecRent> update(@PathVariable String recId, @RequestBody RecRent updatedRentData) {
+        // 使用 recId 從資料庫中找到對應的 RecRent 實體
+        RecRent existingRent = rentRepos.findByRecId(recId);
+
+        // 如果訂單不存在，返回 404 Not Found
+        if (existingRent == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        // 說明: 為確保資料一致性與安全性，僅更新允許修改的欄位。
+        // 訂單成立時的核心資訊，如會員ID、座位ID、租借場地與租借時間，在此方法中不應被修改。
+        // existingRent.setMemId(updatedRentData.getMemId()); // 不應修改
+        // existingRent.setSeatsId(updatedRentData.getSeatsId()); // 不應修改
+        // existingRent.setSpotIdRent(updatedRentData.getSpotIdRent()); // 不應修改
+        // existingRent.setRecRentDT2(updatedRentData.getRecRentDT2()); //
+        // 移除此行可修復原始問題，租借時間不應修改
+
+        // 說明: 更新還車場地，僅在前端提供時更新
+        if (updatedRentData.getSpotIdReturn() != null) {
+            existingRent.setSpotIdReturn(updatedRentData.getSpotIdReturn());
+        }
+
+        // 說明: 更新訂單狀態
+        String newStatus = updatedRentData.getRecStatus();
+        if (newStatus != null) {
+            existingRent.setRecStatus(newStatus);
+        }
+
+        // 說明: 更新歸還時間。
+        // 邏輯: 1. 如果前端明確提供了歸還時間，就使用它。
+        // 2. 如果前端沒有提供歸還時間，但將狀態更新為「已歸還」(假設值為"2")，則自動將歸還時間設為當前伺服器時間。
+        if (updatedRentData.getRecReturnDT2() != null) {
+            existingRent.setRecReturnDT2(updatedRentData.getRecReturnDT2());
+        } else if ("2".equals(newStatus)) { // 請注意: "2" 是假設的「已歸還」狀態代碼，請依據您系統的實際定義修改。
+            existingRent.setRecReturnDT2(LocalDateTime.now());
+        }
+
+        // 說明: 更新其餘可變動的訂單資訊，僅在前端提供非null值時才更新
+        if (updatedRentData.getRecUsageDT2() != null) {
+            existingRent.setRecUsageDT2(updatedRentData.getRecUsageDT2());
+        }
+        if (updatedRentData.getRecPrice() != null) {
+            existingRent.setRecPrice(updatedRentData.getRecPrice());
+        }
+        if (updatedRentData.getRecRequestPay() != null) {
+            existingRent.setRecRequestPay(updatedRentData.getRecRequestPay());
+        }
+        if (updatedRentData.getRecPayment() != null) {
+            existingRent.setRecPayment(updatedRentData.getRecPayment());
+        }
+        if (updatedRentData.getRecPayBy() != null) {
+            existingRent.setRecPayBy(updatedRentData.getRecPayBy());
+        }
+        if (updatedRentData.getRecInvoice() != null) {
+            existingRent.setRecInvoice(updatedRentData.getRecInvoice());
+        }
+        if (updatedRentData.getRecCarrier() != null) {
+            existingRent.setRecCarrier(updatedRentData.getRecCarrier());
+        }
+        if (updatedRentData.getRecViolatInt() != null) {
+            existingRent.setRecViolatInt(updatedRentData.getRecViolatInt());
+        }
+        // 注意：任何 RecRent 中存在但前端未提供的欄位，在此處將保持其在資料庫中的原始值
+
+        // 保存更新後的訂單物件，JPA 將會執行 UPDATE 操作
+        RecRent savedRent = rentRepos.save(existingRent);
+
+        // 說明: 如果訂單狀態被更新為「已歸還」(假設代碼為 "2")，則同步更新該座位的地點(spotId)為歸還時的地點。
+        // 此操作同樣在 @Transactional 的保護下，確保與訂單更新的資料一致性。
+        Integer newSpotId = updatedRentData.getSpotIdReturn();
+        if ("已完成".equals(newStatus) && newSpotId != null) {
+            Integer seatId = Integer.valueOf(savedRent.getSeatsId());
+            if (seatId != null) {
+                Seat seatToUpdate = seatService.selectById(seatId);
+                if (seatToUpdate != null) {
+                    seatToUpdate.setSpotId(newSpotId);
+                    seatService.update(seatToUpdate);
+                }
+            }
+        }
+
+        // 返回 200 OK 以及更新後的訂單物件
+        return new ResponseEntity<>(savedRent, HttpStatus.OK);
     }
 
-    // 6. 刪除訂單`
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable Integer id) {
-        rentRepos.deleteById(id);
+    // 6. 依訂單業務ID (recId) 刪除
+    @DeleteMapping("/{recId}")
+    public ResponseEntity<Void> delete(@PathVariable String recId) { // 檢查訂單是否存在
+        if (recDetailService.getRecById(recId) == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        // 呼叫 repository 依 recId 刪除
+        rentRepos.deleteByRecId(recId);
+        // 返回 204 No Content 表示成功刪除
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

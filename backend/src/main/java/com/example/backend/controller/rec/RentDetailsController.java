@@ -26,7 +26,7 @@ public class RentDetailsController {
         return rentDetailsRepository.findAll();
     }
 
-    // 2. 依 ID 搜尋
+    // 2. 依 recID 搜尋
     @GetMapping("/{id}")
     public RentDetails getById(@PathVariable String id) {
         return rentDetailsRepository.findById(id).orElse(null);

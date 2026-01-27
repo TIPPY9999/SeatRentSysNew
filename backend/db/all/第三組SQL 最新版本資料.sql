@@ -401,7 +401,7 @@ CREATE INDEX idx_redemption_time ON redemption_log(redeemTime);
 --============子桓 TABLE ver.20260121============
 CREATE TABLE recRent
 (
-    recSeqId INT IDENTITY(1,1) NOT NULL,
+    recSeqId INT IDENTITY(11736900,1) NOT NULL,
     --  隱藏的流水號，負責自動遞增
     recId AS ('R' + RIGHT('000000000' + CAST(recSeqId AS VARCHAR(9)), 9)) PERSISTED,-- 'R' + 補零至 9 位數
     memId INT NOT NULL,
@@ -545,6 +545,22 @@ VALUES
 INSERT INTO dbo.seats
     (seatsName, seatsType, spotId, updatedAt, serialNumber, createdAt)
 VALUES
+    (N'置物椅-A01', N'E椅', 11, SYSDATETIME(), 'SN-2026000', DEFAULT),
+    (N'置物椅-A01', N'E椅', 11, SYSDATETIME(), 'SN-2026001', DEFAULT),
+    (N'置物椅-A02', N'E椅', 11, SYSDATETIME(), 'SN-2026002', DEFAULT),
+    (N'置物椅-B01', N'E椅', 12, SYSDATETIME(), 'SN-2026003', DEFAULT),
+    (N'置物椅-B02', N'E椅', 12, SYSDATETIME(), 'SN-2026004', DEFAULT),
+    (N'基本椅-C01', N'B椅', 13, SYSDATETIME(), 'SN-2026005', DEFAULT),
+    (N'基本椅-C02', N'B椅', 13, SYSDATETIME(), 'SN-2026006', DEFAULT),
+    (N'置物椅-D01', N'E椅', 14, SYSDATETIME(), 'SN-2026007', DEFAULT),
+    (N'置物椅-D02', N'E椅', 14, SYSDATETIME(), 'SN-2026008', DEFAULT),
+    (N'基本椅-E01', N'E椅', 15, SYSDATETIME(), 'SN-2026009', DEFAULT),
+    (N'基本椅-F01', N'B椅', 16, SYSDATETIME(), 'SN-2026010', DEFAULT),
+    (N'基本椅-G01', N'B椅', 17, SYSDATETIME(), 'SN-2026011', DEFAULT),
+    (N'置物椅-H01', N'E椅', 18, SYSDATETIME(), 'SN-2026012', DEFAULT),
+    (N'置物椅-I01', N'E椅', 19, SYSDATETIME(), 'SN-2026013', DEFAULT),
+    (N'置物椅-J01', N'E椅', 20, SYSDATETIME(), 'SN-2026014', DEFAULT),
+    (N'置物椅-A01', N'E椅', 1, SYSDATETIME(), 'SN-2025000', DEFAULT),
     (N'置物椅-A01', N'E椅', 1, SYSDATETIME(), 'SN-2025001', DEFAULT),
     (N'置物椅-A02', N'E椅', 1, SYSDATETIME(), 'SN-2025002', DEFAULT),
     (N'置物椅-B01', N'E椅', 2, SYSDATETIME(), 'SN-2025003', DEFAULT),

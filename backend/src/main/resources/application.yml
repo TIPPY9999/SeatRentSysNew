@@ -12,10 +12,22 @@ spring:
   application:
     name: seat-rent-backend
 
+  # --- 新增 Google OAuth2 設定 ---
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: 231325237264-ngpc81gmkl8pop0nq8jlgv0g63pj9fjg.apps.googleusercontent.com
+            client-secret: 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
+            scope:
+              - email
+              - profile
+
   datasource:
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSysNew;encrypt=false;trustServerCertificate=true
-    username: kang
+    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSys;encrypt=false;trustServerCertificate=true
+    username: tippy
     password: 1234
 
   jpa:

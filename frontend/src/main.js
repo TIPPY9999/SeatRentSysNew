@@ -41,25 +41,38 @@ axios.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const url = error.config?.url || ''
+    const currentPath = window.location.hash || window.location.pathname // 取得當前路徑
 
-    // 只處理「非登入 API」＋「已登入狀態」的 401
+    // 修改邏輯：
+    // 1. 排除登入相關請求
+    // 2. 只有在「非首頁」且「非登入頁」發生 401 時才強行踢出
+    // 3. 增加對 /member/profile 的容錯，避免剛進首頁就噴錯
     if (
       status === 401 &&
-      !url.includes('/login') && // 排除登入請求
-      localStorage.getItem('admin') && // 確定曾經登入
+      !url.includes('/login') &&
+      !url.includes('/oauth2') &&
       !isAuthExpiredDialogShowing
     ) {
+      // 如果是在首頁 (#/)，通常是靜態展示，我們就默默清理掉過期資訊就好，不跳彈窗
+      if (currentPath === '#/' || currentPath === '/') {
+        localStorage.removeItem('token')
+        localStorage.removeItem('admin')
+        localStorage.removeItem('member_user')
+        return Promise.reject(error)
+      }
+
+      // 只有在試圖進入「管理後台」或「個人設定」等深層頁面時，才跳出警示
       isAuthExpiredDialogShowing = true
 
-      ElMessageBox.alert('登入已過期，請重新登入', '登入狀態失效', {
+      ElMessageBox.alert('登入已過期或權限不足，請重新登入', '存取受限', {
         confirmButtonText: '確認',
         type: 'warning',
         showClose: false,
         closeOnClickModal: false,
       }).then(() => {
         isAuthExpiredDialogShowing = false
-        localStorage.removeItem('token')
-        localStorage.removeItem('admin')
+        // 清理所有身分緩存
+        localStorage.clear() 
         router.push('/login')
       })
     }
