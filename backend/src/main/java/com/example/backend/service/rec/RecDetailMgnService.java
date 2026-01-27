@@ -1,6 +1,7 @@
 package com.example.backend.service.rec;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,8 @@ import com.example.backend.model.rec.RentDetails;
 import com.example.backend.repository.rec.RecRentRepository;
 import com.example.backend.repository.rec.RentDetailsRepository;
 import com.example.backend.repository.rec.RentDetailsSpecs;
+import com.example.backend.dto.rec.MonthlyOrderCountDTO;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -78,5 +81,18 @@ public class RecDetailMgnService {
     public void insertOrUpdateRec(RecRent recRent) {
         recRepos.save(recRent);
 
+    }
+
+    // 呼叫Repository取得原始統計數據，並在服務層將其映射為DTO列表
+    public List<MonthlyOrderCountDTO> getMonthlyOrderCounts(LocalDate startDate, LocalDate endDate) {
+        // 將LocalDate轉換為LocalDateTime以符合Repository查詢需求
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+        List<Object[]> results = detailRepos.findMonthlyOrderCounts(startDateTime, endDateTime);
+        return results.stream().map(row -> new MonthlyOrderCountDTO(
+                ((Number) row[0]).intValue(), // 年份
+                ((Number) row[1]).intValue(), // 月份
+                ((Number) row[2]).longValue() // 訂單計數
+        )).collect(Collectors.toList());
     }
 }
