@@ -58,13 +58,6 @@ const routes = [
         component: MemberProfileView,
       },
 
-      // 會員身份證頁面
-      {
-        path: 'user-info',
-        name: 'member-user-info',
-        component: () => import('@/views/rec/IdHoldingPage.vue'),
-      },
-
       // 租借頁面
       {
         path: 'rent/:action?',
@@ -84,9 +77,14 @@ const routes = [
       },
 
       {
-        path: '/payment/order',
+        path: 'payment/order',
         name: 'payment-order',
         component: () => import('@/views/ecpay/PaymentViewOrder.vue'),
+      },
+      {
+        path: 'claims',
+        name: 'claims',
+        component: () => import('@/views/rec/RightClaimPage.vue'),
       },
 
 

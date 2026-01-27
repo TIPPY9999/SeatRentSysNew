@@ -167,12 +167,11 @@ const logout = () => {
         </li>
 
         <li class="menu-item" @click="router.push('')">
-            <span class="icon-wrapper">
-              <el-icon><StarFilled /></el-icon>
-            </span>
-            <span class="menu-text">支持我們</span>
+          <span class="icon-wrapper">
+            <el-icon><StarFilled /></el-icon>
+          </span>
+          <span class="menu-text">支持我們</span>
         </li>
-
         <li class="menu-item" @click="logout">
           <span class="icon-wrapper">
             <el-icon><TopLeft /></el-icon>
@@ -180,7 +179,6 @@ const logout = () => {
           <span class="menu-text">登出</span>
         </li>
       </ul>
-
       <!-- ✅ 管理員快捷入口：保留你原本邏輯 -->
       <div class="menu-admin" v-if="adminAuthStore.isLogin">
         <router-link to="/admin" class="member-info">
@@ -211,6 +209,19 @@ const logout = () => {
       <router-view />
     </main>
   </div>
+  <!-- Footer -->
+  <footer class="main-footer">
+    <div class="footer-links">
+      <a href="/claims">隱私權政策</a> | <a href="#">個資告知書</a> | <a href="#">使用條款</a> |
+      <a href="#">服務條款</a> |   © 2026 Have@Seat及其關係企業版權所有。
+    </div>
+    <div class="footer-copyright">
+      
+      Have@Seat其等之標誌以及本網站中其他Have@Seat產品及服務名稱及標誌，皆為Have@Seat
+      Inc.
+      之商標或註冊商標。本網站中提及之其他公司名稱、產品名稱、服務名稱及標誌，分別為其所有權人之商標。
+    </div>
+  </footer>
 </template>
 
 <style scoped>
@@ -223,14 +234,16 @@ const logout = () => {
 .main-content-area {
   flex-grow: 1;
   width: 100%;
-  height: 100%;
+  height: 91vh;
   position: relative;
   overflow-y: auto; /* 如果內容超長，允許滾動 */
+  display: flex;
+  flex-direction: column;
 }
 /* --- 2. 主佈局 --- */
 .page-wrapper {
   display: flex;
-  height: 100vh; /* 改為 100vh 佔滿整個視窗高度 */
+  /* height: 100vh; /*改為 100vh 佔滿整個視窗高度 */
   width: 100%;
   background-color: #f4f6f9;
 }
@@ -244,6 +257,7 @@ const logout = () => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  height: auto;
 }
 
 .page-wrapper.sidebar-collapsed .sidebar {
@@ -352,5 +366,35 @@ const logout = () => {
 .toggle-btn:hover {
   background-color: #ecf5ff;
   color: #409eff;
+}
+
+/* --- 5. Footer --- */
+.main-footer {
+  flex-shrink: 0;
+  background-color: #ffffff;
+  padding: 2px 0px;
+  border-top: 1px solid #dee2e6;
+  color: #6c757d;
+  font-size: 0.8rem;
+  text-align: center;
+  margin-top: auto;
+}
+
+.footer-links {
+  margin-bottom: 1px;
+}
+
+.footer-links a {
+  color: #6c757d;
+  text-decoration: none;
+  margin: 0 1px;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+.footer-copyright {
+  line-height: 1.5;
 }
 </style>
