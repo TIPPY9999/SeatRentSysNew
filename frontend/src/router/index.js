@@ -102,6 +102,11 @@ const routes = [
         name: 'snake-game',
         component: SnakeGame,
       },
+      {
+        path: '/redemption-history',
+        name: 'redemption-history',
+        component: () => import('@/views/merchantAndCoupon/RedemptionHistory.vue'),
+      },
       // 訂單確認與付款頁
       {
         path: '/payment-checkout/:recId',
