@@ -12,17 +12,18 @@
           <i class="bi bi-controller"></i>
           蛇蛇賺點數
         </h1>
-
-        <div class="login-status">
-          <span v-if="memberId" class="status-badge logged-in">
-            <i class="bi bi-person-check"></i>
-            會員 {{ memberId }}
-          </span>
-          <router-link v-else to="/login" class="status-badge not-logged">
-            <i class="bi bi-box-arrow-in-right"></i>
-            登入兌換
-          </router-link>
-        </div>
+            <span class="badge bg-warning text-dark px-3 py-2">
+              <template v-if="memberId">
+                <i class="bi bi-person-fill me-1"></i>{{ memName }} 
+                <span class="mx-2 opacity-50">|</span>
+                <i class="bi bi-coin me-1"></i>{{ currentPoints }} Pts
+                <span class="mx-2 opacity-50">|</span>
+                ID: {{ memberId }}
+              </template>
+              <template v-else>
+                <router-link to="/login" class="text-dark text-decoration-none">⚠️ 未登入 (點我登入)</router-link>
+              </template>
+            </span>
       </div>
 
       <!-- KPI -->
@@ -144,7 +145,7 @@
         </div>
         <ul class="rules-list">
           <li>方向鍵控制移動，撞牆或撞到自己即結束。</li>
-          <li>吃到食物獲得 20 分，蛇身變長。</li>
+          <li>吃到食物獲得 200 分，蛇身變長。</li>
           <li>每累積 <strong>100 分</strong> 可兌換 <strong>1 點</strong>（無條件捨去）。</li>
           <li>領取點數前請先登入會員帳號。</li>
           <li>
@@ -161,8 +162,14 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Swal from 'sweetalert2'
+import { useMemberAuthStore } from '@/stores/memberAuth'; 
 
-const router = useRouter()
+const router = useRouter();
+const memberAuthStore = useMemberAuthStore();
+
+const memberId = computed(() => memberAuthStore.member?.memId);
+const memName = computed(() => memberAuthStore.member?.memName || '訪客');
+const currentPoints = computed(() => memberAuthStore.member?.memPoints || 0);
 
 // =============================
 // 每日遊玩次數限制（整合自組員邏輯，但不破壞你原本流程）
@@ -223,8 +230,7 @@ const isGameRunning = ref(false)
 const gameOver = ref(false)
 const isUploaded = ref(false)
 
-// 會員資料：支援兩種 key（保留你原本邏輯，避免耦合其他 store）
-const memberId = ref(localStorage.getItem('memberId') || localStorage.getItem('memId'))
+
 
 // ===== UI ONLY（不影響核心規則） =====
 const displayScore = ref(0) // UI ONLY: 分數平滑顯示
@@ -351,7 +357,7 @@ const update = () => {
   snake.unshift(head)
 
   if (head.x === food.x && head.y === food.y) {
-    score.value += 20
+    score.value += 200
     // 每 100 分加速一次（核心規則不變）
     if (score.value % 100 === 0 && gameSpeed.value > 60) gameSpeed.value -= 15
     spawnFood()
@@ -440,52 +446,55 @@ const handleKeyDown = (e) => {
 }
 
 const uploadScore = async () => {
-  checkLoginStatus()
+  checkLoginStatus();
 
   if (!memberId.value) {
-    sessionStorage.setItem('pendingSnakeScore', String(score.value))
-
+    // 儲存目前分數到 Session，登入後可恢復
+    sessionStorage.setItem('pendingSnakeScore', score.value);
+    
     const result = await Swal.fire({
       title: '請先登入',
       text: `您獲得了 ${score.value} 分，登入後即可換取點數！`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: '前往登入',
-      cancelButtonText: '稍後再說',
-    })
+      confirmButtonText: '去登入',
+      cancelButtonText: '下次再說'
+    });
 
     if (result.isConfirmed) {
-      router.push({ path: '/login', query: { redirect: '/snake' } })
+      router.push({ path: '/login', query: { redirect: '/snake' } });
     }
-    return
+    return;
   }
 
-  const points = pointsEarned.value
-  if (points < 1) return
-
-  isRedeeming.value = true // UI ONLY
+  const points = Math.floor(score.value / 100);
+  
   try {
     const res = await axios.post('http://localhost:8080/api/game/add-points', {
       memberId: memberId.value,
-      points,
-    })
+      points: points
+    });
 
-    isUploaded.value = true
-    sessionStorage.removeItem('pendingSnakeScore')
+    isUploaded.value = true;
+    sessionStorage.removeItem('pendingSnakeScore');
 
+    
     await Swal.fire({
-      title: '兌換成功',
-      html: `已入帳 <strong>${res.data.addPoints}</strong> 點<br>目前帳戶總點數：<strong>${res.data.currentPoints}</strong>`,
-      icon: 'success',
-      confirmButtonText: '確定',
-    })
+      title: '兌換成功！',
+      text: `已入帳 ${res.data.addPoints} 點，目前帳戶總點數：${res.data.currentPoints}`,  
+      icon: 'success'
+    });
+
+    // ✅ 自動刷新全站點數
+    if (typeof memberAuthStore.refreshPoints === 'function') {
+      await memberAuthStore.refreshPoints();
+    }
   } catch (err) {
-    console.error('上傳失敗', err)
-    Swal.fire('系統錯誤', '無法連接到伺服器，請稍後再試', 'error')
-  } finally {
-    isRedeeming.value = false // UI ONLY
+    console.error("上傳失敗", err);
+    Swal.fire('系統錯誤', '無法連接到伺服器，請稍後再試', 'error');
+   
   }
-}
+};
 
 onMounted(() => {
   ctx = gameCanvas.value?.getContext('2d')

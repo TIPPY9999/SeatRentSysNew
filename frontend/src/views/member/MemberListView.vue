@@ -12,17 +12,6 @@ const members = ref([])
 const keyword = ref('')
 const loading = ref(false)
 
-<<<<<<< HEAD
-const fetchMembers = () => {
-  errorMsg.value = ''
-  axios
-    .get('http://localhost:8080/api/members')
-    .then((res) => {
-      members.value = res.data
-    })
-    .catch(() => {
-      errorMsg.value = '取得會員資料失敗'
-=======
 /**
  * 取得所有會員
  */
@@ -49,7 +38,6 @@ const fetchMembers = async () => {
       text: error.response?.data?.message || '取得會員資料失敗，請稍後再試',
       confirmButtonText: '確定',
       confirmButtonColor: '#f56c6c'
->>>>>>> 17c987d501511d1353cb54797a0b273d49ca1aba
     })
   } finally {
     loading.value = false
@@ -66,16 +54,10 @@ const searchMembers = async () => {
     return
   }
 
-<<<<<<< HEAD
-  axios
-    .get('http://localhost:8080/api/members/search', {
-      params: { keyword: keyword.value },
-=======
   loading.value = true
   try {
     const res = await axios.get('http://localhost:8080/api/members/search', {
       params: { keyword: keyword.value.trim() }
->>>>>>> 17c987d501511d1353cb54797a0b273d49ca1aba
     })
 
     members.value = res.data
@@ -111,13 +93,6 @@ const searchMembers = async () => {
   }
 }
 
-<<<<<<< HEAD
-const deleteMember = (memId) => {
-  if (!confirm('確定要刪除這個會員嗎？')) return
-  axios
-    .get('http://localhost:8080/api/members/delete', {
-      params: { memId },
-=======
 /**
  * 刪除會員（使用 SweetAlert2 確認對話框）
  */
@@ -149,7 +124,6 @@ const deleteMember = async (memId, memName) => {
   try {
     await axios.get('http://localhost:8080/api/members/delete', {
       params: { memId }
->>>>>>> 17c987d501511d1353cb54797a0b273d49ca1aba
     })
 
     // 成功提示

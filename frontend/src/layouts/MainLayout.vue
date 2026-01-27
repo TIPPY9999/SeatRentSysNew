@@ -149,17 +149,14 @@ const logout = () => {
             <span class="menu-text">小遊戲</span>
           </router-link>
         </li>
-<<<<<<< HEAD
         <li class="menu-item" v-if="memberAuthStore.isLogin">
-  <router-link to="/redemption-history" class="member-info">
-    <span class="icon-wrapper">
-      <el-icon><List /></el-icon> </span>
-    <span class="menu-text">兌換紀錄</span>
-  </router-link>
-</li>
-=======
+          <router-link to="/redemption-history" class="member-info">
+            <span class="icon-wrapper">
+              <el-icon><List /></el-icon> </span>
+            <span class="menu-text">兌換紀錄</span>
+          </router-link>
+        </li>
 
->>>>>>> 17c987d501511d1353cb54797a0b273d49ca1aba
         <li class="menu-item">
           <span class="icon-wrapper">
             <el-icon><MapLocation /></el-icon>

@@ -9,21 +9,6 @@ import Swal from 'sweetalert2'
 import LoginView from '@/views/member/LoginView.vue' // 登入頁
 import AdminLayout from '@/layouts/AdminLayout.vue' // 後臺主框架 (包含側邊欄與 Header)
 import AdminHomeView from '@/views/member/AdminHomeView.vue' // 後臺首頁(儀表板)
-<<<<<<< HEAD
-import MemberListView from '@/views/member/MemberListView.vue'
-import MemberEditView from '@/views/member/MemberEditView.vue'
-import MemberCreateView from '@/views/member/MemberCreateView.vue'
-import PaymentView from '@/views/ecpay/PaymentView.vue'
-import AdminListView from '@/views/member/AdminListView.vue'
-import AdminCreateView from '@/views/member/AdminCreateView.vue'
-import AdminEditView from '@/views/member/AdminEditView.vue'
-import MemberLayout from '@/layouts/MemberLayout.vue'
-import MemberProfileView from '@/views/member/MemberProfileView.vue'
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import MainLayout from '@/layouts/MainLayout.vue'
-import SponsorView from '@/views/ecpay/SponsorView.vue'
-import RedemptionHistory from '@/views/merchantAndCoupon/RedemptionHistory.vue'
-=======
 import MemberListView from '@/views/member/MemberListView.vue' // 會員列表
 import MemberEditView from '@/views/member/MemberEditView.vue' // 會員編輯
 import MemberCreateView from '@/views/member/MemberCreateView.vue' // 會員新增
@@ -35,7 +20,6 @@ import MemberLayout from '@/layouts/MemberLayout.vue' // 會員主框架
 import MemberProfileView from '@/views/member/MemberProfileView.vue' // 會員個人資料頁
 import AuthLayout from '@/layouts/AuthLayout.vue' // 認證相關頁面框架
 import MainLayout from '@/layouts/MainLayout.vue' // 前台主框架
->>>>>>> 17c987d501511d1353cb54797a0b273d49ca1aba
 
 /**
  * ==========================================
@@ -93,27 +77,6 @@ const routes = [
 
       // 將 'rec-rent-record' 路由重定向至帶有 action 參數的標準租借路由
       {
-<<<<<<< HEAD
-    path: '/mall',
-    name: 'coupon-mall',
-    component: CouponMall,
-  },
-  {
-    path: '/snake',
-    name: 'snake-game',
-    component: SnakeGame,
-  },
-  {
-    path: '/sponsor',
-    name: 'sponsor',
-    component: SponsorView,
-  },
-  {
-    path: '/redemption-history',
-    name: 'redemption-history',
-    component: RedemptionHistory,
-  },
-=======
         path: 'recordRoute',
         name: 'rec-rent-record',
         redirect: { name: 'rec-rent-user', params: { action: 'record' } },
@@ -145,7 +108,6 @@ const routes = [
         name: 'payment-checkout',
         component: () => import('@/views/ecpay/PaymentView.vue'),
       },
->>>>>>> 17c987d501511d1353cb54797a0b273d49ca1aba
     ],
   },
 

@@ -23,17 +23,11 @@ const member = reactive({
 const errorMsg = ref('')
 const successMsg = ref('')
 
-<<<<<<< HEAD
-const submitCreate = () => {
-  axios
-    .post('http://localhost:8080/api/members', {
-=======
 const submitCreate = async () => {
   try {
     //  endpoint 統一 /api/members
     const res = await axios.post('http://localhost:8080/api/members', {
       //  正確展開 member
->>>>>>> 17c987d501511d1353cb54797a0b273d49ca1aba
       ...member,
       memStatus: 1,
       memLevel: 1,
