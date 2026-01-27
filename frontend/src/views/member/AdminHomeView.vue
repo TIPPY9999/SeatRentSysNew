@@ -48,11 +48,11 @@ const fetchStats = async () => {
   try {
     // 並行請求所有數據
     const [spotsRes, seatsRes, membersRes, rentalsRes, ticketsRes] = await Promise.all([
-      axios.get('http://localhost:8080/spot/list'), // 租借點
-      axios.get('http://localhost:8080/seats'), // 椅子
-      axios.get('http://localhost:8080/api/members'), // 會員
-      axios.get('http://localhost:8080/rec-rent'), // 租借紀錄
-      axios.get('http://localhost:8080/api/maintenance/tickets/active'), // 維修工單
+      axios.get('/api/spot/list'), // 租借點
+      axios.get('/api/seats'), // 椅子 (同步修改為正確 API 路徑)
+      axios.get('/api/members'), // 會員
+      axios.get('/api/rec-rent'), // 租借紀錄
+      axios.get('/api/maintenance/tickets/active'), // 維修工單
     ])
 
     // 租借點數量
@@ -207,6 +207,8 @@ const moduleGroups = [
         </div>
       </div>
     </div>
+
+
 
     <!-- 統計卡片區 -->
     <div class="stats-grid">

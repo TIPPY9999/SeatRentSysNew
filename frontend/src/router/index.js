@@ -20,6 +20,8 @@ import MemberLayout from '@/layouts/MemberLayout.vue' // 會員主框架
 import MemberProfileView from '@/views/member/MemberProfileView.vue' // 會員個人資料頁
 import AuthLayout from '@/layouts/AuthLayout.vue' // 認證相關頁面框架
 import MainLayout from '@/layouts/MainLayout.vue' // 前台主框架
+import HomeView from '@/views/HomeView.vue' // 前台首頁
+
 
 /**
  * ==========================================
@@ -49,6 +51,11 @@ const routes = [
     name: 'entrance',
     component: MainLayout,
     children: [
+      {
+        path: '',
+        name: 'home',
+        component: HomeView,
+      },
       {
         path: 'SearchSpot',
         component: () => import('@/views/rec/RecRentUserSearchPage.vue'),
@@ -145,7 +152,7 @@ const routes = [
         component: AdminHomeView,
       },
 
-      // [整合] 據點與座位管理 (Spot & Seat)
+      // 據點與座位管理 (Spot & Seat)
       {
         path: 'spot/list',
         name: 'spot-list',
@@ -172,11 +179,23 @@ const routes = [
         name: 'spot-view',
         component: () => import('@/views/spot/SpotOne.vue'),
       },
-
+      // 據點統計儀表板
+      {
+        path: 'spot/analyze',
+        name: 'spot-analyze',
+        component: () => import('@/views/spot/SpotAnalyze.vue'),
+      },
+      // 調度監控中心
+      {
+        path: 'spot/monitor',
+        name: 'dispatch-monitor',
+        component: () => import('@/views/spot/DispatchMonitor.vue'),
+      },
       // ==========================================
       // [整合] 座位管理模組 (Seat)
       // ==========================================
       // 座位管理
+
       {
         path: 'seat/list',
         name: 'seat-list',
