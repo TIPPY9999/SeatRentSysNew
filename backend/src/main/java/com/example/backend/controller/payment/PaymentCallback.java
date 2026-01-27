@@ -21,17 +21,22 @@ public class PaymentCallback {
         String rtnCode = formData.get("RtnCode"); // "1" 表示支付成功
 
         if ("1".equals(rtnCode)) {
+            // 💡 判斷是否為贊助訂單
+            if (recId != null && recId.startsWith("SPN")) {
+                // 這裡是贊助成功的處理邏輯：
+                // 你可以選擇存入另一個 Donation 表，或者僅記錄 Log
+                System.out.println("收到贊助款項！金額：" + formData.get("TradeAmt"));
+                return "1|OK";
+            }
+
+            // 💡 原本的租借訂單處理邏輯
             RecRent order = recRentRepository.findByRecId(recId);
             if (order != null) {
-                // 更新訂單狀態
                 order.setRecStatus("PAID");
-                // 更新實際支付金額 (Integer)
                 order.setRecPayment((int) Double.parseDouble(formData.get("TradeAmt")));
-                // 記錄支付方式
                 order.setRecPayBy(formData.get("PaymentType"));
-
                 recRentRepository.save(order);
-                return "1|OK"; // 必須回傳給綠界
+                return "1|OK";
             }
         }
         return "0|Error";
