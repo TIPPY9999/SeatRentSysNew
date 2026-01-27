@@ -40,7 +40,7 @@ public class EcpayUtils {
             form.append("<input type='hidden' name='").append(entry.getKey()).append("' value='")
                     .append(entry.getValue()).append("'>");
         }
-        form.append("</form><script>document.getElementById('ecpayForm').submit();</script>");
+        form.append("</form>");
         return form.toString();
     }
 

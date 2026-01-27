@@ -24,7 +24,7 @@ const successMsg = ref('')
 
 const submitCreate = () => {
   axios
-    .post('http://localhost:8080/members', {
+    .post('http://localhost:8080/api/members', {
       ...member,
       memStatus: 1,
       memLevel: 1,

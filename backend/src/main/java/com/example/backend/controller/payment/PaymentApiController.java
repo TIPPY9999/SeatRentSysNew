@@ -34,4 +34,18 @@ public class PaymentApiController {
         // 4. 產生綠界自動提交的 HTML Form
         return ecpayUtils.genCheckOutForm(order.getRecId(), amount, itemName);
     }
+
+    @PostMapping("/sponsor")
+    public String sponsor(@RequestParam("amount") String amount) {
+        // 💡 產生一個唯一的贊助單號 (SPN 開頭)
+        String donateId = "SPN" + System.currentTimeMillis();
+
+        // 💡 設定顯示在綠界的商品名稱
+        String itemName = "贊助支持 - 金額 TWD " + amount;
+        // 呼叫 ecpayUtils 產生 Form HTML
+        String formHtml = ecpayUtils.genCheckOutForm(donateId, amount, itemName);
+
+        // 直接回傳這串 HTML
+        return formHtml;
+    }
 }

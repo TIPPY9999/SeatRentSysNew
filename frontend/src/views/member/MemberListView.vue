@@ -14,7 +14,7 @@ const keyword = ref('')
 const fetchMembers = () => {
   errorMsg.value = ''
   axios
-    .get('http://localhost:8080/members')
+    .get('http://localhost:8080/api/members')
     .then((res) => {
       members.value = res.data
     })
@@ -30,7 +30,7 @@ const searchMembers = () => {
   }
 
   axios
-    .get('http://localhost:8080/members/search', {
+    .get('http://localhost:8080/api/members/search', {
       params: { keyword: keyword.value },
     })
     .then((res) => {
@@ -44,7 +44,7 @@ const searchMembers = () => {
 const deleteMember = (memId) => {
   if (!confirm('確定要刪除這個會員嗎？')) return
   axios
-    .get('http://localhost:8080/members/delete', {
+    .get('http://localhost:8080/api/members/delete', {
       params: { memId },
     })
     .then(() => {

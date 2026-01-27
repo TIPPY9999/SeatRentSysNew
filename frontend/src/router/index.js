@@ -20,6 +20,8 @@ import MemberLayout from '@/layouts/MemberLayout.vue'
 import MemberProfileView from '@/views/member/MemberProfileView.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import MainLayout from '@/layouts/MainLayout.vue'
+import SponsorView from '@/views/ecpay/SponsorView.vue'
+import RedemptionHistory from '@/views/merchantAndCoupon/RedemptionHistory.vue'
 
 /**
  * ==========================================
@@ -77,6 +79,16 @@ const routes = [
     path: '/snake',
     name: 'snake-game',
     component: SnakeGame,
+  },
+  {
+    path: '/sponsor',
+    name: 'sponsor',
+    component: SponsorView,
+  },
+  {
+    path: '/redemption-history',
+    name: 'redemption-history',
+    component: RedemptionHistory,
   },
     ],
   },
