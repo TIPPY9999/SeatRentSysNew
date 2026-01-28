@@ -35,8 +35,10 @@ const menuGroups = [
     title: '場地與座位',
     icon: 'fas fa-building',
     items: [
-      { path: '/admin/spot/list', icon: 'fas fa-map-marker-alt', title: '據點管理', prefix: '/admin/spot' },
-      { path: '/admin/seat/list', icon: 'fas fa-chair', title: '座位管理', prefix: '/admin/seat' }
+      { path: '/admin/spot/list', icon: 'fas fa-map-marker-alt', title: '據點管理', prefix: '/admin/spot/list' },
+      { path: '/admin/seat/list', icon: 'fas fa-chair', title: '座位管理', prefix: '/admin/seat' },
+      { path: '/admin/spot/analyze', icon: 'fas fa-chart-bar', title: '據點分析', prefix: '/admin/spot/analyze' },
+      { path: '/admin/spot/monitor', icon: 'fas fa-broadcast-tower', title: '調度中心', prefix: '/admin/spot/monitor' }
     ]
   },
   {

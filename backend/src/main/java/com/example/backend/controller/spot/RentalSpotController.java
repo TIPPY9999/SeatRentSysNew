@@ -1,12 +1,13 @@
 package com.example.backend.controller.spot;
 
-import com.example.backend.controller.spot.DTO.SpotUpdateRequest;
+import com.example.backend.dto.spot.SpotUpdateRequest;
 import com.example.backend.model.spot.RentalSpot;
 import com.example.backend.service.spot.RentalSpotService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -117,6 +118,115 @@ public class RentalSpotController {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * 上傳據點圖片 (POST /api/spot/{id}/upload-image)
+     * 將圖片儲存到檔案系統，資料庫只存檔案路徑
+     */
+    @PostMapping("/{id}/upload-image")
+    public ResponseEntity<Map<String, String>> uploadSpotImage(
+            @PathVariable("id") Integer spotId,
+            @RequestParam("image") MultipartFile file) {
+
+        try {
+            // 1. 驗證檔案是否為空
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "請選擇要上傳的圖片"));
+            }
+
+            // 2. 驗證檔案類型
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "只能上傳圖片檔案 (jpg, png, gif)"));
+            }
+
+            // 3. 驗證檔案大小 (限制 5MB)
+            long maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.getSize() > maxSize) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "圖片大小不能超過 5MB"));
+            }
+
+            // 4. 查詢據點是否存在
+            RentalSpot spot = rentalSpotService.selectById(spotId);
+            if (spot == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // 5. 建立 uploads 目錄（如果不存在）
+            String uploadDir = "uploads/spots";
+            java.io.File directory = new java.io.File(uploadDir);
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+
+            // 6. 生成唯一檔案名稱（使用時間戳 + 原始副檔名）
+            String originalFilename = file.getOriginalFilename();
+            String fileExtension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String fileName = "spot_" + spotId + "_" + System.currentTimeMillis() + fileExtension;
+            String filePath = uploadDir + "/" + fileName;
+
+            // 7. 刪除舊圖片（如果存在）
+            if (spot.getSpotImage() != null && !spot.getSpotImage().isEmpty()) {
+                java.io.File oldFile = new java.io.File(spot.getSpotImage());
+                if (oldFile.exists()) {
+                    oldFile.delete();
+                }
+            }
+
+            // 8. 儲存檔案到檔案系統
+            java.io.File destFile = new java.io.File(filePath);
+            file.transferTo(destFile);
+
+            // 9. 更新據點的圖片欄位（儲存相對路徑）
+            spot.setSpotImage(filePath);
+            rentalSpotService.update(spot);
+
+            // 10. 回傳檔案 URL（前端可用於顯示）
+            String imageUrl = "/" + filePath; // 前端透過靜態資源存取
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "圖片上傳成功",
+                    "imageUrl", imageUrl,
+                    "filePath", filePath));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "圖片上傳失敗: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 刪除據點圖片 (DELETE /api/spot/{id}/image)
+     * 刪除檔案系統中的圖片檔案，並清空資料庫欄位
+     */
+    @DeleteMapping("/{id}/image")
+    public ResponseEntity<Map<String, String>> deleteSpotImage(@PathVariable("id") Integer spotId) {
+        RentalSpot spot = rentalSpotService.selectById(spotId);
+        if (spot == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // 刪除檔案系統中的圖片
+        if (spot.getSpotImage() != null && !spot.getSpotImage().isEmpty()) {
+            java.io.File file = new java.io.File(spot.getSpotImage());
+            if (file.exists()) {
+                file.delete();
+            }
+        }
+
+        // 清空資料庫欄位
+        spot.setSpotImage(null);
+        rentalSpotService.update(spot);
+
+        return ResponseEntity.ok(Map.of("message", "圖片已刪除"));
     }
 
     // endregion

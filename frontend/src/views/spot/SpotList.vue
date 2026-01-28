@@ -224,17 +224,19 @@ const sanitizeMerchantId = () => {
 const loadSpots = async () => {
   loading.value = true
   try {
-    // 1. 平行呼叫兩個 API：列表 + 統計數據
-    const [resList, resStats] = await Promise.all([
-      axios.get('/api/spot/list'),
-      axios.get('/api/analyze/stats')
-    ])
-
-    // 2. 更新列表
+    // 1. 先讀取列表 (核心功能)
+    const resList = await axios.get('/api/spot/list')
     spots.value = resList.data
 
-    // 3. 計算並更新統計卡片
-    calculateStats(resList.data, resStats.data)
+    // 2. 再嘗試讀取統計數據 (非核心功能，失敗不應影響列表)
+    try {
+      const resStats = await axios.get('/api/analyze/stats')
+      calculateStats(resList.data, resStats.data)
+    } catch (statsErr) {
+      console.warn('統計數據讀取失敗，僅顯示列表:', statsErr)
+      // 傳入 null 讓 calculateStats 計算基礎數據即可
+      calculateStats(resList.data, null)
+    }
 
   } catch (err) {
     console.error('讀取失敗:', err)

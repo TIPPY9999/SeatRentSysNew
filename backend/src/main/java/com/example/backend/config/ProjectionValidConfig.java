@@ -36,10 +36,10 @@ public class ProjectionValidConfig {
             validate(() -> spotRepo.getSpotRealtimeStatus(), "SpotMonitor (即時監控)");
 
             // 檢查 3: 時段熱度
-            validate(() -> analyzeRepo.getHourlyHeatMap(), "HourlyRate (時段熱度)");
+            validate(() -> analyzeRepo.getHourlyHeatMap(null, null), "HourlyRate (時段熱度)");
 
             // 檢查 4: 時長統計
-            validate(() -> analyzeRepo.getDurationStats(), "DurationRate (時長統計)");
+            validate(() -> analyzeRepo.getDurationStats(null, null), "DurationRate (時長統計)");
 
             log.info("==========================================");
         };
