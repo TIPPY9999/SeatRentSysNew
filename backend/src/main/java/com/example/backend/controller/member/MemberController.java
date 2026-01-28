@@ -69,34 +69,31 @@ public class MemberController {
 
     // 修改
     @PostMapping("/update")
-    public String update(@RequestBody Member member) {
+    public ResponseEntity<?> update(@RequestBody Member member) {
 
-        // 先查舊資料
+        // 根據 ID 找到舊資料 (這步很重要，確保是更新現有資料庫資料)
         Member old = memberService.findById(member.getMemId());
         if (old == null) {
-            return "查無此會員";
+            return ResponseEntity.status(404).body("查無此會員");
         }
 
-        // 更新「非密碼」欄位
-        old.setMemUsername(member.getMemUsername());
+        // 將前端傳來的資料填入 old 物件
         old.setMemName(member.getMemName());
         old.setMemEmail(member.getMemEmail());
         old.setMemPhone(member.getMemPhone());
-        old.setMemStatus(member.getMemStatus());
-        old.setMemPoints(member.getMemPoints());
-        old.setMemViolation(member.getMemViolation());
-        old.setMemLevel(member.getMemLevel());
         old.setMemInvoice(member.getMemInvoice());
+        old.setMemUsername(member.getMemUsername());
 
-        String newPassword = member.getMemPassword();
-        if (newPassword != null && newPassword.isBlank()) {
-            newPassword = null;
+        // 呼叫 Service 更新 (只呼叫這一個 update 即可，它會處理存檔)
+        try {
+            // 這裡會同時處理基本資料存檔與密碼驗證
+            memberService.update(old, member.getMemPassword());
+        } catch (IllegalArgumentException e) {
+            // 如果密碼格式不對，回傳錯誤訊息給前端
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
 
-        // 呼叫 Service（Service 本身不用改）
-        memberService.update(old, newPassword);
-
-        return "會員修改成功";
+        return ResponseEntity.ok("會員修改成功");
     }
 
     // 刪除
