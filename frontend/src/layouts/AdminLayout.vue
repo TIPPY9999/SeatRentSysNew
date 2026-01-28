@@ -63,7 +63,8 @@ const menuGroups = [
     title: '租借與訂單',
     icon: 'fas fa-clipboard-list',
     items: [
-      { path: '/admin/rec-rent', icon: 'fas fa-file-invoice', title: '租借訂單管理', prefix: '/admin/rec-rent' }
+      { path: '/admin/rec-chart', icon: 'fas fa-file-invoice', title: '統計圖表', prefix: '/admin/rec-chart' },
+      { path: '/admin/rec-rent', icon: 'fas fa-file-invoice', title: '訂單管理', prefix: '/admin/rec-rent' }
     ]
   },
   {
@@ -232,13 +233,13 @@ const logout = async () => {
     </nav>
 
     <!-- 側邊欄 -->
-    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <aside class="main-sidebar sidebar-dark-primary elevation-2">
       <!-- 品牌 Logo -->
       <RouterLink to="/admin" class="brand-link">
         <div class="brand-icon">
           <i class="fas fa-chair"></i>
         </div>
-        <span class="brand-text">SeatRentSys</span>
+        <span class="brand-text">Take@Seat</span>
       </RouterLink>
 
       <div class="sidebar">
@@ -336,7 +337,7 @@ const logout = async () => {
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 16px;
+  font-size: 19px;
   transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   will-change: transform;
 }
@@ -354,7 +355,8 @@ const logout = async () => {
 
 /* ========== 側邊欄整體 ========== */
 .main-sidebar {
-  background: linear-gradient(180deg, #9db8d4 0%, #8aa5c1 100%) !important;
+  background: linear-gradient(180deg, #c6dcf3 0%, #97aabd 100%) !important;
+  width:fit-content;
   overflow: hidden !important;
   /* ✅ 統一由AdminLTE JS管理動畫，不重複定義transition */
   will-change: transform;
@@ -372,11 +374,11 @@ const logout = async () => {
 .user-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 20px;
-  margin: 16px 12px;
+  gap: 8px;
+  padding: 8px;
+  margin: 12px 12px;
   background: rgba(255, 255, 255, 0.25);
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   transition: background 0.2s ease, box-shadow 0.2s ease;
   will-change: background, box-shadow;
@@ -441,24 +443,24 @@ const logout = async () => {
 
 /* ========== 選單群組 ========== */
 .menu-group {
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   border-radius: 10px;
   overflow: hidden;
   /* 移除hover transform，避免layout shift */
 }
 
 .menu-group.is-active .group-header {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(66, 88, 129, 0.25);
 }
 
 .group-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 4px;
+  padding: 4px 4px;
   cursor: pointer;
   transition: background 0.15s ease;
-  border-radius: 10px;
+  border-radius: 12px;
   position: relative;
   will-change: background;
 }
@@ -476,7 +478,7 @@ const logout = async () => {
   align-items: center;
   justify-content: center;
   color: #1e293b;
-  font-size: 13px;
+  font-size: 18px;
   transition: background 0.15s ease;
   will-change: background;
 }
@@ -494,13 +496,13 @@ const logout = async () => {
 .group-title {
   flex: 1;
   color: #1e293b;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   font-weight: 600;
 }
 
 .group-arrow {
   color: #64748b;
-  font-size: 12px;
+  font-size: 18px;
   transition: transform 0.3s ease;
 }
 
@@ -510,7 +512,7 @@ const logout = async () => {
 
 /* ========== 群組項目 ========== */
 .group-items {
-  padding: 4px 0 8px 0;
+  padding: 0px 0 0px 0;
   background: rgba(0, 0, 0, 0.1);
   border-radius: 0 0 10px 10px;
   overflow: hidden;
@@ -523,11 +525,11 @@ const logout = async () => {
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px 10px 60px;
+  gap: 4px;
+  padding: 5px 1px 5px 55px;
   color: #0f172a;
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -540,7 +542,7 @@ const logout = async () => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #475569;
+  background: #19365e;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

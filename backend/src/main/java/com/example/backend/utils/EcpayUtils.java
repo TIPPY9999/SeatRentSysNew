@@ -16,11 +16,11 @@ public class EcpayUtils {
     // 綠界測試金鑰
     private static final String HASH_KEY = "pwFHCqoQZGmho4w6";
     private static final String HASH_IV = "EkRm7iFT261dpevs";
-    private static final String MERCHANT_ID = "2000132"; // 綠界測試特店編號
+    private static final String MERCHANT_ID = "3002607"; // 綠界測試特店編號
 
     public String genCheckOutForm(String tradeNo, String totalAmount, String itemName) {
         Map<String, String> params = new TreeMap<>();
-        params.put("MerchantID", "2000132"); // 綠界測試 ID
+        params.put("MerchantID", "3002607"); // 綠界測試 ID
         params.put("MerchantTradeNo", tradeNo);
         params.put("MerchantTradeDate", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
         params.put("PaymentType", "aio");
