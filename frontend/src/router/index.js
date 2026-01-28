@@ -110,6 +110,12 @@ const routes = [
         name: 'redemption-history',
         component: () => import('@/views/merchantAndCoupon/RedemptionHistory.vue'),
       },
+      {
+        path: '/sponsor',
+        name: 'sponsor',
+        component: () => import('@/views/ecpay/SponsorView.vue'),
+      },
+     
       // 訂單確認與付款頁
       {
         path: '/payment-checkout/:recId',
