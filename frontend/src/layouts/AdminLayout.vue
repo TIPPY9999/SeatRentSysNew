@@ -357,7 +357,7 @@ const logout = async () => {
 
 /* ========== 側邊欄整體 ========== */
 .main-sidebar {
-  background: linear-gradient(180deg, #c6dcf3 0%, #97aabd 100%) !important;
+  background: linear-gradient(180deg, #bdddff 0%, #96b5d4 100%) !important;
   width:fit-content;
   overflow: hidden !important;
   /* ✅ 統一由AdminLTE JS管理動畫，不重複定義transition */
@@ -452,7 +452,7 @@ const logout = async () => {
 }
 
 .menu-group.is-active .group-header {
-  background: rgba(66, 88, 129, 0.25);
+  background: rgba(76, 133, 248, 0.25);
 }
 
 .group-header {
@@ -486,7 +486,8 @@ const logout = async () => {
 }
 
 .group-header:hover .group-icon {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.4);  
+  transform: scale(1.1) rotate(5deg);
 }
 
 .menu-group.is-active .group-icon {
@@ -515,7 +516,7 @@ const logout = async () => {
 /* ========== 群組項目 ========== */
 .group-items {
   padding: 0px 0 0px 0;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(5, 0, 0, 0.1);
   border-radius: 0 0 10px 10px;
   overflow: hidden;
   will-change: max-height, opacity;
@@ -529,7 +530,7 @@ const logout = async () => {
   align-items: center;
   gap: 4px;
   padding: 5px 1px 5px 55px;
-  color: #0f172a;
+  color: #ffffff;
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
@@ -549,9 +550,8 @@ const logout = async () => {
 }
 
 .menu-item:hover {
-  color: #000000;
-  background: rgba(255, 255, 255, 0.2);
-  font-weight: 600;
+  color: #000000;  
+  font-weight: 900;
 }
 
 .menu-item:hover::before {
@@ -562,12 +562,12 @@ const logout = async () => {
 
 .menu-item.active {
   color: #000000;
-  background: rgba(29, 78, 216, 0.2);
+  background: rgba(55, 121, 255, 0.25);
   font-weight: 700;
 }
 
 .menu-item.active::before {
-  background: #60a5fa;
+  background: #0173ff;
   box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
 }
 

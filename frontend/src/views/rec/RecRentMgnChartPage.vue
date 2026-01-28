@@ -64,54 +64,63 @@ const drawDailyOrdersChart = async (start, end) => {
   }, [])
 
   const options = {
-    title: { text: '每日訂單數量與累計趨勢', left: 'center', top:'1',padding:'' },
+    title: { text: '每日訂單數量與累計趨勢', left: 'center', top: '1', padding: '' },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'line' },
     },
     grid: { left: '1%', right: '1%', bottom: '9%', containLabel: true },
-    legend: { data: ['每日訂單數', '累計訂單數'], top: 'bottom' },
+    legend: { data: ['每日', '累計'], top: 'bottom' },
     xAxis: [{ type: 'category', data: dailyLabels, axisTick: { alignWithLabel: true } }],
     yAxis: [
       {
         type: 'value',
-        name: '日訂單',
-        position: 1,
-        axisLabel: { color:'#E0583A',formatter: '{value} 筆' },
-         max:'50',
-        nameTextStyle:{color:'#E0583A'},
+        name: '每日',
+        axisLabel: { color: '#E0583A', formatter: '{value} 筆' },
+        max: '50',
+        nameTextStyle: { align: 'right', color: '#E0583A' },
       },
       {
         type: 'value',
         name: '累計',
-        position: 'right',
-        axisLabel: { formatter: '{value} 筆' },
+        axisLabel: { color: '#188df0', formatter: '{value} 筆' },
+        nameTextStyle: { align: 'left', color: '#188df0' },
       },
     ],
     series: [
       {
-        name: '每日訂單數',
+        name: '日訂單',
         type: 'line',
-        color:'#E0583A',
+        color: '#E0583A',
         yAxisIndex: 0,
         data: dailyValues,
         smooth: false,
+        // 直接在圖上顯示標籤
+        label: {
+          show: true,
+          position: 'top',
+        },
       },
       {
-        name: '累計訂單數',
+        name: '累計訂單',
         type: 'bar',
         yAxisIndex: 1,
         data: cumulativeValues,
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#83bff6' },
-            { offset: 1, color: '#188df0' },
+            { offset: 1, color: '#83bff6' },
+            { offset: 0, color: '#188df0' },
           ]),
         },
-        
+
+        // 直接在圖上顯示標籤
+        label: {
+          show: true,
+          position: 'top',
+        },
       },
     ],
-    dataZoom: [{ show:'true',type: 'inside', start: 0, end: 100}],
+    dataZoom: [{ show: 'true', type: 'inside', start: 0, end: 100 }],
   }
 
   if (!dailyChartInstance.value) {
@@ -135,7 +144,7 @@ const drawHourlyOrdersChart = async (start, end) => {
   const hourlyLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`)
 
   const options = {
-    title: { text: '訂單時段分佈 (0-23點)', left: 'center' , top:'0'},
+    title: { text: '訂單時段分佈 (0-23點)', left: 'center', top: '0' },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     xAxis: [{ type: 'category', data: hourlyLabels, name: '小時' }],
@@ -151,11 +160,7 @@ const drawHourlyOrdersChart = async (start, end) => {
         // 直接在圖上顯示標籤
         label: {
           show: true,
-          //formatter: '{b}: {d}%', // 格式: 名稱: 百分比%
           position: 'top',
-        },
-        labelLine: {
-          show: true,
         },
       },
     ],
@@ -179,7 +184,7 @@ const drawOrderStatusPieChart = async (start, end) => {
   }))
 
   const options = {
-    title: { text: '訂單狀態比例', left: 'center' , top:'0'},
+    title: { text: '訂單狀態比例', left: 'center', top: '0' },
     tooltip: { trigger: 'item', formatter: '{a} <br/>{b} : {c} ({d}%)' },
     legend: { orient: 'vertical', left: 'left', data: chartData.map((item) => item.name) },
     series: [
@@ -199,8 +204,8 @@ const drawOrderStatusPieChart = async (start, end) => {
         // 直接在圖上顯示標籤
         label: {
           show: true,
-          formatter: '{b}: {d}%', // 格式: 名稱: 百分比%
-          position: 'inside',
+          formatter: '{b} {c}筆: {d}% ', // 格式: 名稱: 百分比%
+          position: 'outside',
         },
         labelLine: {
           show: true,
@@ -224,19 +229,25 @@ const drawRentalDurationChart = async (start, end) => {
 
   // 處理數據
   const durationLabels = chartData.map((item) => {
-    const lower = item.intervalGroup * 30
-    const upper = (item.intervalGroup + 1) * 30
-    return `${lower}-${upper}分鐘`
+    const lower = item.intervalGroup * 0.5
+    const upper = (item.intervalGroup + 1) * 0.5
+    return `${lower}~${upper} hr`
   })
   const durationValues = chartData.map((item) => item.count)
 
   const options = {
-    title: { text: '訂單租借時長分佈 (30分鐘區間)', left: 'center' , top:'0'},
+    title: { text: '訂單租借時長分佈 (半小時區間)', left: 'center', top: '0' },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'shadow' },
+      axisPointer: { type: 'line' },
     },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true,
+      splitLine: { interval: 'auto' },
+    },
     xAxis: { type: 'category', data: durationLabels, name: '租借時長' },
     yAxis: { type: 'value', name: '訂單數量' },
     series: [
@@ -246,9 +257,14 @@ const drawRentalDurationChart = async (start, end) => {
         type: 'bar',
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#83bff6' },
-            { offset: 1, color: '#188df0' },
+            { offset: 1, color: '#83bff6' },
+            { offset: 0, color: '#188df0' },
           ]),
+        },
+        // 直接在圖上顯示標籤
+        label: {
+          show: true,
+          position: 'top',
         },
       },
     ],
@@ -277,10 +293,10 @@ const fetchAllCharts = async () => {
   try {
     // 並行獲取所有圖表數據
     await Promise.all([
-      drawDailyOrdersChart(formattedStart, formattedEnd),
-      drawHourlyOrdersChart(formattedStart, formattedEnd),
       drawOrderStatusPieChart(formattedStart, formattedEnd),
       drawRentalDurationChart(formattedStart, formattedEnd),
+      drawDailyOrdersChart(formattedStart, formattedEnd),
+      drawHourlyOrdersChart(formattedStart, formattedEnd),
     ])
   } catch (error) {
     console.error('獲取圖表數據失敗:', error)
@@ -288,6 +304,19 @@ const fetchAllCharts = async () => {
   } finally {
     loading.close()
   }
+}
+
+/**
+ * 快速設定日期範圍並自動查詢
+ * @param {number} months - 往前推算的月份數
+ */
+const setQuickDateRange = (months) => {
+  const end = new Date()
+  const start = new Date()
+  start.setMonth(start.getMonth() - months)
+  startDate.value = start
+  endDate.value = end
+  fetchAllCharts()
 }
 
 // --- 3. 生命週期 & 事件監聽 ---
@@ -314,30 +343,35 @@ window.addEventListener('resize', () => {
     <h3 style="text-align: center">訂單統計圖表</h3>
     <!-- 頂部控制項 -->
     <el-card class="box-card">
-      <div class="card-header">
-        <el-row :gutter="0" align="left"
-          >開始日期
-          <el-col :span="5">
+      <div class="controls-container">
+        <el-form :inline="true" :model="{ startDate, endDate }">
+          <el-form-item>
+            <el-button-group>
+              <el-button @click="setQuickDateRange(12)">近1年</el-button>
+              <el-button @click="setQuickDateRange(36)">近3年</el-button>
+              <el-button @click="setQuickDateRange(60)">近5年</el-button>
+            </el-button-group>
+            
+          </el-form-item>
+          <el-form-item label="選擇開始日期">
             <el-date-picker
               v-model="startDate"
               type="date"
               placeholder="選擇開始日期"
-              style="width: 100%"
+              style="width: 150px"
             />
-          </el-col>
-          <el-col :span="1" style="text-align: center">-</el-col> 結束日期
-          <el-col :span="5">
+          </el-form-item>
+          <el-form-item label="選擇結束日期">
             <el-date-picker
               v-model="endDate"
               type="date"
               placeholder="選擇結束日期"
-              style="width: 100%"
-            />
-          </el-col>
-          <el-col :span="3">
-            <el-button type="primary" @click="fetchAllCharts" style="width: 100%">查詢</el-button>
-          </el-col>
-        </el-row>
+              style="width: 150px"
+            /> </el-form-item
+          ><el-form-item>
+            <el-button type="primary" @click="fetchAllCharts" >查詢</el-button>
+          </el-form-item>
+        </el-form>
       </div>
     </el-card>
 
@@ -381,7 +415,12 @@ window.addEventListener('resize', () => {
 .box-card {
   margin-bottom: 10px;
 }
-.card-header {
-  font-weight: bold;
+.controls-container {
+  /* 使用 Flexbox 排版 */
+  display: flex;
+  /* 水平置中表單 */
+  justify-content: center;
+  /* 允許內容換行 */
+  flex-wrap: wrap;padding-top: 10px;
 }
 </style>
