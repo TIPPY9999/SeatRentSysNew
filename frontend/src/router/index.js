@@ -84,7 +84,7 @@ const routes = [
       {
         path: 'claims',
         name: 'claims',
-        component: () => import('@/views/rec/RightClaimPage.vue'),
+        component: () => import('@/views/rec/RightsClaimPage.vue'),
       },
 
 

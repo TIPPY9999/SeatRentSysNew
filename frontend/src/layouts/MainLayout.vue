@@ -101,7 +101,7 @@ const logout = () => {
             <span class="icon-wrapper">
               <el-icon><Avatar /></el-icon>
             </span>
-            <span class="menu-text">會員登入</span>
+            <span class="menu-text">請先登入</span>
           </router-link>
         </li>
 
