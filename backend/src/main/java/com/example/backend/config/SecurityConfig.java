@@ -4,6 +4,7 @@ import com.example.backend.repository.member.CustomOAuth2UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -20,79 +21,93 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private CustomOAuth2UserService customOAuth2UserService;
+        @Autowired
+        private CustomOAuth2UserService customOAuth2UserService;
 
-    @Autowired
-    private ClientRegistrationRepository clientRegistrationRepository;
+        @Autowired
+        private ClientRegistrationRepository clientRegistrationRepository;
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                // 1. 基礎安全設定
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                http
+                                // 1. 修正：將所有需要外部 POST 或跨域 POST 的路徑都排除在 CSRF 檢查外
+                                .csrf(csrf -> csrf.ignoringRequestMatchers(
+                                                "/api/payment/**",
+                                                "/login/member", // 💡 解決 403 報錯的關鍵
+                                                "/api/auth/**"))
 
-                // 2. 權限控管
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login/**", "/oauth2/**", "/api/auth/**").permitAll()
-                        .anyRequest().permitAll())
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 3. OAuth2 登入設定
-                .oauth2Login(oauth2 -> oauth2
-                        // 強制 Google 顯示帳號選擇視窗
-                        .authorizationEndpoint(authorization -> authorization
-                                .authorizationRequestResolver(
-                                        authorizationRequestResolver(clientRegistrationRepository)))
-                        // 自定義註冊與存檔邏輯
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOAuth2UserService))
-                        // 登入成功後跳轉回 Vue
-                        .defaultSuccessUrl("http://localhost:5173/", true))
+                                .headers(headers -> headers
+                                                .frameOptions(frame -> frame.sameOrigin()))
 
-                // 4. 登出設定
-                .logout(logout -> logout
-                        .logoutUrl("/api/auth/logout")
-                        .logoutSuccessHandler((request, response, authentication) -> {
-                            response.setStatus(200); // 回傳 OK 給前端 axios
-                        })
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID"));
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers("/favicon.ico", "/error", "/css/**", "/js/**",
+                                                                "/images/**")
+                                                .permitAll()
 
-        return http.build();
-    }
+                                                // 確保包含 payment-success 和 login 相關路徑
+                                                .requestMatchers(
+                                                                "/api/payment/**",
+                                                                "/login/**",
+                                                                "/oauth2/**",
+                                                                "/api/auth/**")
+                                                .permitAll()
 
-    /**
-     * 自定義 OAuth2 請求解析器
-     * 作用：在重新導向到 Google 之前，強制補上 prompt=select_account 參數
-     */
-    private OAuth2AuthorizationRequestResolver authorizationRequestResolver(
-            ClientRegistrationRepository clientRegistrationRepository) {
+                                                .anyRequest().permitAll()) // 開發環境先放行所有，確認功能
 
-        DefaultOAuth2AuthorizationRequestResolver resolver = new DefaultOAuth2AuthorizationRequestResolver(
-                clientRegistrationRepository, "/oauth2/authorization");
+                                .oauth2Login(oauth2 -> oauth2
+                                                .authorizationEndpoint(authorization -> authorization
+                                                                .authorizationRequestResolver(
+                                                                                authorizationRequestResolver(
+                                                                                                clientRegistrationRepository)))
+                                                .userInfoEndpoint(userInfo -> userInfo
+                                                                .userService(customOAuth2UserService))
+                                                .defaultSuccessUrl("http://localhost:5173/", true))
 
-        resolver.setAuthorizationRequestCustomizer(
-                customizer -> customizer.additionalParameters(params -> params.put("prompt", "select_account")));
+                                .logout(logout -> logout
+                                                .logoutUrl("/api/auth/logout")
+                                                .logoutSuccessHandler((request, response, authentication) -> {
+                                                        response.setStatus(200);
+                                                })
+                                                .invalidateHttpSession(true)
+                                                .deleteCookies("JSESSIONID"));
 
-        return resolver;
-    }
+                return http.build();
+        }
 
-    /**
-     * CORS 跨域設定
-     */
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // 允許前端地址
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        // 必須允許 Credentials 才能帶 Session Cookie (重要！)
-        configuration.setAllowCredentials(true);
+        /**
+         * 自定義 OAuth2 請求解析器
+         */
+        private OAuth2AuthorizationRequestResolver authorizationRequestResolver(
+                        ClientRegistrationRepository clientRegistrationRepository) {
+                DefaultOAuth2AuthorizationRequestResolver resolver = new DefaultOAuth2AuthorizationRequestResolver(
+                                clientRegistrationRepository, "/oauth2/authorization");
+                resolver.setAuthorizationRequestCustomizer(
+                                customizer -> customizer.additionalParameters(
+                                                params -> params.put("prompt", "select_account")));
+                return resolver;
+        }
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+        /**
+         * CORS 跨域設定
+         */
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+
+                // 💡 允許的名單：包含本地與 Localtunnel，並增加綠界官方網域(可選，增加穩定性)
+                configuration.setAllowedOrigins(Arrays.asList(
+                                "http://localhost:5173",
+                                "https://*.ngrok-free.dev", // 💡 增加 ngrok 萬用字元
+                                "https://*.loca.lt"));
+
+                configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                configuration.setAllowedHeaders(Arrays.asList("*"));
+                configuration.setAllowCredentials(true);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 }

@@ -63,30 +63,30 @@ const handleCheckout = async () => {
     // 1. 呼叫後端 API
     const response = await axios.post(`http://localhost:8080/api/payment/checkout?recId=${recId.value}`);
     
-    // 2. 處理後端回傳的 HTML 字串
+    // 2. 處理回應
     const payHtml = response.data;
-
     if (!payHtml || (typeof payHtml === 'string' && payHtml.includes('Error'))) {
       throw new Error('訂單資訊有誤，無法付款');
     }
 
-    // 3. 建立一個臨時容器並插入 HTML
+    // 💡 修正點 A：先移除 HTML 裡的 <script> 標籤，避免塞入 DOM 時觸發 CSP 報錯
+    const cleanHtml = payHtml.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+
+    // 3. 建立一個臨時容器並插入純表單 HTML
     const div = document.createElement('div');
     div.style.display = 'none'; 
-    div.innerHTML = payHtml;
+    div.innerHTML = cleanHtml; 
     document.body.appendChild(div);
 
-    // 4. 自動提交表單
+    // 💡 修正點 B：直接抓取 form 並提交
     const form = div.querySelector('form');
     if (form) {
+      console.log("表單準備就緒，執行提交...");
       form.submit();
     } else {
-      // 如果 form 沒自動提交，嘗試手動觸發
-      const scriptTag = div.querySelector('script');
-      if (scriptTag) {
-        eval(scriptTag.innerHTML);
-      }
+      throw new Error('找不到支付表單，請稍後再試');
     }
+
   } catch (error) {
     console.error('付款啟動失敗', error);
     Swal.fire({
@@ -94,8 +94,6 @@ const handleCheckout = async () => {
       title: '啟動支付失敗',
       text: error.message || '請檢查網路連線或聯絡客服。',
     });
-  } finally {
-    setTimeout(() => { isLoading.value = false; }, 2000);
   }
 };
 </script>
