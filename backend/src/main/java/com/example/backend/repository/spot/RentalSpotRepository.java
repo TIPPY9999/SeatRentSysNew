@@ -27,7 +27,7 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
      */
     boolean existsBySpotCode(String spotCode);
 
-    // 需求 5: 站點分布於每一縣市之統計
+    // 站點分布於每一縣市之統計
     // 對應 Projection: SpotCountByCity (getCity, getSpotCount)
     @Query(value = """
                 SELECT
@@ -40,10 +40,11 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
             """, nativeQuery = true)
     List<SpotCountByCity> getCityDistribution();
 
-    // 需求 2 & 6: 站點即時監控 (總座位 vs 已租借)
+    // 站點即時監控 (總座位 vs 已租借)
     // 對應 Projection: SpotMonitor (getSpotName, getTotalSeats, getRentedCount)
     @Query(value = """
                 SELECT
+                    s.spotId as spotId,
                     s.spotName as spotName,
                     (SELECT COUNT(*) FROM seats st WHERE st.spotId = s.spotId AND st.seatsStatus = '啟用') as totalSeats,
                     (SELECT COUNT(*) FROM recRent r WHERE r.spotIdRent = s.spotId AND r.recStatus = '租借中') as rentedCount

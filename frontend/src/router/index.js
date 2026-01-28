@@ -180,7 +180,6 @@ const routes = [
         name: 'spot-analyze',
         component: () => import('@/views/spot/SpotAnalyze.vue'),
       },
-      // 調度監控中心
       {
         path: 'spot/monitor',
         name: 'dispatch-monitor',
