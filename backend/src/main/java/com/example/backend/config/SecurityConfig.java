@@ -1,23 +1,23 @@
 package com.example.backend.config;
 
-import com.example.backend.repository.member.CustomOAuth2UserService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import com.example.backend.repository.member.CustomOAuth2UserService;// 自訂的 OAuth2UserService
+import org.springframework.beans.factory.annotation.Autowired;// 自動注入註解
+import org.springframework.context.annotation.Bean;// 定義 Bean 的註解
+import org.springframework.context.annotation.Configuration;// 配置類註解
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;// HttpSecurity 用於配置安全性
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;// 啟用 Spring Security 的註解
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;// BCrypt 密碼編碼器
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;// OAuth2 客戶端註冊庫
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;// 預設的 OAuth2 授權請求解析器
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;// OAuth2 授權請求解析器介面
+import org.springframework.security.web.SecurityFilterChain;// 安全過濾鏈
+import org.springframework.web.cors.CorsConfiguration;// CORS 配置類
+import org.springframework.web.cors.CorsConfigurationSource;// CORS 配置來源介面
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;// 基於 URL 的 CORS 配置來源
 
 import java.util.Arrays;
 
-@Configuration
+@Configuration 
 @EnableWebSecurity
 public class SecurityConfig {
 
@@ -41,13 +41,20 @@ public class SecurityConfig {
         http
                 /**
                  * - 綠界回呼 /api/payment/** 多為外部 POST，若不排除常見 403
-                 * - /login/member：你們註解說是解 403 的關鍵，保留
+                 * - /login/member：註解說是解 403 的關鍵，保留
                  * - /api/auth/**：前端跨域呼叫常見，保留
                  */
                 .csrf(csrf -> csrf.ignoringRequestMatchers(
-                        "/api/payment/**",
-                        "/login/member",
-                        "/api/auth/**"
+                /*這邊我要說明一下(翌帆) 原本寫法是這樣
+                         "/api/payment/**", // 綠界回呼的 POST 請求
+                         "/login/member",   // 放行前端登入請求
+                         "/api/auth/**"    // 放行所有認證相關請求
+                但是會發生其他功能模組的 POST 請求也被擋下來的問題，還有後台管理員登入無法進入的問題。
+                所以我先改成放行所有後端 API 的請求，跟管理員登入請求，未來再視情況調整。
+                */
+                         "/api/**",      // 放行所有後端 API (工單、金流、座位、分析...)
+                        "/login/**",    // 放行所有登入請求
+                        "/oauth2/**"    // 放行 OAuth2 相關 (通常不需要，但加著保險)
                 ))
 
                 /**
