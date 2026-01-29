@@ -13,8 +13,13 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 將 /uploads/** 的請求映射到 uploads/ 資料夾
+        // 保持原本的 uploads 映射
         registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:uploads/");
+
+        // ✨ 新增這個：把前端請求的 /images/** 指向你的實體存放資料夾
+        // 假設你的圖片是存放在專案根目錄下的 uploads 資料夾
+        registry.addResourceHandler("/images/**")
                 .addResourceLocations("file:uploads/");
     }
 }

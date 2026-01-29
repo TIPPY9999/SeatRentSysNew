@@ -6,8 +6,7 @@
  */
 import axios from 'axios'
 import Swal from 'sweetalert2'
-import router from '@/router'
-import { useUserStore } from '@/stores/user'
+
 
 const TUNNEL_API = window.APP_CONFIG?.API_URL; // 從設定檔抓 Tunnel 網址
 const LOCAL_API = "http://localhost:8080";
