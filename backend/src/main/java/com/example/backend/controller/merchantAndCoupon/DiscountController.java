@@ -1,5 +1,6 @@
 package com.example.backend.controller.merchantAndCoupon;
 
+import com.example.backend.dto.RedemptionLogDTO;
 import com.example.backend.model.member.Member;
 import com.example.backend.model.merchantAndCoupon.DiscountBean;
 import com.example.backend.model.merchantAndCoupon.RedemptionLog;
@@ -7,7 +8,7 @@ import com.example.backend.model.merchantAndCoupon.Result;
 import com.example.backend.repository.member.MemberRepository;
 import com.example.backend.repository.merchantAndCoupon.RedemptionLogRepository;
 import com.example.backend.service.merchantAndCoupon.DiscountService;
-
+import com.example.backend.service.merchantAndCoupon.RedemptionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
@@ -16,6 +17,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.dao.EmptyResultDataAccessException; // [新增]
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,6 +40,9 @@ public class DiscountController {
 
     @Autowired
     private RedemptionLogRepository redemptionLogRepository; // 注入新的 Repo
+
+    @Autowired
+    private RedemptionService redemptionService;
 
     @Value("${file.upload-path:./uploads/}")
     private String uploadPath;
@@ -175,5 +180,12 @@ public class DiscountController {
         result.put("status", "success");
         result.put("data", list);
         return result;
+    }
+
+    // 會員專屬紀錄 API
+    @GetMapping("/member/{memId}/logs") // 建議加上 /member 區分路徑
+    public ResponseEntity<List<RedemptionLogDTO>> getMemberLogs(@PathVariable Integer memId) {
+        // 這裡會調用你之前寫的，帶有 MerchantName 的 Service 邏輯
+        return ResponseEntity.ok(redemptionService.getMemberLogs(memId));
     }
 }

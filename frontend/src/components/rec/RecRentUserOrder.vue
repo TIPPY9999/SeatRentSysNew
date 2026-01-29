@@ -130,8 +130,6 @@ const proceedWithRent = async () => {
     return
   }
 
-
-
   // 根據使用者要求組合新的訂單資料
   const newOrderData = {
     memId: memberAuthStore.member.memId, // 直接從 Pinia Store 獲取 USERID
@@ -143,7 +141,7 @@ const proceedWithRent = async () => {
     recRequestPay: 0, // 因為無需確認付款，所以請求付款金額為 0
     recPayment: 0, // 同上，實際付款為 0
     recPayBy: '尚未付款', //
-    recInvoice: "", // 歸還時生成發票號碼
+    recInvoice: '', // 歸還時生成發票號碼
     recCarrier: memberAuthStore.member.memInvoice,
     recViolatInt: 0, //
   }
@@ -275,7 +273,7 @@ watch(
     </div>
 
     <!-- 使用條款 Modal -->
-    <div v-if="showTermsModal" class="modal-backdrop fade show"></div>
+    <div v-if="showTermsModal" class="modal-backdrop fade show" style="width: 600px"></div>
     <div
       class="modal fade"
       :class="{ show: showTermsModal }"
@@ -286,12 +284,26 @@ watch(
       <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">使用條款</h5>
+            <h5 class="modal-title">【重要租借告知】</h5>
             <button type="button" class="btn-close" @click="closeModal"></button>
           </div>
           <div class="modal-body">
-            <p>開始使用前，請詳閱使用條款...</p>
-            <!-- 在此處添加您的條款詳細內容 -->
+            <span>在您點擊租借前，請先確認以下租借及使用注意事項：</span><br /><br />
+            <span style="font-weight: bolder">計費方式：</span>
+            <span>前 30 分鐘 NT$45，之後每 30 分鐘 NT$30</span><br />
+            <span>(不足 30 分鐘以 30 分鐘計)。 </span><br />
+            <span style="font-weight: bolder">安全承諾：</span>
+            <span style="color: red">座椅載重上限為 85kg，僅供椅坐，禁止危險動作或超載。</span
+            ><br />
+            <span>超過限制或不當使用導致之損害由使用者自負。</span><br />
+            <span style="font-weight: bolder">檢查設備：</span>
+            <span>使用前請檢查結構，如有異常請於 10分鐘內回報。</span><br />
+            <span style="font-weight: bolder">正確歸還：</span>
+            <span>務必確認App顯示「租借結束訂單」，否則將持續計費。</span><br />
+            <span style="font-weight: bolder">賠償責任： </span>
+            <span>若設備遺失或人為損毀，最高需負擔賠償金 NT$1500。</span><br />
+            <span style="font-weight: bolder">服務細則： </span>
+            <span>閱讀並同意上述條款視同接受我們的詳細服務細則。</span>
             <hr />
             <div class="form-check">
               <input

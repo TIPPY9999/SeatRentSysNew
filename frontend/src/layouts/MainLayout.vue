@@ -96,13 +96,12 @@ const logout = () => {
         </li>
 
         <!-- ✅ 產品化：未登入才顯示「會員登入」 -->
-        <!-- 若你堅持要一直顯示，把 v-if 移除即可 -->
         <li class="menu-item" v-if="!memberAuthStore.isLogin && !adminAuthStore.isLogin">
           <router-link to="/login" class="member-info">
             <span class="icon-wrapper">
               <el-icon><Avatar /></el-icon>
             </span>
-            <span class="menu-text">會員登入</span>
+            <span class="menu-text">請先登入</span>
           </router-link>
         </li>
 
@@ -116,11 +115,11 @@ const logout = () => {
               width: '100%',
             }"
             :aria-disabled="!uidClickable"
-          ><span class="icon-wrapper" style="font-size: 120%;">歡迎</span>
+          >
+            <span class="icon-wrapper" style="font-size: 130%; font-weight: 400">您好 </span>
             <span class="menu-text">
-              
               <span v-if="displayUID">{{ displayUID }}</span>
-              <span v-else> 尚未登入 </span>
+              <span v-else> 訪客 </span>
             </span>
           </div>
         </li>
@@ -132,39 +131,43 @@ const logout = () => {
           <span class="menu-text">@Seat借還</span>
         </li>
 
-        <li class="menu-item">
-          <router-link to="/mall" class="member-info">
+        <li class="menu-item" @click="router.push('/mall')">
+          <span class="icon-wrapper">
+            <el-icon><Ticket /></el-icon>
+          </span>
+          <span class="menu-text">商家優惠</span>
+        </li>
+
+        <li class="menu-item" @click="router.push('/snake')">
+          <span class="icon-wrapper">
+            <el-icon><SwitchFilled /></el-icon>
+          </span>
+          <span class="menu-text">小遊戲</span>
+        </li>
+        <li class="menu-item" v-if="memberAuthStore.isLogin">
+          <router-link to="/redemption-history" class="member-info">
             <span class="icon-wrapper">
-              <el-icon><Ticket /></el-icon>
+              <el-icon><List /></el-icon>
             </span>
-            <span class="menu-text">商家優惠</span>
+            <span class="menu-text">兌換紀錄</span>
           </router-link>
         </li>
 
-        <li class="menu-item">
-          <router-link to="/snake" class="member-info">
-            <span class="icon-wrapper">
-              <el-icon><SwitchFilled /></el-icon>
-            </span>
-            <span class="menu-text">小遊戲</span>
-          </router-link>
-        </li>
-
-        <li class="menu-item">
+        <li class="menu-item" @click="router.push('')">
           <span class="icon-wrapper">
             <el-icon><MapLocation /></el-icon>
           </span>
           <span class="menu-text">猜你喜歡</span>
         </li>
 
-        <li class="menu-item">
+        <li class="menu-item" @click="router.push('')">
           <span class="icon-wrapper">
             <el-icon><Comment /></el-icon>
           </span>
           <span class="menu-text">分享討論</span>
         </li>
 
-        <li class="menu-item">
+        <li class="menu-item" @click="router.push('')">
           <span class="icon-wrapper">
             <el-icon><Phone /></el-icon>
           </span>
@@ -172,14 +175,13 @@ const logout = () => {
         </li>
 
         <li class="menu-item">
-          <router-link to="/payment" class="member-info">
+          <router-link to="/sponsor" class="member-info">
             <span class="icon-wrapper">
               <el-icon><StarFilled /></el-icon>
             </span>
             <span class="menu-text">支持我們</span>
           </router-link>
         </li>
-
         <li class="menu-item" @click="logout">
           <span class="icon-wrapper">
             <el-icon><TopLeft /></el-icon>
@@ -187,6 +189,15 @@ const logout = () => {
           <span class="menu-text">登出</span>
         </li>
       </ul>
+      <!-- ✅ 管理員快捷入口：保留你原本邏輯 -->
+      <div class="menu-admin" v-if="adminAuthStore.isLogin">
+        <router-link to="/admin" class="member-info">
+          <span class="icon-wrapper">
+            <el-icon><Tools /></el-icon>
+          </span>
+          <span class="menu-text">後台管理</span>
+        </router-link>
+      </div>
 
       <!-- 收合按鈕 -->
       <div class="sidebar-footer">
@@ -201,16 +212,6 @@ const logout = () => {
           </el-icon>
         </button>
       </div>
-
-      <!-- ✅ 管理員快捷入口：保留你原本邏輯 -->
-      <div class="menu-admin" v-if="adminAuthStore.isLogin">
-        <router-link to="/admin" class="member-info">
-          <span class="icon-wrapper">
-            <el-icon><Tools /></el-icon>
-          </span>
-          <span class="menu-text">後台管理</span>
-        </router-link>
-      </div>
     </aside>
 
     <!-- 右側主內容容器 -->
@@ -218,26 +219,39 @@ const logout = () => {
       <router-view />
     </main>
   </div>
+  <!-- Footer -->
+  <footer class="main-footer">
+    <div class="footer-links">
+      <a href="/claims">隱私權政策</a> | <a href="#">個資告知書</a> | <a href="#">使用條款</a> |
+      <a href="#">服務條款</a> | © 2026 Have@Seat及其關係企業版權所有。
+    </div>
+    <div class="footer-copyright">
+      Have@Seat其等之標誌以及本網站中其他Have@Seat產品及服務名稱及標誌，皆為Have@Seat Inc.
+      之商標或註冊商標。本網站中提及之其他公司名稱、產品名稱、服務名稱及標誌，分別為其所有權人之商標。
+    </div>
+  </footer>
 </template>
 
 <style scoped>
 /* --- 1. CSS 變數 --- */
 :root {
   --sidebar-width-expanded: 200px;
-  --sidebar-width-collapsed: 70px;
+  --sidebar-width-collapsed: 80px;
 }
-
+/* --- 4. 主內容容器 --- */
+.main-content-area {
+  flex-grow: 1;
+  width: 100%;
+  height: 91vh;
+  position: relative;
+  overflow-y: auto; /* 如果內容超長，允許滾動 */
+  display: flex;
+  flex-direction: column;
+}
 /* --- 2. 主佈局 --- */
-
-.logo {
-  font-size: 22px;
-  font-weight: 600;
-  margin: 0 px;
-  padding: 0;
-}
 .page-wrapper {
   display: flex;
-  height: 100vh; /* 改為 100vh 佔滿整個視窗高度 */
+  /* height: 100vh; /*改為 100vh 佔滿整個視窗高度 */
   width: 100%;
   background-color: #f4f6f9;
 }
@@ -245,12 +259,13 @@ const logout = () => {
 /* --- 3. 側邊欄 --- */
 .sidebar {
   width: var(--sidebar-width-expanded);
-  background-color: #b9f8b9;
+  background-color: #c4f7c4;
   border-right: 1px solid #dee2e6;
   transition: width 0.2s ease;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  height: auto;
 }
 
 .page-wrapper.sidebar-collapsed .sidebar {
@@ -262,10 +277,10 @@ const logout = () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 15px;
+  height: 10px;
   font-size: 30px; /* for SVG size */
-  color: #484848;
+  color: #2e2e2e;
   flex-shrink: 0;
 }
 
@@ -281,7 +296,7 @@ const logout = () => {
 .menu-list {
   list-style: none;
   padding: 0;
-  margin: 10px 0;
+  margin: 3px 0;
   flex-grow: 1;
   overflow-y: auto;
   overflow-x: hidden; /* 新增：防止水平滾動條 */
@@ -290,8 +305,8 @@ const logout = () => {
 .menu-item {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  gap: 20px;
+  padding: 10px 12px;
+  gap: 17px;
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 0.2s;
@@ -333,21 +348,21 @@ const logout = () => {
 
 /* 側邊欄頁腳 (收合按鈕) */
 .sidebar-footer {
-  padding: 5px;
+  padding: 3px;
   margin-top: auto; /* 將按鈕推到底部 */
   border-top: 1px solid #e9ecef;
 }
 
 .toggle-btn {
-  width: 100%;
+  width: 90%;
   background-color: #f5f7fa;
   border: 1px solid #dcdfe6;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   padding: 5px;
   font-size: 28px;
   line-height: 1;
-  color: #606266;
+  color: #404142;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -361,12 +376,33 @@ const logout = () => {
   color: #409eff;
 }
 
-/* --- 4. 主內容容器 --- */
-.main-content-area {
-  flex-grow: 1;
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow-y: auto; /* 如果內容超長，允許滾動 */
+/* --- 5. Footer --- */
+.main-footer {
+  flex-shrink: 0;
+  background-color: #ffffff;
+  padding: 2px 0px;
+  border-top: 1px solid #dee2e6;
+  color: #6c757d;
+  font-size: 0.8rem;
+  text-align: center;
+  margin-top: auto;
+}
+
+.footer-links {
+  margin-bottom: 1px;
+}
+
+.footer-links a {
+  color: #6c757d;
+  text-decoration: none;
+  margin: 0 1px;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+.footer-copyright {
+  line-height: 1.5;
 }
 </style>

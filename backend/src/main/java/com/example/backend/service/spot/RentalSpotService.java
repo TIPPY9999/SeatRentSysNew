@@ -51,11 +51,22 @@ public class RentalSpotService implements IRentalSpotService {
 
     @Override
     public RentalSpot update(RentalSpot rentalSpot) {
-
         // [修正] 確保 Update 操作有 ID，避免變成 Insert
         if (rentalSpot.getSpotId() == null) {
             throw new IllegalArgumentException("更新失敗：據點 ID (spotId) 不能為空");
         }
+
+        // [優化] 檔案清理機制：如果更新了圖片，刪除舊的實體檔案
+        rentalSpotRepository.findById(rentalSpot.getSpotId()).ifPresent(oldSpot -> {
+            String oldImage = oldSpot.getSpotImage();
+            String newImage = rentalSpot.getSpotImage();
+
+            // 當資料庫原本有圖，且新傳入的圖與舊圖不同（代表更換了或是原本有現在要刪除）
+            if (StringUtils.hasText(oldImage) && !oldImage.equals(newImage)) {
+                fileStorageService.delete(oldImage);
+            }
+        });
+
         // 更新時通常不檢查代碼重複 (除非允許修改代碼且改到跟別人一樣)，直接儲存
         return rentalSpotRepository.save(rentalSpot);
     }

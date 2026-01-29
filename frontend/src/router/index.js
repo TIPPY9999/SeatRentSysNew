@@ -20,6 +20,7 @@ import MemberLayout from '@/layouts/MemberLayout.vue' // 會員主框架
 import MemberProfileView from '@/views/member/MemberProfileView.vue' // 會員個人資料頁
 import AuthLayout from '@/layouts/AuthLayout.vue' // 認證相關頁面框架
 import MainLayout from '@/layouts/MainLayout.vue' // 前台主框架
+import HomeView from '@/views/HomeView.vue' // 前台首頁
 
 /**
  * ==========================================
@@ -50,8 +51,9 @@ const routes = [
     component: MainLayout,
     children: [
       {
-        path: 'SearchSpot',
-        component: () => import('@/views/rec/RecRentUserSearchPage.vue'),
+        path: '',
+        name: 'home',
+        component: HomeView,
       },
 
       // 會員頁面
@@ -61,18 +63,15 @@ const routes = [
         component: MemberProfileView,
       },
 
-      // 會員身份證頁面
-      {
-        path: 'user-info',
-        name: 'member-user-info',
-        component: () => import('@/views/rec/IdHoldingPage.vue'),
-      },
-
       // 租借頁面
       {
         path: 'rent/:action?',
         name: 'rec-rent-user',
         component: () => import('@/views/rec/RecRentUserPage.vue'),
+      },
+      {
+        path: 'SearchSpot',
+        component: () => import('@/views/rec/RecRentUserSearchPage.vue'),
       },
 
       // 將 'rec-rent-record' 路由重定向至帶有 action 參數的標準租借路由
@@ -83,11 +82,15 @@ const routes = [
       },
 
       {
-        path: '/payment/order',
+        path: 'payment/order',
         name: 'payment-order',
         component: () => import('@/views/ecpay/PaymentViewOrder.vue'),
       },
-
+      {
+        path: 'claims',
+        name: 'claims',
+        component: () => import('@/views/rec/RightsClaimPage.vue'),
+      },
 
       // --- 新增：優惠券商城 ---
       {
@@ -102,6 +105,17 @@ const routes = [
         name: 'snake-game',
         component: SnakeGame,
       },
+      {
+        path: '/redemption-history',
+        name: 'redemption-history',
+        component: () => import('@/views/merchantAndCoupon/RedemptionHistory.vue'),
+      },
+      {
+        path: '/sponsor',
+        name: 'sponsor',
+        component: () => import('@/views/ecpay/SponsorView.vue'),
+      },
+     
       // 訂單確認與付款頁
       {
         path: '/payment-checkout/:recId',
@@ -140,7 +154,7 @@ const routes = [
         component: AdminHomeView,
       },
 
-      // [整合] 據點與座位管理 (Spot & Seat)
+      // 據點與座位管理 (Spot & Seat)
       {
         path: 'spot/list',
         name: 'spot-list',
@@ -167,11 +181,22 @@ const routes = [
         name: 'spot-view',
         component: () => import('@/views/spot/SpotOne.vue'),
       },
-
+      // 據點統計儀表板
+      {
+        path: 'spot/analyze',
+        name: 'spot-analyze',
+        component: () => import('@/views/spot/SpotAnalyze.vue'),
+      },
+      {
+        path: 'spot/monitor',
+        name: 'dispatch-monitor',
+        component: () => import('@/views/spot/DispatchMonitor.vue'),
+      },
       // ==========================================
       // [整合] 座位管理模組 (Seat)
       // ==========================================
       // 座位管理
+
       {
         path: 'seat/list',
         name: 'seat-list',
@@ -274,6 +299,11 @@ const routes = [
         path: 'rec-rent',
         name: 'rec-rent',
         component: () => import('@/views/rec/RecRentMgnPage.vue'),
+      },
+      {
+        path: 'rec-chart',
+        name: 'rec-chart',
+        component: () => import('@/views/rec/RecRentMgnChartPage.vue'),
       },
 
       // [功能] 維修管理 (Maintenance)

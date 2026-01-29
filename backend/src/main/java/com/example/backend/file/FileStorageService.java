@@ -43,7 +43,13 @@ public class FileStorageService {
         }
 
         try {
-            // 2. 淨化檔名 (只取最後的檔案名稱，防止路徑遍歷攻擊 ../../)
+            // 2. 檔案類型檢核：僅允許圖片格式
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                throw new RuntimeException("不支援的檔案格式！僅允許上傳圖片檔案 (MIME type: " + contentType + ")");
+            }
+
+            // 3. 淨化檔名 (只取最後的檔案名稱，防止路徑遍歷攻擊 ../../)
             // 例如: "foo/../bar.jpg" 會變成 "bar.jpg"
             String originalFilename = file.getOriginalFilename();
             if (originalFilename == null) {

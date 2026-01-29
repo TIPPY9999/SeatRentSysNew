@@ -15,6 +15,8 @@ import VueGoogleMaps from '@fawmi/vue-google-maps'
 import Particles from '@tsparticles/vue3'
 import { loadSlim } from '@tsparticles/slim'
 
+import VueApexCharts from 'vue3-apexcharts'
+
 import App from './App.vue'
 import router from './router'
 
@@ -73,7 +75,7 @@ axios.interceptors.response.use(
       }).then(() => {
         isAuthExpiredDialogShowing = false
         // 清理所有身分緩存
-        localStorage.clear() 
+        localStorage.clear()
         router.push('/login')
       })
     }
@@ -89,6 +91,9 @@ app.use(router)
 
 // Element Plus
 app.use(ElementPlus)
+
+// ApexCharts
+app.use(VueApexCharts)
 
 // --- 啟用 vue-google-maps 並設定 API 金鑰 ---
 app.use(VueGoogleMaps, {

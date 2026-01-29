@@ -129,7 +129,7 @@ const backToList = () => {
 
   <div class="rec-rent-container">
     <div class="main-content">
-      <h1>訂單管理系統 (RecRent)</h1>
+      <h1>訂單管理系統</h1>
 
       <div v-if="activeView === 'add'" class="view-section">
         <rec-rent-add @save-rent="handleSaveRent" @cancel="backToList" />
