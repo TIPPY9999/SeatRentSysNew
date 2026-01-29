@@ -15,6 +15,8 @@ import VueGoogleMaps from '@fawmi/vue-google-maps'
 import Particles from '@tsparticles/vue3'
 import { loadSlim } from '@tsparticles/slim'
 
+import VueApexCharts from 'vue3-apexcharts'
+
 import App from './App.vue'
 import router from './router'
 
@@ -51,6 +53,7 @@ axios.interceptors.response.use(
       status === 401 &&
       !url.includes('/login') &&
       !url.includes('/oauth2') &&
+      !url.includes('/api/auth/me') &&
       !isAuthExpiredDialogShowing
     ) {
       // 如果是在首頁 (#/)，通常是靜態展示，我們就默默清理掉過期資訊就好，不跳彈窗
@@ -72,7 +75,7 @@ axios.interceptors.response.use(
       }).then(() => {
         isAuthExpiredDialogShowing = false
         // 清理所有身分緩存
-        localStorage.clear() 
+        localStorage.clear()
         router.push('/login')
       })
     }
@@ -88,6 +91,9 @@ app.use(router)
 
 // Element Plus
 app.use(ElementPlus)
+
+// ApexCharts
+app.use(VueApexCharts)
 
 // --- 啟用 vue-google-maps 並設定 API 金鑰 ---
 app.use(VueGoogleMaps, {

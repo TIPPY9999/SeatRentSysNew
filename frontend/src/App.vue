@@ -87,15 +87,11 @@ onMounted(async() => {
 html,
 body,
 #app {
-  height: 100%;
+  height: 100vh;
   margin: 0;
   padding: 0;
   font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
 }
 
 /* 這是 Vue Router 自動加上的 class，用來做選單高亮 */
-.router-link-active {
-  background-color: #007bff !important;
-  color: #fff !important;
-}
 </style>

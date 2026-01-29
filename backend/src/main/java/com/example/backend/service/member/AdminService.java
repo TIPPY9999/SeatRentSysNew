@@ -83,4 +83,26 @@ public class AdminService {
         }
         return adminRepository.findByKeyword(keyword);
     }
+
+    // 透過 Email 尋找管理員 (供 Controller 檢查是否存在)
+    public Admin findByEmail(String email) {
+        if (email == null)
+            return null;
+        return adminRepository.findByAdmEmail(email.trim().toLowerCase());
+    }
+
+    // 透過 Email 更新密碼
+    @Transactional
+    public boolean updatePasswordByEmail(String email, String newPassword) {
+        // 先檢查密碼格式
+        validatePassword(newPassword);
+
+        Admin admin = adminRepository.findByAdmEmail(email.trim().toLowerCase());
+        if (admin != null) {
+            admin.setAdmPassword(newPassword);
+            adminRepository.save(admin);
+            return true;
+        }
+        return false;
+    }
 }

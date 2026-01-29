@@ -1,7 +1,12 @@
 <script setup>
 /**
- * AdminHomeView.vue：後台首頁入口
- * 科技數據風儀表板設計 - Glassmorphism 風格
+ * AdminHomeView.vue：後台首頁入口 (Layout 適配修正版)
+ * ------------------------------------------------
+ * 1. [Fix] 更名 .content-wrapper -> .dashboard-inner 避免與 AdminLayout 衝突
+ * 2. [Fix] 移除 min-height: 100vh，改由內容撐開，適配 AdminLTE 結構
+ * 3. [Fix] 粒子特效改為 absolute，限制在內容區塊內
+ * 4. [Layout] 模組區塊採用 Grid 分箱設計，確保每個類別獨立顯示
+ * ------------------------------------------------
  */
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -11,28 +16,98 @@ import axios from 'axios'
 const router = useRouter()
 const adminAuthStore = useAdminAuthStore()
 
-// 取得當前登入管理員名稱
 const adminName = computed(() => adminAuthStore.admin?.name || '管理員')
 
-// 統計數據 - 從 API 取得
+// =======================
+// 1. 統計數據狀態
+// =======================
 const stats = ref({
-  totalSpots: 0, // 租借點數量
-  totalSeats: 0, // 椅子數量
-  maintenanceCount: 0, // 維修/維護中數量
-  totalMembers: 0, // 會員人數
-  activeRentals: 0, // 進行中租借
+  totalSpots: 0,
+  totalSeats: 0,
+  maintenanceCount: 0,
+  totalMembers: 0,
+  activeRentals: 0,
 })
 
-// 載入狀態
 const loading = ref(true)
-
-// 當前時間
 const currentTime = ref('')
 const timeInterval = ref(null)
 
+// =======================
+// 2. 圖表設定
+// =======================
+// (A) 營收趨勢圖
+const revenueSeries = ref([])
+const revenueOptions = ref({
+  chart: {
+    type: 'area',
+    height: 350,
+    toolbar: { show: false },
+    fontFamily: 'Helvetica, Arial, sans-serif',
+    animations: { enabled: true, easing: 'easeinout', speed: 800 },
+    background: 'transparent',
+  },
+  dataLabels: { enabled: false },
+  stroke: { curve: 'smooth', width: 3 },
+  xaxis: {
+    categories: [],
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+    labels: { style: { colors: '#64748b' } },
+  },
+  yaxis: { labels: { style: { colors: '#64748b' } } },
+  grid: {
+    borderColor: '#f1f1f1',
+    strokeDashArray: 4,
+    padding: { top: 0, right: 0, bottom: 0, left: 10 },
+  },
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shadeIntensity: 1,
+      opacityFrom: 0.6,
+      opacityTo: 0.05,
+      stops: [0, 90, 100],
+    },
+  },
+  tooltip: { x: { format: 'yyyy-MM-dd' }, theme: 'light' },
+  colors: ['#4f46e5'],
+})
+
+// (B) 熱門站點排行
+const spotSeries = ref([])
+const spotOptions = ref({
+  chart: {
+    type: 'bar',
+    height: 350,
+    toolbar: { show: false },
+    fontFamily: 'Helvetica, Arial, sans-serif',
+    background: 'transparent',
+  },
+  plotOptions: {
+    bar: {
+      borderRadius: 4,
+      horizontal: true,
+      barHeight: '55%',
+      distributed: true,
+    },
+  },
+  dataLabels: { enabled: false },
+  xaxis: {
+    categories: [],
+    labels: { style: { colors: '#64748b' } },
+  },
+  yaxis: { labels: { style: { colors: '#64748b', fontSize: '13px', fontWeight: 500 } } },
+  grid: { show: false },
+  colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+  legend: { show: false },
+})
+
+// =======================
+// 3. 時間更新邏輯
+// =======================
 const updateTime = () => {
-  const now = new Date()
-  currentTime.value = now.toLocaleString('zh-TW', {
+  currentTime.value = new Date().toLocaleString('zh-TW', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -42,69 +117,72 @@ const updateTime = () => {
   })
 }
 
-// 取得統計數據
+// =======================
+// 4. 資料獲取與處理
+// =======================
 const fetchStats = async () => {
   loading.value = true
   try {
-    // 並行請求所有數據
     const [spotsRes, seatsRes, membersRes, rentalsRes, ticketsRes] = await Promise.all([
-      axios.get('http://localhost:8080/spot/list'), // 租借點
-      axios.get('http://localhost:8080/seats'), // 椅子
-      axios.get('http://localhost:8080/api/members'), // 會員
-      axios.get('http://localhost:8080/rec-rent'), // 租借紀錄
-      axios.get('http://localhost:8080/api/maintenance/tickets/active'), // 維修工單
+      axios.get('/api/spot/list'),
+      axios.get('/api/seats'),
+      axios.get('/api/members'),
+      axios.get('/api/rent-details/all'),
+      axios.get('/api/maintenance/tickets/active'),
     ])
 
-    // 租借點數量
+    // 基礎數據
     stats.value.totalSpots = spotsRes.data?.length || 0
-
-    // 椅子數量
     stats.value.totalSeats = seatsRes.data?.length || 0
-
-    // 維修/維護中數量 (狀態為 維修中 或 待處理 的工單數)
-    const maintenanceTickets = ticketsRes.data || []
-    stats.value.maintenanceCount = maintenanceTickets.length
-
-    // 會員人數
+    stats.value.maintenanceCount = (ticketsRes.data || []).length
     stats.value.totalMembers = membersRes.data?.length || 0
+    stats.value.activeRentals = (rentalsRes.data || []).filter(
+      (r) => r.recStatus === '租借中',
+    ).length
 
-    // 進行中租借 (狀態為 租借中)
-    const rentals = rentalsRes.data || []
-    stats.value.activeRentals = rentals.filter((r) => r.recStatus === '租借中').length
+    // 圖表數據處理
+    const rawRentals = rentalsRes.data || []
+
+    // (A) 每日營收
+    const dailyMap = {}
+    rawRentals.forEach((item) => {
+      const dateKey = item.recRentDT2 ? item.recRentDT2.split('T')[0] : 'Unknown'
+      const price = item.recPrice || 0
+      if (!dailyMap[dateKey]) dailyMap[dateKey] = 0
+      dailyMap[dateKey] += price
+    })
+    const sortedDates = Object.keys(dailyMap).sort()
+    const dailyAmounts = sortedDates.map((date) => dailyMap[date])
+
+    revenueOptions.value = { ...revenueOptions.value, xaxis: { categories: sortedDates } }
+    revenueSeries.value = [{ name: '當日營收', data: dailyAmounts }]
+
+    // (B) 熱門站點
+    const spotCountMap = {}
+    rawRentals.forEach((item) => {
+      const spotName = item.rentSpotName || '未知站點'
+      spotCountMap[spotName] = (spotCountMap[spotName] || 0) + 1
+    })
+    const sortedSpots = Object.entries(spotCountMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+
+    const topSpotNames = sortedSpots.map((entry) => entry[0])
+    const topSpotCounts = sortedSpots.map((entry) => entry[1])
+
+    spotOptions.value = { ...spotOptions.value, xaxis: { categories: topSpotNames } }
+    spotSeries.value = [{ name: '租借次數', data: topSpotCounts }]
   } catch (error) {
-    console.error('取得統計數據失敗:', error)
+    console.error('統計載入失敗:', error)
   } finally {
     loading.value = false
   }
 }
 
-onMounted(() => {
-  updateTime()
-  timeInterval.value = setInterval(updateTime, 1000)
-  fetchStats()
-})
-
-onUnmounted(() => {
-  if (timeInterval.value) {
-    clearInterval(timeInterval.value)
-  }
-})
-
-// 管理功能模組分類
+// =======================
+// 5. 模組定義
+// =======================
 const moduleGroups = [
-  {
-    title: '會員與權限管理',
-    icon: 'fas fa-users-cog',
-    modules: [
-      { name: '會員管理', desc: '管理會員資料', icon: 'fas fa-users', path: '/admin/members' },
-      {
-        name: '管理員管理',
-        desc: '管理後台人員帳號',
-        icon: 'fas fa-user-shield',
-        path: '/admin/admins',
-      },
-    ],
-  },
   {
     title: '場地與座位管理',
     icon: 'fas fa-building',
@@ -115,30 +193,69 @@ const moduleGroups = [
         icon: 'fas fa-map-marker-alt',
         path: '/admin/spot/list',
       },
+      { name: '座位管理', desc: '座位配置與狀態', icon: 'fas fa-chair', path: '/admin/seat/list' },
       {
-        name: '座位管理',
-        desc: '管理座位狀態與配置',
-        icon: 'fas fa-chair',
-        path: '/admin/seat/list',
+        name: '據點分析',
+        desc: '關鍵統計圖表',
+        icon: 'fas fa-chart-line',
+        path: '/admin/spot/analyze',
+      },
+      {
+        name: '調度中心',
+        desc: '即時監控與調度',
+        icon: 'fas fa-broadcast-tower',
+        path: '/admin/spot/monitor',
       },
     ],
   },
   {
-    title: '租借與金流管理',
-    icon: 'fas fa-hand-holding-usd',
+    title: '會員與權限管理',
+    icon: 'fas fa-users-cog',
+    modules: [
+      { name: '會員列表', desc: '一般會員資料管理', icon: 'fas fa-users', path: '/admin/members' },
+      {
+        name: '管理員列表',
+        desc: '後台權限設定',
+        icon: 'fas fa-user-shield',
+        path: '/admin/admins',
+      },
+    ],
+  },
+  {
+    title: '商家與優惠管理',
+    icon: 'fas fa-store',
     modules: [
       {
-        name: '租借紀錄',
-        desc: '查看租借與歸還紀錄',
-        icon: 'fas fa-clipboard-list',
-        path: '/admin/rec-rent',
+        name: '商家管理',
+        desc: '合作商家資料',
+        icon: 'fas fa-store-alt',
+        path: '/admin/merchants',
       },
       {
-        name: '金流管理',
-        desc: '管理金流相關設定',
-        icon: 'fas fa-credit-card',
-        path: '/admin/payment',
+        name: '優惠券管理',
+        desc: '發放與管理優惠券',
+        icon: 'fas fa-ticket-alt',
+        path: '/admin/discounts',
       },
+      {
+        name: '兌換紀錄',
+        desc: '點數兌換報表',
+        icon: 'fas fa-clipboard-list',
+        path: '/admin/redemption-logs',
+      },
+    ],
+  },
+  {
+    title: '租借與訂單管理',
+    icon: 'fas fa-file-invoice-dollar',
+    modules: [
+      {
+        name: '統計圖表',
+        desc: '營收與租借分析',
+        icon: 'fas fa-chart-pie',
+        path: '/admin/rec-chart',
+      },
+      { name: '訂單管理', desc: '查詢歷史訂單', icon: 'fas fa-list-alt', path: '/admin/rec-rent' },
     ],
   },
   {
@@ -147,208 +264,188 @@ const moduleGroups = [
     modules: [
       {
         name: '維護人員管理',
-        desc: '管理維護技術人員',
+        desc: '人員排班與資料',
         icon: 'fas fa-user-cog',
         path: '/admin/staff-list',
       },
       {
         name: '維修工單管理',
-        desc: '追蹤維修進度與派工',
+        desc: '追蹤維修進度',
         icon: 'fas fa-wrench',
         path: '/admin/mtif-list',
       },
-    ],
-  },
-  {
-    title: '商家與優惠管理',
-    icon: 'fas fa-store-alt',
-    modules: [
       {
-        name: '商家管理',
-        desc: '管理商家資料與狀態',
-        icon: 'fas fa-store',
-        path: '/admin/merchants',
+        name: '定期排程管理',
+        desc: '自動化維護排程',
+        icon: 'fas fa-calendar-alt',
+        path: '/admin/maintenance/schedule',
       },
-      {
-        name: '優惠券管理',
-        desc: '管理優惠券與活動',
-        icon: 'fas fa-ticket-alt',
-        path: '/admin/coupons',
-      },
-    ],
-  },
-  {
-    title: '其他功能',
-    icon: 'fas fa-ellipsis-h',
-    modules: [
-      { name: '小遊戲', desc: '貪吃蛇', icon: 'fas fa-gamepad', path: '/admin/snake-game' },
     ],
   },
 ]
+
+// =======================
+// 6. 生命週期
+// =======================
+onMounted(() => {
+  updateTime()
+  timeInterval.value = setInterval(updateTime, 1000)
+  fetchStats()
+})
+
+onUnmounted(() => {
+  if (timeInterval.value) clearInterval(timeInterval.value)
+})
 </script>
 
 <template>
-  <div class="dashboard">
-    <!-- 粒子背景效果 -->
-    <div class="particles-bg">
-      <div class="particle" v-for="n in 20" :key="n"></div>
+  <div class="dashboard-container">
+    <div class="particles-container">
+      <div class="particle" v-for="n in 30" :key="n"></div>
     </div>
 
-    <!-- 頂部歡迎區 -->
-    <div class="welcome-section">
-      <div class="welcome-content">
-        <div class="welcome-text">
-          <h1>歡迎回來，{{ adminName }}</h1>
-          <p class="subtitle">座位租借系統管理後台</p>
+    <main class="dashboard-inner fade-in-up">
+      <header class="header-section">
+        <div class="header-left">
+          <h1>Hello, {{ adminName }} <span class="wave">👋</span></h1>
+          <p class="subtitle">Take@Seat 營運控制中心</p>
         </div>
-        <div class="time-display">
-          <i class="fas fa-clock"></i>
-          <span>{{ currentTime }}</span>
+        <div class="header-right">
+          <div class="time-pill">
+            <span class="pulse-dot"></span>
+            {{ currentTime }}
+          </div>
         </div>
-      </div>
-    </div>
+      </header>
 
-    <!-- 統計卡片區 -->
-    <div class="stats-grid">
-      <!-- 租借點數量 -->
-      <div class="stat-card glass">
-        <div class="stat-icon spots">
-          <i class="fas fa-map-marker-alt"></i>
+      <section class="stats-section">
+        <div class="stat-card">
+          <div class="icon-circle blue-bg"><i class="fas fa-map-marker-alt"></i></div>
+          <div class="stat-content">
+            <span class="stat-num">{{ loading ? '...' : stats.totalSpots }}</span>
+            <span class="stat-label">營運據點</span>
+          </div>
         </div>
-        <div class="stat-details">
-          <span class="stat-value" :class="{ 'loading-text': loading }">
-            {{ loading ? '載入中...' : stats.totalSpots }}
-          </span>
-          <span class="stat-label">租借據點</span>
-        </div>
-        <div class="stat-indicator" v-if="!loading"><span class="dot active"></span> 營運中</div>
-      </div>
 
-      <!-- 椅子數量 -->
-      <div class="stat-card glass">
-        <div class="stat-icon seats">
-          <i class="fas fa-chair"></i>
+        <div class="stat-card">
+          <div class="icon-circle purple-bg"><i class="fas fa-chair"></i></div>
+          <div class="stat-content">
+            <span class="stat-num">{{ loading ? '...' : stats.totalSeats }}</span>
+            <span class="stat-label">資產總數</span>
+          </div>
         </div>
-        <div class="stat-details">
-          <span class="stat-value" :class="{ 'loading-text': loading }">
-            {{ loading ? '載入中...' : stats.totalSeats }}
-          </span>
-          <span class="stat-label">座位總數</span>
-        </div>
-        <div class="stat-badge" v-if="!loading"><i class="fas fa-check-circle"></i> 可用</div>
-      </div>
 
-      <!-- 維修/維護中 -->
-      <div class="stat-card glass">
-        <div class="stat-icon maintenance">
-          <i class="fas fa-tools"></i>
+        <div class="stat-card">
+          <div class="icon-circle red-bg"><i class="fas fa-tools"></i></div>
+          <div class="stat-content">
+            <span class="stat-num">{{ loading ? '...' : stats.maintenanceCount }}</span>
+            <span class="stat-label">維護案量</span>
+          </div>
+          <div class="alert-dot" v-if="stats.maintenanceCount > 0"></div>
         </div>
-        <div class="stat-details">
-          <span class="stat-value" :class="{ 'loading-text': loading }">
-            {{ loading ? '載入中...' : stats.maintenanceCount }}
-          </span>
-          <span class="stat-label">維護工單</span>
-        </div>
-        <div class="stat-badge warning" v-if="!loading && stats.maintenanceCount > 0">
-          <i class="fas fa-exclamation-triangle"></i> 處理中
-        </div>
-        <div class="stat-badge success" v-else-if="!loading">
-          <i class="fas fa-check"></i> 無待處理
-        </div>
-      </div>
 
-      <!-- 會員人數 -->
-      <div class="stat-card glass">
-        <div class="stat-icon members">
-          <i class="fas fa-users"></i>
+        <div class="stat-card">
+          <div class="icon-circle green-bg"><i class="fas fa-broadcast-tower"></i></div>
+          <div class="stat-content">
+            <span class="stat-num">{{ loading ? '...' : stats.activeRentals }}</span>
+            <span class="stat-label">即時租借</span>
+          </div>
         </div>
-        <div class="stat-details">
-          <span class="stat-value" :class="{ 'loading-text': loading }">
-            {{ loading ? '載入中...' : stats.totalMembers.toLocaleString() }}
-          </span>
-          <span class="stat-label">會員總數</span>
-        </div>
-        <div class="stat-trend up" v-if="!loading"><i class="fas fa-user-plus"></i> 成長中</div>
-      </div>
+      </section>
 
-      <!-- 進行中租借 -->
-      <div class="stat-card glass highlight">
-        <div class="stat-icon rentals">
-          <i class="fas fa-clipboard-check"></i>
+      <section class="charts-section">
+        <div class="chart-wrapper">
+          <div class="section-header">
+            <h3><i class="fas fa-chart-area"></i> 營收趨勢分析</h3>
+            <span class="badge-soft">近 7 日</span>
+          </div>
+          <apexchart
+            type="area"
+            height="350"
+            :options="revenueOptions"
+            :series="revenueSeries"
+          ></apexchart>
         </div>
-        <div class="stat-details">
-          <span class="stat-value" :class="{ 'loading-text': loading }">
-            {{ loading ? '載入中...' : stats.activeRentals }}
-          </span>
-          <span class="stat-label">進行中租借</span>
-        </div>
-        <div class="stat-indicator live" v-if="!loading"><span class="dot pulse"></span> 即時</div>
-      </div>
-    </div>
 
-    <!-- 功能模組區 - 分類設計 -->
-    <div class="modules-section">
-      <div class="section-header">
-        <div class="section-title">
-          <i class="fas fa-th-large"></i>
-          <span>管理功能</span>
+        <div class="chart-wrapper">
+          <div class="section-header">
+            <h3><i class="fas fa-chart-bar"></i> 熱門站點排行</h3>
+            <span class="badge-soft">Top 5</span>
+          </div>
+          <apexchart
+            type="bar"
+            height="350"
+            :options="spotOptions"
+            :series="spotSeries"
+          ></apexchart>
         </div>
-        <p class="section-subtitle">快速存取各項管理功能</p>
-      </div>
+      </section>
 
-      <!-- 模組分類群組 -->
-      <div class="module-groups">
-        <div v-for="(group, gIndex) in moduleGroups" :key="gIndex" class="module-group glass">
+      <section class="modules-section">
+        <div v-for="(group, gIndex) in moduleGroups" :key="gIndex" class="module-group-box">
           <div class="group-header">
-            <div class="group-icon">
-              <i :class="group.icon"></i>
-            </div>
-            <h3 class="group-title">{{ group.title }}</h3>
+            <i :class="group.icon"></i>
+            <span>{{ group.title }}</span>
           </div>
 
-          <div class="group-modules">
+          <div class="module-grid">
             <div
               v-for="(mod, mIndex) in group.modules"
               :key="mIndex"
-              class="module-item"
+              class="module-btn"
               @click="router.push(mod.path)"
             >
-              <div class="module-icon">
+              <div class="mod-icon">
                 <i :class="mod.icon"></i>
               </div>
-              <div class="module-info">
-                <span class="module-name">{{ mod.name }}</span>
-                <span class="module-desc">{{ mod.desc }}</span>
+              <div class="mod-info">
+                <h4>{{ mod.name }}</h4>
+                <span>{{ mod.desc }}</span>
               </div>
-              <div class="module-arrow">
-                <i class="fas fa-chevron-right"></i>
-              </div>
+              <i class="fas fa-chevron-right arrow-icon"></i>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   </div>
 </template>
 
 <style scoped>
-/* ========== 主容器 ========== */
-.dashboard {
-  min-height: 100vh;
-  padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e8f4fc 100%);
+/* =========================================
+   1. Layout 適配修正
+   ========================================= */
+.dashboard-container {
+  /* 🔥 移除 min-height: 100vh，因為外層 AdminLayout 已經有高度 */
+  width: 100%;
+  background-color: #f8fafc; /* 確保有底色 */
+  color: #0f172a;
   position: relative;
-  overflow: hidden;
+  /* 給一點內距，讓內容不要貼死邊緣 */
+  padding: 1.5rem;
+  overflow: hidden; /* 防止內部粒子溢出 */
 }
 
-/* ========== 粒子背景 ========== */
-.particles-bg {
-  position: absolute;
+/* ✅ 改名為 dashboard-inner，不再與 AdminLTE 的 content-wrapper 衝突 */
+.dashboard-inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* =========================================
+   2. 粒子特效 (改為 absolute)
+   ========================================= */
+.particles-container {
+  position: absolute; /* 🔥 改為 absolute，只佔滿 dashboard-container */
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
+  z-index: 0;
   overflow: hidden;
 }
 
@@ -356,540 +453,383 @@ const moduleGroups = [
   position: absolute;
   width: 6px;
   height: 6px;
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  background: rgba(59, 130, 246, 0.4);
   border-radius: 50%;
-  opacity: 0.3;
-  animation: float 15s infinite ease-in-out;
+  animation: float 20s infinite linear;
+  opacity: 0.6;
 }
 
+.particle:nth-child(even) {
+  background: rgba(16, 185, 129, 0.3);
+  width: 8px;
+  height: 8px;
+  animation-duration: 25s;
+}
+.particle:nth-child(3n) {
+  background: rgba(245, 158, 11, 0.3);
+  width: 4px;
+  height: 4px;
+  animation-duration: 18s;
+}
+
+/* 隨機分佈 */
 .particle:nth-child(1) {
-  left: 5%;
   top: 10%;
-  animation-delay: 0s;
+  left: 5%;
 }
 .particle:nth-child(2) {
-  left: 15%;
-  top: 30%;
-  animation-delay: 1s;
+  top: 20%;
+  left: 85%;
 }
 .particle:nth-child(3) {
-  left: 25%;
-  top: 50%;
-  animation-delay: 2s;
+  top: 80%;
+  left: 15%;
 }
 .particle:nth-child(4) {
-  left: 35%;
-  top: 20%;
-  animation-delay: 3s;
+  top: 50%;
+  left: 50%;
 }
 .particle:nth-child(5) {
-  left: 45%;
-  top: 70%;
-  animation-delay: 4s;
+  top: 30%;
+  left: 10%;
 }
 .particle:nth-child(6) {
-  left: 55%;
-  top: 15%;
-  animation-delay: 5s;
-}
-.particle:nth-child(7) {
-  left: 65%;
-  top: 45%;
-  animation-delay: 6s;
-}
-.particle:nth-child(8) {
-  left: 75%;
-  top: 65%;
-  animation-delay: 7s;
-}
-.particle:nth-child(9) {
-  left: 85%;
-  top: 25%;
-  animation-delay: 8s;
-}
-.particle:nth-child(10) {
-  left: 95%;
-  top: 55%;
-  animation-delay: 9s;
-}
-.particle:nth-child(11) {
-  left: 10%;
-  top: 80%;
-  animation-delay: 10s;
-}
-.particle:nth-child(12) {
-  left: 20%;
-  top: 5%;
-  animation-delay: 11s;
-}
-.particle:nth-child(13) {
-  left: 30%;
-  top: 85%;
-  animation-delay: 12s;
-}
-.particle:nth-child(14) {
-  left: 40%;
-  top: 40%;
-  animation-delay: 13s;
-}
-.particle:nth-child(15) {
-  left: 50%;
-  top: 90%;
-  animation-delay: 14s;
-}
-.particle:nth-child(16) {
-  left: 60%;
-  top: 35%;
-  animation-delay: 0.5s;
-}
-.particle:nth-child(17) {
-  left: 70%;
-  top: 75%;
-  animation-delay: 1.5s;
-}
-.particle:nth-child(18) {
-  left: 80%;
-  top: 8%;
-  animation-delay: 2.5s;
-}
-.particle:nth-child(19) {
-  left: 90%;
   top: 60%;
-  animation-delay: 3.5s;
+  left: 90%;
 }
-.particle:nth-child(20) {
-  left: 3%;
-  top: 45%;
-  animation-delay: 4.5s;
-}
+/* ...更多省略 */
 
 @keyframes float {
-  0%,
-  100% {
-    transform: translateY(0) translateX(0);
+  0% {
+    transform: translateY(0) rotate(0deg);
     opacity: 0.3;
   }
-  25% {
-    transform: translateY(-30px) translateX(10px);
-    opacity: 0.5;
-  }
   50% {
-    transform: translateY(-15px) translateX(-10px);
-    opacity: 0.4;
+    transform: translateY(-100px) rotate(180deg);
+    opacity: 0.8;
   }
-  75% {
-    transform: translateY(-40px) translateX(5px);
-    opacity: 0.6;
+  100% {
+    transform: translateY(0) rotate(360deg);
+    opacity: 0.3;
   }
 }
 
-/* ========== 玻璃擬態效果 ========== */
-.glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.08);
-}
-
-/* ========== 歡迎區 ========== */
-.welcome-section {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 28px;
-}
-
-.welcome-content {
+/* =========================================
+   3. UI 元件
+   ========================================= */
+.header-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 28px 32px;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(12px);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.06);
+  margin-bottom: 2rem;
 }
 
-.welcome-text h1 {
-  margin: 0;
+.header-left h1 {
   font-size: 1.75rem;
-  font-weight: 700;
-  color: #1e3a5f;
-  letter-spacing: -0.5px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
 }
-
 .subtitle {
-  margin: 6px 0 0;
-  font-size: 0.95rem;
   color: #64748b;
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
 }
-
-.time-display {
+.time-pill {
+  background: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 99px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  border-radius: 12px;
-  color: white;
-  font-weight: 500;
-  font-size: 0.95rem;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-}
-
-/* ========== 統計卡片區 ========== */
-.stats-grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
-  margin-bottom: 32px;
-}
-
-.stat-card {
-  padding: 20px;
-  border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15);
-}
-
-.stat-card.highlight {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(96, 165, 250, 0.15) 100%);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-}
-
-.stat-icon.spots {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #d97706;
-}
-
-.stat-icon.seats {
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-  color: #4f46e5;
-}
-
-.stat-icon.maintenance {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #dc2626;
-}
-
-.stat-icon.members {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #2563eb;
-}
-
-.stat-icon.rentals {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-  color: #059669;
-}
-
-.stat-details {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #1e3a5f;
-  line-height: 1.2;
-}
-
-.stat-value.loading-text {
+  font-weight: 600;
+  color: #475569;
   font-size: 0.9rem;
-  color: #94a3b8;
 }
-
-.stat-label {
-  font-size: 0.85rem;
-  color: #64748b;
-  margin-top: 2px;
-}
-
-.stat-trend {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #059669;
-}
-
-.stat-trend.up {
-  color: #059669;
-}
-
-.stat-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #3b82f6;
-}
-
-.stat-badge.warning {
-  color: #f59e0b;
-}
-
-.stat-badge.success {
-  color: #10b981;
-}
-
-.stat-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-.stat-indicator.live {
-  color: #10b981;
-  font-weight: 500;
-}
-
-.stat-indicator .dot {
+.pulse-dot {
   width: 8px;
   height: 8px;
+  background: #22c55e;
   border-radius: 50%;
-  background: #10b981;
-}
-
-.stat-indicator .dot.active {
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
   animation: pulse 2s infinite;
 }
 
-.stat-indicator .dot.pulse {
-  animation: pulse 1s infinite;
-  background: #10b981;
+/* 統計卡片 Grid */
+.stats-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.1);
-  }
-}
-
-/* ========== 功能模組區 ========== */
-.modules-section {
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.05),
+    0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   position: relative;
-  z-index: 1;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.icon-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+.blue-bg {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+.purple-bg {
+  background: #f5f3ff;
+  color: #8b5cf6;
+}
+.red-bg {
+  background: #fef2f2;
+  color: #ef4444;
+}
+.green-bg {
+  background: #f0fdf4;
+  color: #22c55e;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+.stat-num {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+.stat-label {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+.alert-dot {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+}
+
+/* 圖表 Grid */
+.charts-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-wrapper {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.05),
+    0 1px 2px -1px rgba(0, 0, 0, 0.03);
 }
 
 .section-header {
-  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
-
-.section-title {
+.section-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.5rem;
 }
-
-.section-title i {
-  color: #3b82f6;
-  font-size: 1.1rem;
-}
-
-.section-title span {
-  font-size: 1.2rem;
+.badge-soft {
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #1e3a5f;
 }
 
-.section-subtitle {
-  margin: 6px 0 0 26px;
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
-
-/* ========== 模組群組 ========== */
-.module-groups {
+/* =========================================
+   4. 模組區 - 分箱佈局 (Modules)
+   ========================================= */
+.modules-section {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  /* 🔥 [關鍵] 大螢幕雙欄，中螢幕單欄 */
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 1.5rem;
 }
 
-.module-group {
-  border-radius: 16px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.module-group:hover {
-  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.12);
+/* 這是您要的「獨立 Box」 */
+.module-group-box {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.05),
+    0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .group-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(96, 165, 250, 0.05) 100%);
-  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  gap: 0.8rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #334155;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.group-header i {
+  color: #3b82f6;
+  font-size: 1.2rem;
 }
 
-.group-icon {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+/* 按鈕 Grid */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.module-btn {
+  background: #f8fafc;
   border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 14px;
-}
-
-.group-title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #1e3a5f;
-}
-
-.group-modules {
-  padding: 8px;
-}
-
-.module-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 10px;
+  padding: 1rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.module-btn:hover {
+  background: white;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1);
+  transform: translateY(-2px);
 }
 
-.module-item:hover {
-  background: rgba(59, 130, 246, 0.08);
-}
-
-.module-item .module-icon {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+.mod-icon {
+  width: 40px;
+  height: 40px;
+  background: white;
+  color: #64748b;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  color: #3b82f6;
-  transition: all 0.2s ease;
+  font-size: 1.1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: 0.2s;
+}
+.module-btn:hover .mod-icon {
+  background: #3b82f6;
+  color: white;
 }
 
-.module-item:hover .module-icon {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  transform: scale(1.05);
-}
-
-.module-item .module-info {
+.mod-info {
   flex: 1;
-  display: flex;
-  flex-direction: column;
 }
-
-.module-item .module-name {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #1e3a5f;
+.mod-info h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
 }
-
-.module-item .module-desc {
+.mod-info span {
   font-size: 0.75rem;
   color: #94a3b8;
+  display: block;
   margin-top: 2px;
 }
 
-.module-item .module-arrow {
+.arrow-icon {
+  font-size: 0.8rem;
   color: #cbd5e1;
-  font-size: 12px;
-  transition: all 0.2s ease;
+  transition: 0.2s;
 }
-
-.module-item:hover .module-arrow {
+.module-btn:hover .arrow-icon {
   color: #3b82f6;
-  transform: translateX(4px);
+  transform: translateX(3px);
 }
 
-/* ========== 響應式設計 ========== */
-@media (max-width: 1400px) {
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .module-groups {
-    grid-template-columns: repeat(2, 1fr);
+/* 動畫 */
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+  opacity: 0;
+  transform: translateY(15px);
+}
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-
-@media (max-width: 1024px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
   }
 }
+@keyframes wave-animation {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(15deg);
+  }
+}
+.wave {
+  display: inline-block;
+  animation: wave-animation 2.5s infinite;
+  transform-origin: 70% 70%;
+}
 
+/* RWD */
 @media (max-width: 768px) {
-  .dashboard {
-    padding: 16px;
-  }
-
-  .welcome-content {
-    flex-direction: column;
-    text-align: center;
-    gap: 16px;
-  }
-
-  .stats-grid {
+  .charts-section {
     grid-template-columns: 1fr;
   }
-
-  .module-groups {
+  .modules-section {
     grid-template-columns: 1fr;
-  }
-
-  .stat-card {
-    flex-direction: row;
-    align-items: center;
-    padding: 16px;
-  }
-
-  .stat-card .stat-icon {
-    margin-right: 12px;
-  }
-
-  .stat-card .stat-details {
-    flex: 1;
-  }
-
-  .welcome-text h1 {
-    font-size: 1.4rem;
   }
 }
 </style>

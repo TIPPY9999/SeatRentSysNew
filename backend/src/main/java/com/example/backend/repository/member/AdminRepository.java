@@ -26,4 +26,7 @@ public interface AdminRepository extends JpaRepository<Admin, Integer> {
                    OR a.admEmail LIKE %:kw%
             """)
     List<Admin> findByKeyword(@Param("kw") String keyword);
+
+    // 忘記密碼用：透過 Email 找到管理員物件
+    Admin findByAdmEmail(String admEmail);
 }

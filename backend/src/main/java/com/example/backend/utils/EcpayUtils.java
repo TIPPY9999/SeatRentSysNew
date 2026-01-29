@@ -15,7 +15,10 @@ public class EcpayUtils {
     private static final String HASH_KEY = "pwFHCqoQZGmho4w6";
     private static final String HASH_IV = "EkRm7iFT261dpevs";
     private static final String MERCHANT_ID = "3002607";
+    
     // 💡 記得更換為你目前的 Localtunnel 網址
+    // 注意：這裡必須是你現在有效的 Ngrok 或 Localtunnel 網址
+    // 如果隊友的網址已失效，請換成你自己的，否則綠界付款後跳轉會 404
     private static final String BASE_URL = "https://ceola-unreigning-paraphrastically.ngrok-free.dev";
 
     public String genCheckOutForm(String tradeNo, String totalAmount, String itemName, String baseUrl) {

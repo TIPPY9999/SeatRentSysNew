@@ -26,9 +26,6 @@ spring:
 
   datasource:
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSysNew;encrypt=false;trustServerCertificate=true
-    username: kang
-    password: 1234
 
   jpa:
     show-sql: true
@@ -42,3 +39,16 @@ spring:
       "[hibernate.default_schema]": dbo
       "[hibernate.dialect]": org.hibernate.dialect.SQLServerDialect
       "[hibernate.jdbc.lob.non_contextual_creation]": true
+
+  # --- 新增郵件發送設定 ---
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: alan123149@gmail.com
+    password: nyjctvblehdjzxbc
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true

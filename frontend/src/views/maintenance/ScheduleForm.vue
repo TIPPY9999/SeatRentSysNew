@@ -8,8 +8,7 @@ import { Setting, Aim, Clock, User, Check } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
-const { scheduleTypeConfig, dayOfWeekConfig, priorityConfig, formatScheduleDetail } =
-  useScheduleConfig()
+const { scheduleTypeConfig, priorityConfig, formatScheduleDetail } = useScheduleConfig()
 
 // ====== 編輯模式判斷 ======
 const isEdit = computed(() => !!route.params.id)
@@ -67,10 +66,10 @@ const dayOfWeekOptions = [
 ]
 
 const priorityOptions = [
-  { label: '低', value: 'LOW', color: '#909399' },
-  { label: '一般', value: 'NORMAL', color: '#409eff' },
-  { label: '高', value: 'HIGH', color: '#e6a23c' },
-  { label: '緊急', value: 'URGENT', color: '#f56c6c' },
+  { label: '低', value: 'LOW' },
+  { label: '一般', value: 'NORMAL' },
+  { label: '高', value: 'HIGH' },
+  { label: '緊急', value: 'URGENT' },
 ]
 
 const issueTypeOptions = ['例行保養', '清潔維護', '零件檢查', '系統校正', '安全檢測', '耗材更換']
@@ -118,7 +117,7 @@ const loadOptions = async () => {
     seatOptions.value = seatsRes.data || []
     staffOptions.value = (staffRes.data || []).filter((s) => s.isActive)
   } catch {
-    // 錯誤已由 http.js 處理
+    // handled by http.js
   } finally {
     loading.value = false
   }
@@ -152,20 +151,38 @@ const loadSchedule = async () => {
 }
 
 // ====== 監聽變更 ======
-watch(() => form.targetType, () => { form.targetId = null })
-watch(() => form.scheduleType, (newType) => {
-  if (newType === 'DAILY') { form.dayOfWeek = null; form.dayOfMonth = null }
-  else if (newType === 'WEEKLY') { form.dayOfMonth = null }
-  else if (newType === 'MONTHLY') { form.dayOfWeek = null }
-})
+watch(
+  () => form.targetType,
+  () => {
+    form.targetId = null
+  },
+)
+watch(
+  () => form.scheduleType,
+  (newType) => {
+    if (newType === 'DAILY') {
+      form.dayOfWeek = null
+      form.dayOfMonth = null
+    } else if (newType === 'WEEKLY') {
+      form.dayOfMonth = null
+    } else if (newType === 'MONTHLY') {
+      form.dayOfWeek = null
+    }
+  },
+)
 
 // ====== 步驟驗證 ======
 const validateCurrentStep = async () => {
   const fieldsMap = {
     0: ['title', 'issueType', 'issuePriority'],
     1: ['targetType', 'targetId'],
-    2: ['scheduleType', 'executeTime', ...(form.scheduleType === 'WEEKLY' ? ['dayOfWeek'] : []), ...(form.scheduleType === 'MONTHLY' ? ['dayOfMonth'] : [])],
-    3: [], // 指派人員非必填
+    2: [
+      'scheduleType',
+      'executeTime',
+      ...(form.scheduleType === 'WEEKLY' ? ['dayOfWeek'] : []),
+      ...(form.scheduleType === 'MONTHLY' ? ['dayOfMonth'] : []),
+    ],
+    3: [],
     4: [],
   }
   const fields = fieldsMap[currentStep.value]
@@ -184,7 +201,6 @@ const nextStep = async () => {
     currentStep.value = Math.min(currentStep.value + 1, steps.length - 1)
   }
 }
-
 const prevStep = () => {
   currentStep.value = Math.max(currentStep.value - 1, 0)
 }
@@ -194,7 +210,12 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate()
   } catch {
-    Swal.fire({ icon: 'warning', title: '請檢查表單', text: '有必填欄位尚未填寫', confirmButtonColor: '#409eff' })
+    Swal.fire({
+      icon: 'warning',
+      title: '請檢查表單',
+      text: '有必填欄位尚未填寫',
+      confirmButtonColor: '#409eff',
+    })
     return
   }
 
@@ -203,14 +224,22 @@ const handleSubmit = async () => {
     const payload = { ...form }
     if (isEdit.value) {
       await maintenanceApi.updateSchedule(route.params.id, payload)
-      await Swal.fire({ icon: 'success', title: '更新成功！', timer: 1500, showConfirmButton: false })
+      await Swal.fire({
+        icon: 'success',
+        title: '更新成功！',
+        timer: 1500,
+        showConfirmButton: false,
+      })
     } else {
       await maintenanceApi.createSchedule(payload)
-      await Swal.fire({ icon: 'success', title: '建立成功！', timer: 1500, showConfirmButton: false })
+      await Swal.fire({
+        icon: 'success',
+        title: '建立成功！',
+        timer: 1500,
+        showConfirmButton: false,
+      })
     }
     router.push('/admin/maintenance/schedule')
-  } catch {
-    // 錯誤已由 http.js 處理
   } finally {
     submitting.value = false
   }
@@ -244,18 +273,23 @@ onMounted(async () => {
 
 <template>
   <div class="schedule-form-container">
-    <!-- ========== Header ========== -->
     <section class="content-header">
       <div class="container-fluid">
         <div class="row align-items-center">
           <div class="col-sm-6">
             <h1 class="page-title">
-              <i :class="isEdit ? 'fas fa-edit' : 'fas fa-plus-circle'" class="mr-2" style="color: #409eff"></i>
+              <i
+                :class="isEdit ? 'fas fa-edit' : 'fas fa-plus-circle'"
+                class="mr-2"
+                style="color: #409eff"
+              ></i>
               {{ pageTitle }}
             </h1>
           </div>
           <div class="col-sm-6 text-right">
-            <el-button @click="handleCancel"><i class="fas fa-arrow-left mr-1"></i> 返回列表</el-button>
+            <el-button @click="handleCancel">
+              <i class="fas fa-arrow-left mr-1"></i> 返回列表
+            </el-button>
           </div>
         </div>
       </div>
@@ -264,15 +298,22 @@ onMounted(async () => {
     <section class="content">
       <div class="container-fluid">
         <el-card shadow="hover" class="form-card" v-loading="loading">
-          <!-- ========== 步驟指示器 ========== -->
           <el-steps :active="currentStep" finish-status="success" align-center class="mb-6">
             <el-step v-for="(step, idx) in steps" :key="idx" :title="step.title">
-              <template #icon><el-icon><component :is="step.icon" /></el-icon></template>
+              <template #icon
+                ><el-icon><component :is="step.icon" /></el-icon
+              ></template>
             </el-step>
           </el-steps>
 
-          <el-form ref="formRef" :model="form" :rules="dynamicRules" label-width="100px" label-position="top">
-            <!-- ========== Step 0: 基本資訊 ========== -->
+          <el-form
+            ref="formRef"
+            :model="form"
+            :rules="dynamicRules"
+            label-width="100px"
+            label-position="top"
+          >
+            <!-- Step 0 -->
             <div v-show="currentStep === 0" class="step-content">
               <div class="step-header">
                 <i class="fas fa-info-circle"></i>
@@ -280,7 +321,13 @@ onMounted(async () => {
               </div>
 
               <el-form-item label="排程標題" prop="title">
-                <el-input v-model="form.title" placeholder="例如：每日機台清潔" maxlength="100" show-word-limit clearable>
+                <el-input
+                  v-model="form.title"
+                  placeholder="例如：每日機台清潔"
+                  maxlength="100"
+                  show-word-limit
+                  clearable
+                >
                   <template #prefix><i class="fas fa-tag"></i></template>
                 </el-input>
               </el-form-item>
@@ -288,16 +335,33 @@ onMounted(async () => {
               <el-row :gutter="20">
                 <el-col :span="12">
                   <el-form-item label="問題類型" prop="issueType">
-                    <el-select v-model="form.issueType" placeholder="選擇或輸入" filterable allow-create style="width: 100%">
-                      <el-option v-for="type in issueTypeOptions" :key="type" :label="type" :value="type" />
+                    <el-select
+                      v-model="form.issueType"
+                      placeholder="選擇或輸入"
+                      filterable
+                      allow-create
+                      style="width: 100%"
+                    >
+                      <el-option
+                        v-for="type in issueTypeOptions"
+                        :key="type"
+                        :label="type"
+                        :value="type"
+                      />
                     </el-select>
                   </el-form-item>
                 </el-col>
+
                 <el-col :span="12">
                   <el-form-item label="優先級" prop="issuePriority">
                     <el-radio-group v-model="form.issuePriority" class="priority-radio">
-                      <el-radio-button v-for="opt in priorityOptions" :key="opt.value" :value="opt.value">
-                        <span :style="{ color: form.issuePriority === opt.value ? opt.color : '' }">{{ opt.label }}</span>
+                      <el-radio-button
+                        v-for="opt in priorityOptions"
+                        :key="opt.value"
+                        :value="opt.value"
+                        :data-priority="opt.value"
+                      >
+                        {{ opt.label }}
                       </el-radio-button>
                     </el-radio-group>
                   </el-form-item>
@@ -305,11 +369,17 @@ onMounted(async () => {
               </el-row>
 
               <el-form-item label="啟用狀態">
-                <el-switch v-model="form.isActive" active-text="啟用" inactive-text="停用" active-color="#67c23a" inline-prompt />
+                <el-switch
+                  v-model="form.isActive"
+                  active-text="啟用"
+                  inactive-text="停用"
+                  active-color="#67c23a"
+                  inline-prompt
+                />
               </el-form-item>
             </div>
 
-            <!-- ========== Step 1: 目標設定 ========== -->
+            <!-- Step 1 -->
             <div v-show="currentStep === 1" class="step-content">
               <div class="step-header">
                 <i class="fas fa-crosshairs"></i>
@@ -318,12 +388,20 @@ onMounted(async () => {
 
               <el-form-item label="目標類型" prop="targetType">
                 <div class="target-type-cards">
-                  <div class="target-card" :class="{ active: form.targetType === 'SPOT' }" @click="form.targetType = 'SPOT'">
+                  <div
+                    class="target-card"
+                    :class="{ active: form.targetType === 'SPOT' }"
+                    @click="form.targetType = 'SPOT'"
+                  >
                     <i class="fas fa-desktop"></i>
                     <span>機台</span>
                     <small>維護據點設備</small>
                   </div>
-                  <div class="target-card" :class="{ active: form.targetType === 'SEAT' }" @click="form.targetType = 'SEAT'">
+                  <div
+                    class="target-card"
+                    :class="{ active: form.targetType === 'SEAT' }"
+                    @click="form.targetType = 'SEAT'"
+                  >
                     <i class="fas fa-chair"></i>
                     <span>椅子</span>
                     <small>維護座椅設備</small>
@@ -332,20 +410,51 @@ onMounted(async () => {
               </el-form-item>
 
               <el-form-item label="選擇目標" prop="targetId">
-                <el-select v-if="form.targetType === 'SPOT'" v-model="form.targetId" placeholder="搜尋並選擇機台" filterable style="width: 100%">
-                  <el-option v-for="spot in spotOptions" :key="spot.spotId" :label="`${spot.spotName || spot.spotCode || '機台'} (ID: ${spot.spotId})`" :value="spot.spotId">
-                    <div class="option-item"><i class="fas fa-desktop mr-2"></i>{{ spot.spotName || spot.spotCode || '機台' }}<el-tag size="small" class="ml-2">ID: {{ spot.spotId }}</el-tag></div>
+                <el-select
+                  v-if="form.targetType === 'SPOT'"
+                  v-model="form.targetId"
+                  placeholder="搜尋並選擇機台"
+                  filterable
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="spot in spotOptions"
+                    :key="spot.spotId"
+                    :label="`${spot.spotName || spot.spotCode || '機台'} (ID: ${spot.spotId})`"
+                    :value="spot.spotId"
+                  >
+                    <div class="option-item">
+                      <i class="fas fa-desktop mr-2"></i
+                      >{{ spot.spotName || spot.spotCode || '機台' }}
+                      <el-tag size="small" class="ml-2">ID: {{ spot.spotId }}</el-tag>
+                    </div>
                   </el-option>
                 </el-select>
-                <el-select v-else v-model="form.targetId" placeholder="搜尋並選擇椅子" filterable style="width: 100%">
-                  <el-option v-for="seat in seatOptions" :key="seat.seatsId" :label="`${seat.seatsName || seat.serialNumber || '椅子'} (ID: ${seat.seatsId})`" :value="seat.seatsId">
-                    <div class="option-item"><i class="fas fa-chair mr-2"></i>{{ seat.seatsName || seat.serialNumber || '椅子' }}<el-tag size="small" class="ml-2">ID: {{ seat.seatsId }}</el-tag></div>
+
+                <el-select
+                  v-else
+                  v-model="form.targetId"
+                  placeholder="搜尋並選擇椅子"
+                  filterable
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="seat in seatOptions"
+                    :key="seat.seatsId"
+                    :label="`${seat.seatsName || seat.serialNumber || '椅子'} (ID: ${seat.seatsId})`"
+                    :value="seat.seatsId"
+                  >
+                    <div class="option-item">
+                      <i class="fas fa-chair mr-2"></i
+                      >{{ seat.seatsName || seat.serialNumber || '椅子' }}
+                      <el-tag size="small" class="ml-2">ID: {{ seat.seatsId }}</el-tag>
+                    </div>
                   </el-option>
                 </el-select>
               </el-form-item>
             </div>
 
-            <!-- ========== Step 2: 排程設定 ========== -->
+            <!-- Step 2 -->
             <div v-show="currentStep === 2" class="step-content">
               <div class="step-header">
                 <i class="fas fa-clock"></i>
@@ -354,7 +463,13 @@ onMounted(async () => {
 
               <el-form-item label="排程類型" prop="scheduleType">
                 <div class="schedule-type-cards">
-                  <div v-for="opt in scheduleTypeOptions" :key="opt.value" class="schedule-card" :class="{ active: form.scheduleType === opt.value }" @click="form.scheduleType = opt.value">
+                  <div
+                    v-for="opt in scheduleTypeOptions"
+                    :key="opt.value"
+                    class="schedule-card"
+                    :class="{ active: form.scheduleType === opt.value }"
+                    @click="form.scheduleType = opt.value"
+                  >
                     <i :class="opt.icon"></i>
                     <span>{{ opt.label }}</span>
                     <small>{{ opt.desc }}</small>
@@ -366,18 +481,36 @@ onMounted(async () => {
                 <el-col :span="12" v-if="form.scheduleType === 'WEEKLY'">
                   <el-form-item label="星期幾" prop="dayOfWeek">
                     <el-select v-model="form.dayOfWeek" placeholder="選擇星期" style="width: 100%">
-                      <el-option v-for="opt in dayOfWeekOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+                      <el-option
+                        v-for="opt in dayOfWeekOptions"
+                        :key="opt.value"
+                        :label="opt.label"
+                        :value="opt.value"
+                      />
                     </el-select>
                   </el-form-item>
                 </el-col>
+
                 <el-col :span="12" v-if="form.scheduleType === 'MONTHLY'">
                   <el-form-item label="每月幾號" prop="dayOfMonth">
-                    <el-input-number v-model="form.dayOfMonth" :min="1" :max="31" style="width: 100%" />
+                    <el-input-number
+                      v-model="form.dayOfMonth"
+                      :min="1"
+                      :max="31"
+                      style="width: 100%"
+                    />
                   </el-form-item>
                 </el-col>
+
                 <el-col :span="12">
                   <el-form-item label="執行時間" prop="executeTime">
-                    <el-time-picker v-model="form.executeTime" format="HH:mm" value-format="HH:mm:ss" placeholder="選擇時間" style="width: 100%" />
+                    <el-time-picker
+                      v-model="form.executeTime"
+                      format="HH:mm"
+                      value-format="HH:mm:ss"
+                      placeholder="選擇時間"
+                      style="width: 100%"
+                    />
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -390,7 +523,7 @@ onMounted(async () => {
               </el-alert>
             </div>
 
-            <!-- ========== Step 3: 指派人員 ========== -->
+            <!-- Step 3 -->
             <div v-show="currentStep === 3" class="step-content">
               <div class="step-header">
                 <i class="fas fa-user-cog"></i>
@@ -398,12 +531,27 @@ onMounted(async () => {
               </div>
 
               <el-form-item label="維護人員">
-                <el-select v-model="form.assignedStaffId" placeholder="選擇人員或留空" clearable filterable style="width: 100%">
-                  <el-option v-for="staff in staffOptions" :key="staff.staffId" :label="`${staff.staffName} (${staff.specialization || '未設定專長'})`" :value="staff.staffId">
+                <el-select
+                  v-model="form.assignedStaffId"
+                  placeholder="選擇人員或留空"
+                  clearable
+                  filterable
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="staff in staffOptions"
+                    :key="staff.staffId"
+                    :label="`${staff.staffName} (${staff.specialization || '未設定專長'})`"
+                    :value="staff.staffId"
+                  >
                     <div class="option-item">
-                      <el-avatar :size="24" class="mr-2">{{ staff.staffName?.charAt(0) }}</el-avatar>
+                      <el-avatar :size="24" class="mr-2">{{
+                        staff.staffName?.charAt(0)
+                      }}</el-avatar>
                       {{ staff.staffName }}
-                      <el-tag size="small" type="info" class="ml-2">{{ staff.specialization || '未設定' }}</el-tag>
+                      <el-tag size="small" type="info" class="ml-2">{{
+                        staff.specialization || '未設定'
+                      }}</el-tag>
                     </div>
                   </el-option>
                 </el-select>
@@ -411,11 +559,13 @@ onMounted(async () => {
 
               <el-alert type="warning" :closable="false" show-icon>
                 <template #title>提示</template>
-                <template #default>若不指派，工單建立後狀態為「已回報」；若指派則為「已指派」</template>
+                <template #default
+                  >若不指派，工單建立後狀態為「已回報」；若指派則為「已指派」</template
+                >
               </el-alert>
             </div>
 
-            <!-- ========== Step 4: 確認送出 ========== -->
+            <!-- Step 4 -->
             <div v-show="currentStep === 4" class="step-content">
               <div class="step-header">
                 <i class="fas fa-check-circle"></i>
@@ -426,24 +576,31 @@ onMounted(async () => {
                 <el-descriptions-item label="排程標題" :span="2">
                   <strong>{{ form.title || '-' }}</strong>
                 </el-descriptions-item>
-                <el-descriptions-item label="問題類型">{{ form.issueType || '-' }}</el-descriptions-item>
+
+                <el-descriptions-item label="問題類型">{{
+                  form.issueType || '-'
+                }}</el-descriptions-item>
                 <el-descriptions-item label="優先級">
                   <el-tag :type="priorityConfig[form.issuePriority]?.tagType" size="small">
                     {{ priorityConfig[form.issuePriority]?.text }}
                   </el-tag>
                 </el-descriptions-item>
+
                 <el-descriptions-item label="目標類型">
                   <el-tag :type="form.targetType === 'SPOT' ? 'primary' : 'warning'" size="small">
                     {{ form.targetType === 'SPOT' ? '機台' : '椅子' }}
                   </el-tag>
                 </el-descriptions-item>
+
                 <el-descriptions-item label="目標名稱">{{ getTargetName }}</el-descriptions-item>
+
                 <el-descriptions-item label="執行頻率" :span="2">
                   <el-tag :type="scheduleTypeConfig[form.scheduleType]?.tagType" effect="plain">
                     <i :class="scheduleTypeConfig[form.scheduleType]?.icon" class="mr-1"></i>
                     {{ formatScheduleDetail(form) }}
                   </el-tag>
                 </el-descriptions-item>
+
                 <el-descriptions-item label="指派人員">{{ getStaffName }}</el-descriptions-item>
                 <el-descriptions-item label="啟用狀態">
                   <el-tag :type="form.isActive ? 'success' : 'info'" size="small">
@@ -453,12 +610,18 @@ onMounted(async () => {
               </el-descriptions>
             </div>
 
-            <!-- ========== 按鈕區 ========== -->
+            <!-- Buttons -->
             <div class="form-actions">
               <el-button @click="handleCancel">取消</el-button>
               <div class="action-right">
-                <el-button v-if="currentStep > 0" @click="prevStep"><i class="fas fa-chevron-left mr-1"></i> 上一步</el-button>
-                <el-button v-if="currentStep < steps.length - 1" type="primary" @click="nextStep">下一步 <i class="fas fa-chevron-right ml-1"></i></el-button>
+                <el-button v-if="currentStep > 0" @click="prevStep">
+                  <i class="fas fa-chevron-left mr-1"></i> 上一步
+                </el-button>
+
+                <el-button v-if="currentStep < steps.length - 1" type="primary" @click="nextStep">
+                  下一步 <i class="fas fa-chevron-right ml-1"></i>
+                </el-button>
+
                 <el-button v-else type="success" :loading="submitting" @click="handleSubmit">
                   <i class="fas fa-save mr-1"></i> {{ isEdit ? '儲存變更' : '建立排程' }}
                 </el-button>
@@ -472,7 +635,9 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.schedule-form-container { padding: 20px; }
+.schedule-form-container {
+  padding: 20px;
+}
 
 .page-title {
   font-size: 1.6rem;
@@ -489,9 +654,12 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-.mb-6 { margin-bottom: 2rem; }
-
-.step-content { min-height: 300px; }
+.mb-6 {
+  margin-bottom: 2rem;
+}
+.step-content {
+  min-height: 300px;
+}
 
 .step-header {
   display: flex;
@@ -505,13 +673,14 @@ onMounted(async () => {
   border-bottom: 2px solid #409eff;
 }
 
-/* 目標類型卡片 */
-.target-type-cards, .schedule-type-cards {
+/* 目標/排程卡片 */
+.target-type-cards,
+.schedule-type-cards {
   display: flex;
   gap: 16px;
 }
-
-.target-card, .schedule-card {
+.target-card,
+.schedule-card {
   flex: 1;
   padding: 20px;
   border: 2px solid #e4e7ed;
@@ -520,32 +689,32 @@ onMounted(async () => {
   cursor: pointer;
   transition: all 0.3s;
 }
-
-.target-card:hover, .schedule-card:hover {
+.target-card:hover,
+.schedule-card:hover {
   border-color: #409eff;
   background: rgba(64, 158, 255, 0.05);
 }
-
-.target-card.active, .schedule-card.active {
+.target-card.active,
+.schedule-card.active {
   border-color: #409eff;
   background: rgba(64, 158, 255, 0.1);
   box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.2);
 }
-
-.target-card i, .schedule-card i {
+.target-card i,
+.schedule-card i {
   font-size: 2rem;
   color: #409eff;
   display: block;
   margin-bottom: 8px;
 }
-
-.target-card span, .schedule-card span {
+.target-card span,
+.schedule-card span {
   font-size: 1rem;
   font-weight: 600;
   display: block;
 }
-
-.target-card small, .schedule-card small {
+.target-card small,
+.schedule-card small {
   font-size: 12px;
   color: #909399;
   display: block;
@@ -557,12 +726,43 @@ onMounted(async () => {
   align-items: center;
 }
 
-.priority-radio { width: 100%; }
-.priority-radio :deep(.el-radio-button) { flex: 1; }
-.priority-radio :deep(.el-radio-button__inner) { width: 100%; }
+/* ✅ 優先級 Radio：修正文字被吃掉 + 不同顏色 */
+.priority-radio {
+  width: 100%;
+}
+.priority-radio :deep(.el-radio-button) {
+  flex: 1;
+}
+.priority-radio :deep(.el-radio-button__inner) {
+  width: 100%;
+}
 
-.summary-desc { margin-top: 16px; }
-.summary-desc :deep(.el-descriptions__label) { width: 100px; font-weight: 500; }
+.priority-radio :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+/* ✅ 依不同優先級上色 */
+.priority-radio :deep([data-priority='LOW'].is-active .el-radio-button__inner) {
+  background: #909399 !important;
+}
+.priority-radio :deep([data-priority='NORMAL'].is-active .el-radio-button__inner) {
+  background: #409eff !important;
+}
+.priority-radio :deep([data-priority='HIGH'].is-active .el-radio-button__inner) {
+  background: #e6a23c !important;
+}
+.priority-radio :deep([data-priority='URGENT'].is-active .el-radio-button__inner) {
+  background: #f56c6c !important;
+}
+
+.summary-desc {
+  margin-top: 16px;
+}
+.summary-desc :deep(.el-descriptions__label) {
+  width: 100px;
+  font-weight: 500;
+}
 
 .form-actions {
   display: flex;
@@ -572,12 +772,24 @@ onMounted(async () => {
   margin-top: 24px;
   border-top: 1px solid #ebeef5;
 }
+.action-right {
+  display: flex;
+  gap: 12px;
+}
 
-.action-right { display: flex; gap: 12px; }
-
-.mr-1 { margin-right: 4px; }
-.mr-2 { margin-right: 8px; }
-.ml-1 { margin-left: 4px; }
-.ml-2 { margin-left: 8px; }
-.mt-4 { margin-top: 1rem; }
+.mr-1 {
+  margin-right: 4px;
+}
+.mr-2 {
+  margin-right: 8px;
+}
+.ml-1 {
+  margin-left: 4px;
+}
+.ml-2 {
+  margin-left: 8px;
+}
+.mt-4 {
+  margin-top: 1rem;
+}
 </style>

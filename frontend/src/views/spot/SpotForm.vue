@@ -29,6 +29,33 @@
         <transition name="zoom-fade" appear>
           <el-card shadow="hover" class="form-card">
             <el-form
+              v-if="isEditMode && spotDataForView"
+              :model="spotDataForView"
+              label-width="120px"
+              label-position="top"
+              class="view-section"
+              disabled
+            >
+              <div class="form-section">
+                <div class="section-header">
+                  <i class="fas fa-eye"></i>
+                  <span>目前資料預覽</span>
+                </div>
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <el-form-item label="據點代碼">
+                      <el-input v-model="spotDataForView.spotCode" />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="據點名稱">
+                      <el-input v-model="spotDataForView.spotName" />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+              </div>
+            </el-form>
+            <el-form
               :model="formData"
               label-width="120px"
               label-position="top"
@@ -39,7 +66,7 @@
               <div class="form-section">
                 <div class="section-header">
                   <i class="fas fa-info-circle"></i>
-                  <span>基本資料</span>
+                  <span>編輯資料</span>
                 </div>
 
                 <el-row :gutter="20">
@@ -59,17 +86,81 @@
                   </el-col>
                 </el-row>
 
-                <el-row :gutter="20">
-                  <el-col :span="16">
-                    <el-form-item label="地址 (Address)" required>
-                      <el-input v-model="formData.spotAddress" placeholder="請輸入完整地址" clearable>
-                        <template #prefix><i class="fas fa-map-marker-alt"></i></template>
-                      </el-input>
+                <!-- ✅ 地址（Autocomplete + Enter geocode） -->
+                <el-form-item label="地址 (Address)" prop="spotAddress">
+                  <!-- ✅ A方案：加 ref，讓我們可以在載入後主動同步 value -->
+                  <GMapAutocomplete
+                    ref="gmapAutoRef"
+                    @place_changed="onPlaceChangedForForm"
+                    :options="{ fields: ['geometry', 'formatted_address'], componentRestrictions: { country: 'tw' } }"
+                  >
+                    <!-- ✅ A方案：el-input 也加 ref，nextTick 後把值塞回原生 input -->
+                    <el-input
+                      ref="addrElInputRef"
+                      v-model="formData.spotAddress"
+                      placeholder="請輸入完整地址（可用建議清單）"
+                      clearable
+                      @keyup.enter="geocodeAddress({ force: true })"
+                    >
+                      <template #prefix><i class="fas fa-map-marker-alt"></i></template>
+                    </el-input>
+                  </GMapAutocomplete>
+                </el-form-item>
+
+                <!-- 經緯度 -->
+                <el-row :gutter="12">
+                  <el-col :span="12">
+                    <el-form-item label="緯度 Latitude" prop="latitude">
+                      <el-input-number
+                        v-model="formData.latitude"
+                        :precision="7"
+                        :step="0.000001"
+                        style="width: 100%"
+                        @change="manualOverride.lat = true"
+                      />
                     </el-form-item>
                   </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="經度 Longitude" prop="longitude">
+                      <el-input-number
+                        v-model="formData.longitude"
+                        :precision="7"
+                        :step="0.000001"
+                        style="width: 100%"
+                        @change="manualOverride.lng = true"
+                      />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+
+                <div style="display:flex; gap:10px; margin-bottom: 12px;">
+                  <el-button type="primary" :loading="geoLoading" @click="geocodeAddress({ force: true })">
+                    依地址帶入經緯度
+                  </el-button>
+                  <el-button @click="manualOverride.lat=false; manualOverride.lng=false">
+                    允許自動覆蓋
+                  </el-button>
+                </div>
+
+                <el-alert
+                  v-if="geoError"
+                  :title="geoError"
+                  type="warning"
+                  show-icon
+                  :closable="false"
+                  style="margin-bottom: 12px;"
+                />
+
+                <el-row :gutter="20">
                   <el-col :span="8">
                     <el-form-item label="所屬商家 ID (Merchant ID)">
-                      <el-input v-model.number="formData.merchantId" type="number" :min="1" placeholder="無商家可留空" clearable>
+                      <el-input
+                        v-model.number="formData.merchantId"
+                        type="number"
+                        :min="1"
+                        placeholder="無商家可留空"
+                        clearable
+                      >
                         <template #prefix><i class="fas fa-building"></i></template>
                       </el-input>
                     </el-form-item>
@@ -77,7 +168,12 @@
                 </el-row>
 
                 <el-form-item label="描述 (Description)">
-                  <el-input v-model="formData.spotDescription" type="textarea" :rows="3" placeholder="請輸入據點描述..." />
+                  <el-input
+                    v-model="formData.spotDescription"
+                    type="textarea"
+                    :rows="3"
+                    placeholder="請輸入據點描述..."
+                  />  
                 </el-form-item>
 
                 <el-row :gutter="20">
@@ -107,29 +203,37 @@
                 </div>
 
                 <el-form-item>
-                  <div class="image-upload-area">
-                    <input 
-                      type="file" 
-                      @change="handleFileChange" 
-                      accept="image/*"
+                  <div v-if="previewUrl" class="preview-section">
+                    <div class="preview-header">
+                      <p class="preview-title">圖片預覽：</p>
+                      <el-button type="danger" size="small" @click="deleteImage" :loading="isUploading">
+                        <i class="fas fa-trash mr-1"></i> 刪除圖片
+                      </el-button>
+                    </div>
+                    <img :src="previewUrl" alt="預覽圖片" class="preview-image" />
+                  </div>
+
+                  <div v-else class="image-upload-area">
+                    <input
+                      type="file"
+                      @change="handleFileChange"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                       class="file-input"
                       id="image-upload"
                     />
                     <label for="image-upload" class="upload-label">
                       <i class="fas fa-cloud-upload-alt"></i>
                       <span>點擊或拖曳上傳圖片</span>
+                      <span class="upload-hint">支援 JPG, PNG, GIF, WebP (最大 5MB)</span>
                     </label>
                   </div>
-                  
-                  <!-- 預覽區域 -->
-                  <div v-if="previewUrl" class="preview-section">
-                    <p class="preview-title">圖片預覽：</p>
-                    <img :src="previewUrl" alt="預覽圖片" class="preview-image" />
+
+                  <div v-if="isUploading" class="uploading-hint">
+                    <i class="el-icon-loading"></i> 上傳中...
                   </div>
                 </el-form-item>
               </div>
 
-              <!-- ========== 按鈕區 ========== -->
               <div class="form-actions">
                 <el-button @click="goBack" class="back-btn">
                   <i class="fas fa-times mr-1"></i> 取消
@@ -147,122 +251,350 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
-import Swal from 'sweetalert2';
+import { ref, onMounted, computed, reactive, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
+import Swal from 'sweetalert2'
 
-// 明確定義元件名稱，方便識別與除錯
-defineOptions({
-  name: 'SpotForm'
-})
+defineOptions({ name: 'SpotForm' })
 
-const route = useRoute();
-const router = useRouter();
+const route = useRoute()
+const router = useRouter()
 
-// 狀態定義
-const isEditMode = computed(() => !!route.params.id); // 有 ID 就是編輯模式
-const isSubmitting = ref(false);
-const selectedFile = ref(null);
-const previewUrl = ref('');
+// ✅ 後端 Controller 是 /spot（沒有 /api）
+const API_BASE = '/spot'
 
-// 表單資料模型
+// ✅ A方案：兩個 ref（讓「編輯載入」時可以把地址灌回 input）
+const gmapAutoRef = ref(null)
+const addrElInputRef = ref(null)
+
+// ========== Geo（地址 → 經緯度）狀態 ==========
+const geoLoading = ref(false)
+const geoError = ref('')
+const manualOverride = reactive({ lat: false, lng: false })
+
+// ========== 狀態定義 ==========
+const isEditMode = computed(() => !!route.params.id)
+const isSubmitting = ref(false)
+const selectedFile = ref(null)
+const previewUrl = ref('')
+const spotDataForView = ref(null) // [新增] 用於顯示的原始資料
+const isUploading = ref(false)
+
+// ========== 表單資料模型 ==========
 const formData = ref({
   spotCode: '',
   spotName: '',
   spotAddress: '',
+  latitude: null,
+  longitude: null,
   merchantId: '',
   spotDescription: '',
   spotStatus: '營運中',
-  spotImage: '' 
-});
+  spotImage: '',
+})
 
-// 初始化：如果是編輯模式，載入資料
+// ✅ A方案：把 spotAddress「強制同步」回 ElementPlus 的原生 input（讓畫面一定顯示）
+const syncAddressToNativeInput = () => {
+  // [修正] Google Maps Autocomplete 腳本初始化可能比 nextTick 慢，
+  // 它會覆蓋掉 input 的值。我們需要延遲執行，確保在它之後才設定值。
+  // 這裡我們嘗試在 100ms 和 500ms 後都設定一次，以確保成功。
+  const updateValue = () => {
+    const comp = addrElInputRef.value
+    const nativeInput =
+      comp?.input ||
+      comp?.$el?.querySelector?.('input') ||
+      document.querySelector?.('input[placeholder="請輸入完整地址（可用建議清單）"]')
+
+    if (nativeInput && nativeInput.value !== formData.value.spotAddress) {
+      nativeInput.value = formData.value.spotAddress || ''
+    }
+  }
+  setTimeout(updateValue, 100)
+  setTimeout(updateValue, 500)
+}
+
+// ========== 地址 Autocomplete：選取後回填座標 ==========
+// ✅ A方案：兼容 place 可能不會從 event 傳入 → 直接從 ref.getPlace() 取
+const onPlaceChangedForForm = (placeFromEvent) => {
+  const place = placeFromEvent || gmapAutoRef.value?.getPlace?.()
+  if (!place?.geometry?.location) return
+
+  if (place.formatted_address) {
+    formData.value.spotAddress = place.formatted_address
+    // 選到地址後也同步一次（避免畫面沒更新）
+    syncAddressToNativeInput()
+  }
+
+  const loc = place.geometry.location
+  formData.value.latitude = Number(loc.lat())
+  formData.value.longitude = Number(loc.lng())
+
+  manualOverride.lat = false
+  manualOverride.lng = false
+  geoError.value = ''
+}
+
+// 文字地址 → Geocoder → 回填座標（尊重手改；force 可強制覆蓋）
+const geocodeAddress = ({ force } = { force: false }) => {
+  const address = (formData.value.spotAddress || '').trim()
+  if (!address) return
+
+  if (!force && (manualOverride.lat || manualOverride.lng)) return
+
+  if (!window.google?.maps?.Geocoder) {
+    geoError.value = 'Google Maps 尚未載入（請確認已載入 places library）'
+    return
+  }
+
+  geoLoading.value = true
+  geoError.value = ''
+
+  const geocoder = new google.maps.Geocoder()
+  geocoder.geocode({ address }, (results, status) => {
+    geoLoading.value = false
+
+    if (status === 'OK' && results?.[0]) {
+      const location = results[0].geometry.location
+      const lat = Number(location.lat())
+      const lng = Number(location.lng())
+
+      if (force || !manualOverride.lat) formData.value.latitude = lat
+      if (force || !manualOverride.lng) formData.value.longitude = lng
+      return
+    }
+
+    geoError.value = `找不到座標，請輸入更完整地址（狀態：${status}）`
+  })
+}
+
+// 地址變更 → debounce 自動查（尊重手改鎖）
+let geoTimer = null
+watch(
+  () => formData.value.spotAddress,
+  (v) => {
+    geoError.value = ''
+    if (!v || v.trim().length < 6) return
+    clearTimeout(geoTimer)
+    geoTimer = setTimeout(() => {
+      geocodeAddress({ force: false })
+    }, 700)
+  },
+)
+
+// ========== 初始化：編輯模式載入資料 ==========
 onMounted(async () => {
   if (isEditMode.value) {
     try {
-      const res = await axios.get(`/api/spot/${route.params.id}`);
-      formData.value = res.data;
-      // 若原本有圖片，顯示預覽
+      const res = await axios.get(`${API_BASE}/${route.params.id}`)
+      formData.value = { ...formData.value, ...res.data }
+      spotDataForView.value = { ...res.data } // [新增] 將原始資料存入顯示用的 ref
+
+      manualOverride.lat = false
+      manualOverride.lng = false
+
       if (formData.value.spotImage) {
-        previewUrl.value = formData.value.spotImage;
+        previewUrl.value = `http://localhost:8080/${formData.value.spotImage}`
       }
+
+      // ✅ A方案：關鍵！載入完成後，把 spotAddress 一定塞回 input，確保畫面顯示
+      syncAddressToNativeInput()
     } catch (err) {
-      console.error('載入失敗', err);
+      console.error('載入失敗', err)
       Swal.fire({
         title: '載入失敗',
         html: '<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f56c6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p style="margin-top:12px;">無法載入據點資料</p></div>',
         confirmButtonColor: '#409eff',
-        confirmButtonText: '確定'
-      });
+        confirmButtonText: '確定',
+      })
     }
   }
-});
+})
 
-// 處理檔案選擇
-const handleFileChange = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    selectedFile.value = file;
-    previewUrl.value = URL.createObjectURL(file);
+// ========== 處理檔案選擇 ==========
+const handleFileChange = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    Swal.fire({
+      icon: 'error',
+      title: '檔案類型錯誤',
+      text: '只能上傳圖片檔案 (jpg, png, gif)',
+      confirmButtonColor: '#409eff',
+    })
+    return
   }
-};
 
-// 提交表單
-const submitForm = async () => {
-  isSubmitting.value = true;
+  if (file.size > 5 * 1024 * 1024) {
+    Swal.fire({
+      icon: 'error',
+      title: '檔案過大',
+      text: '圖片大小不能超過 5MB',
+      confirmButtonColor: '#409eff',
+    })
+    return
+  }
+
+  selectedFile.value = file
+  previewUrl.value = URL.createObjectURL(file)
+
+  if (isEditMode.value) {
+    await uploadImage()
+  }
+}
+
+// ========== 上傳圖片到後端 ==========
+const uploadImage = async () => {
+  if (!selectedFile.value) return
+
+  isUploading.value = true
+  const formDataUpload = new FormData()
+  formDataUpload.append('image', selectedFile.value)
+
   try {
-    // 1. 建構乾淨的 Payload，避免將 GET 取得的額外欄位 (如 merchant 物件) 傳回後端導致錯誤
+    const res = await axios.post(`${API_BASE}/${route.params.id}/upload-image`, formDataUpload, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+
+    formData.value.spotImage = res.data.filePath
+    previewUrl.value = `http://localhost:8080${res.data.imageUrl}`
+
+    Swal.fire({
+      icon: 'success',
+      title: '上傳成功',
+      text: '圖片已成功上傳',
+      timer: 1500,
+      showConfirmButton: false,
+    })
+  } catch (error) {
+    console.error('上傳失敗:', error)
+    Swal.fire({
+      icon: 'error',
+      title: '上傳失敗',
+      text: error.response?.data?.message || '圖片上傳失敗',
+      confirmButtonColor: '#409eff',
+    })
+  } finally {
+    isUploading.value = false
+  }
+}
+
+// ========== 刪除圖片 ==========
+const deleteImage = async () => {
+  const result = await Swal.fire({
+    title: '確定要刪除圖片嗎？',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#f56c6c',
+    cancelButtonColor: '#909399',
+    confirmButtonText: '刪除',
+    cancelButtonText: '取消',
+  })
+
+  if (!result.isConfirmed) return
+
+  if (isEditMode.value && formData.value.spotImage) {
+    try {
+      await axios.delete(`${API_BASE}/${route.params.id}/image`)
+      formData.value.spotImage = ''
+      previewUrl.value = ''
+      selectedFile.value = null
+
+      Swal.fire({
+        icon: 'success',
+        title: '已刪除',
+        text: '圖片已成功刪除',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: '刪除失敗',
+        text: error.response?.data?.message || '無法刪除圖片',
+        confirmButtonColor: '#409eff',
+      })
+    }
+  } else {
+    previewUrl.value = ''
+    selectedFile.value = null
+    formData.value.spotImage = ''
+  }
+}
+
+// ========== 提交表單 ==========
+const submitForm = async () => {
+  isSubmitting.value = true
+  try {
     const payload = {
       spotCode: formData.value.spotCode,
       spotName: formData.value.spotName,
       spotAddress: formData.value.spotAddress,
+      latitude:
+        formData.value.latitude === '' || formData.value.latitude === null || formData.value.latitude === undefined
+          ? null
+          : Number(formData.value.latitude),
+      longitude:
+        formData.value.longitude === '' || formData.value.longitude === null || formData.value.longitude === undefined
+          ? null
+          : Number(formData.value.longitude),
       spotDescription: formData.value.spotDescription,
       spotStatus: formData.value.spotStatus,
-      spotImage: formData.value.spotImage, // 若有圖片路徑則保留
-      // 處理 merchantId: 若為空值則送 null，確保型別正確
-      merchantId: (formData.value.merchantId === '' || formData.value.merchantId === null || formData.value.merchantId === undefined) ? null : Number(formData.value.merchantId)
-    };
+      spotImage: formData.value.spotImage,
+      merchantId:
+        formData.value.merchantId === '' || formData.value.merchantId === null || formData.value.merchantId === undefined
+          ? null
+          : Number(formData.value.merchantId),
+    }
 
     if (isEditMode.value) {
-      // 編輯模式：確保 Body 內也有 ID，許多後端邏輯會檢查 Path ID 與 Body ID 是否一致
-      payload.spotId = Number(route.params.id);
-      await axios.put(`/api/spot/${route.params.id}`, payload);
+      payload.spotId = Number(route.params.id)
+      await axios.put(`${API_BASE}/${route.params.id}`, payload)
+
       await Swal.fire({
         title: '更新成功',
         html: '<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#67c23a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><p style="margin-top:12px;">據點資料已成功更新</p></div>',
         confirmButtonColor: '#409eff',
-        confirmButtonText: '確定'
-      });
+        confirmButtonText: '確定',
+      })
     } else {
-      await axios.post('/api/spot', payload);
+      const res = await axios.post(`${API_BASE}`, payload)
+
+      if (selectedFile.value && res.data?.spotId) {
+        const spotId = res.data.spotId
+        const formDataUpload = new FormData()
+        formDataUpload.append('image', selectedFile.value)
+
+        await axios.post(`${API_BASE}/${spotId}/upload-image`, formDataUpload, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+      }
+
       await Swal.fire({
         title: '新增成功',
         html: '<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#67c23a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><p style="margin-top:12px;">據點資料已成功新增</p></div>',
         confirmButtonColor: '#409eff',
-        confirmButtonText: '確定'
-      });
+        confirmButtonText: '確定',
+      })
     }
-    
-    router.push({ name: 'spot-list' }); // 成功後回列表
+
+    router.push({ name: 'spot-list' })
   } catch (error) {
-    console.error('儲存錯誤:', error);
-    // 顯示後端回傳的具體錯誤訊息，方便除錯
-    const msg = error.response?.data?.message || error.message || '儲存失敗，請檢查輸入資料或後端連線';
+    console.error('儲存錯誤:', error)
+    const msg = error.response?.data?.message || error.message || '儲存失敗，請檢查輸入資料或後端連線'
     Swal.fire({
       title: '操作失敗',
       html: `<div style="display:flex;flex-direction:column;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f56c6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p style="margin-top:12px;">${msg}</p></div>`,
       confirmButtonColor: '#409eff',
-      confirmButtonText: '確定'
-    });
+      confirmButtonText: '確定',
+    })
   } finally {
-    isSubmitting.value = false;
+    isSubmitting.value = false
   }
-};
-
-const goBack = () => {
-  router.back();
 }
+
+const goBack = () => router.back()
 </script>
 
 <style scoped>
@@ -273,6 +605,12 @@ const goBack = () => {
   min-height: 100vh;
 }
 
+.view-section {
+  background-color: #f9fafb;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
 /* ========== 頁面標題區 ========== */
 .page-title-box {
   display: flex;
@@ -377,21 +715,43 @@ const goBack = () => {
   color: #c0c4cc;
 }
 
+.upload-hint {
+  font-size: 12px;
+  color: #c0c4cc;
+  margin-top: 4px;
+}
+
 .preview-section {
   margin-top: 16px;
-  text-align: center;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .preview-title {
   color: #909399;
   font-size: 14px;
-  margin-bottom: 8px;
+  margin: 0;
 }
 
 .preview-image {
-  max-height: 200px;
+  max-width: 100%;
+  max-height: 300px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: block;
+  margin: 0 auto;
+}
+
+.uploading-hint {
+  text-align: center;
+  color: #409eff;
+  font-size: 14px;
+  margin-top: 12px;
 }
 
 /* ========== 按鈕區 ========== */
@@ -449,7 +809,6 @@ const goBack = () => {
 .text-warning { color: #e6a23c; }
 .text-danger { color: #f56c6c; }
 
-/* ========== 響應式設計 ========== */
 @media (max-width: 768px) {
   .page-title-box {
     flex-direction: column;

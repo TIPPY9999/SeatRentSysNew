@@ -1,0 +1,36 @@
+package com.example.backend.repository.projection;
+
+public class AnalyzeProjections {
+
+    // 站點於各城市之分布統計
+    public interface SpotCountByCity {
+        String getCity();
+
+        Integer getSpotCount();
+    }
+
+    // 各時段租借次數統計
+    public interface HourlyRate {
+        Integer getHourofDay();
+
+        Integer getRentedCount();
+    }
+
+    // 站點即時監控 (名稱、總座位、已租借)
+    public interface SpotMonitor {
+        Integer getSpotId(); // [Add] 新增 ID 以便前端進行調度操作
+
+        String getSpotName();
+
+        Integer getTotalSeats();
+
+        Integer getRentedCount();
+    }
+
+    // 各租借時長區間統計
+    public interface DurationRate {
+        String getDurationRange();
+
+        Integer getCount();
+    }
+}

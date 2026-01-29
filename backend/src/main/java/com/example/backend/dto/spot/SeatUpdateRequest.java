@@ -1,4 +1,4 @@
-package com.example.backend.controller.spot.DTO;
+package com.example.backend.dto.spot;
 
 import lombok.Data;
 

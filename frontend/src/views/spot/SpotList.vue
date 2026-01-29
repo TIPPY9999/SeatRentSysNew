@@ -27,6 +27,38 @@
 
     <section class="content">
       <div class="container-fluid">
+        <!-- ========== 數據摘要區 ========== -->
+        <div class="stats-overview">
+          <div class="stat-box blue">
+            <div class="stat-icon"><i class="fas fa-building"></i></div>
+            <div class="stat-info">
+              <span class="stat-label">據點總數</span>
+              <span class="stat-value">{{ statsSummary.totalSpots }}</span>
+            </div>
+          </div>
+          <div class="stat-box orange">
+            <div class="stat-icon"><i class="fas fa-wrench"></i></div>
+            <div class="stat-info">
+              <span class="stat-label">維修中據點</span>
+              <span class="stat-value">{{ statsSummary.maintenance }}</span>
+            </div>
+          </div>
+          <div class="stat-box purple">
+            <div class="stat-icon"><i class="fas fa-chair"></i></div>
+            <div class="stat-info">
+              <span class="stat-label">營運座位數</span>
+              <span class="stat-value">{{ statsSummary.activeSeats }}</span>
+            </div>
+          </div>
+          <div class="stat-box green">
+            <div class="stat-icon"><i class="fas fa-clipboard-check"></i></div>
+            <div class="stat-info">
+              <span class="stat-label">今日累計租借</span>
+              <span class="stat-value">{{ statsSummary.todayRents }}</span>
+            </div>
+          </div>
+        </div>
+
         <transition name="fade-slide" appear>
           <div>
             <!-- ========== 主要表格卡片 ========== -->
@@ -157,7 +189,6 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Swal from 'sweetalert2'
 
-// 明確定義元件名稱
 defineOptions({
   name: 'SpotList'
 })
@@ -169,6 +200,14 @@ const searchKeyword = ref('') // 搜尋關鍵字狀態
 const searchMerchantId = ref('') // Merchant ID 搜尋狀態
 const searchStatus = ref('') // 狀態搜尋狀態
 
+// 統計數據摘要
+const statsSummary = ref({
+  totalSpots: 0,
+  maintenance: 0,
+  activeSeats: 0,
+  todayRents: 0
+})
+
 // 分頁設定
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -176,29 +215,29 @@ const pageSize = ref(10)
 // 防止輸入負數
 const sanitizeMerchantId = () => {
   const v = searchMerchantId.value
-  // 1. 允許使用者清空欄位 (不套用搜尋條件)
   if (v === '' || v === null || v === undefined) return
-
-  // 2. 如果是非數字或是小於 1，強制變成 1
   if (!Number.isFinite(v) || v < 1) {
     searchMerchantId.value = 1
   }
 }
 
-// 載入資料
 const loadSpots = async () => {
   loading.value = true
   try {
-    // 呼叫後端 API (對應 RentalSpotController 的 list 方法)
-    // [修正] 改用 RESTful 風格路徑，對應 RentalSpotController 的 @GetMapping("/api/spot")
-    // TODO: 若資料量大，建議將 searchKeyword, searchMerchantId 等參數傳給後端進行過濾，而非前端過濾
-    const res = await axios.get('/api/spot/list', {
-      // params: {
-      //   keyword: searchKeyword.value,
-      //   status: searchStatus.value
-      // }
-    })
-    spots.value = res.data
+    // 1. 先讀取列表 (核心功能)
+    const resList = await axios.get('/api/spot/list')
+    spots.value = resList.data
+
+    // 2. 再嘗試讀取統計數據 (非核心功能，失敗不應影響列表)
+    try {
+      const resStats = await axios.get('/api/analyze/stats')
+      calculateStats(resList.data, resStats.data)
+    } catch (statsErr) {
+      console.warn('統計數據讀取失敗，僅顯示列表:', statsErr)
+      // 傳入 null 讓 calculateStats 計算基礎數據即可
+      calculateStats(resList.data, null)
+    }
+
   } catch (err) {
     console.error('讀取失敗:', err)
     Swal.fire({
@@ -213,11 +252,21 @@ const loadSpots = async () => {
   }
 }
 
-// 計算屬性：即時過濾資料
+const calculateStats = (listData, statsData) => {
+  // A. 從列表計算的基本數據
+  statsSummary.value.totalSpots = listData.length
+  statsSummary.value.maintenance = listData.filter(s => s.spotStatus === '維修中').length
+
+  // B. 從統計 API 取得的進階數據 (spotMonitor 陣列)
+  const monitorList = statsData?.spotMonitor || []
+
+  // 用 reduce 加總所有站點的數據
+  statsSummary.value.activeSeats = monitorList.reduce((sum, item) => sum + (item.totalSeats || 0), 0)
+  statsSummary.value.todayRents = monitorList.reduce((sum, item) => sum + (item.rentedCount || 0), 0)
+}
+
 const filteredSpots = computed(() => {
   let results = spots.value
-
-  // 1. 關鍵字過濾 (名稱、代碼、地址)
   if (searchKeyword.value.trim()) {
     const keyword = searchKeyword.value.toLowerCase().trim()
     results = results.filter(
@@ -227,18 +276,13 @@ const filteredSpots = computed(() => {
         spot.spotAddress?.toLowerCase().includes(keyword),
     )
   }
-
-  // 2. Merchant ID 過濾 (若有輸入才過濾)
   if (searchMerchantId.value !== '' && searchMerchantId.value !== null) {
     const mId = Number(searchMerchantId.value)
     results = results.filter((spot) => Number(spot.merchantId) === mId)
   }
-
-  // 3. 狀態過濾 (若有選擇才過濾)
   if (searchStatus.value) {
     results = results.filter((spot) => spot.spotStatus === searchStatus.value)
   }
-
   return results
 })
 
@@ -269,22 +313,26 @@ const handleSizeChange = (size) => {
 
 // 跳轉到新增頁面
 const goToAdd = () => {
-  router.push({ name: 'spot-add' }) // 改用具名路由，對應 router/index.js 的 name: 'spot-add'
+  router.push({ name: 'spot-add' })
 }
 
-// [新增] 跳轉到詳細頁面
+const goToMonitor = () => {
+  // 請確保 router/index.js 中已設定 name: 'dispatch-monitor' 的路由
+  router.push({ name: 'dispatch-monitor' })
+}
+
+const goToAnalyze = () => {
+  router.push({ name: 'spot-analyze' })
+}
+
 const goToView = (id) => {
-  // 改用具名路由，對應 router/index.js 的 name: 'spot-view'
   router.push({ name: 'spot-view', params: { id } })
 }
 
-// 跳轉到編輯頁面
 const goToEdit = (id) => {
-  // 改用具名路由，對應 router/index.js 的 name: 'spot-edit'
   router.push({ name: 'spot-edit', params: { id } })
 }
 
-// 刪除功能
 const deleteSpot = async (id, name) => {
   // 二次確認：顯示更詳細的資訊 (名稱 + ID)，並提示無法復原，增加安全性
   const result = await Swal.fire({
@@ -301,8 +349,6 @@ const deleteSpot = async (id, name) => {
   if (!result.isConfirmed) return
 
   try {
-    // [修正] 改用 RESTful 風格：DELETE 方法 + 路徑參數 ID
-    // 對應 RentalSpotController 的 @DeleteMapping("/{id}")
     await axios.delete(`/api/spot/${id}`)
 
     Swal.fire({
@@ -337,6 +383,64 @@ onMounted(() => {
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
   min-height: 100vh;
 }
+
+/* ========== 數據摘要區 ========== */
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: transform 0.3s ease;
+}
+
+.stat-box:hover {
+  transform: translateY(-5px);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: white;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-box.blue .stat-icon { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.stat-box.orange .stat-icon { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+.stat-box.purple .stat-icon { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+.stat-box.green .stat-icon { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
 
 /* ========== 頁面標題區 ========== */
 .page-title-box {

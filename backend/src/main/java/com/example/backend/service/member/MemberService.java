@@ -53,12 +53,13 @@ public class MemberService {
 
     // 修改（UpdateMember）
     public void update(Member old, String newPassword) {
-
+        // 如果有新密碼，就驗證並設定
         if (newPassword != null && !newPassword.isBlank()) {
             validatePassword(newPassword);
             old.setMemPassword(newPassword);
         }
 
+        // 不管有沒有改密碼，最後都要 save 剩下的欄位（如姓名、電話）
         memberRepository.save(old);
     }
 
@@ -70,5 +71,29 @@ public class MemberService {
     // 模糊查詢
     public List<Member> search(String keyword) {
         return memberRepository.findByKeyword(keyword);
+    }
+
+    // 透過 Email 尋找會員 (忘記密碼用)
+    public Member findByEmail(String email) {
+        // 這裡調用 repository 根據 Email 找人，請確保 repository 有對應的方法
+        return memberRepository.findByMemEmailIgnoreCase(email);
+    }
+
+    // 透過 Email 更新密碼 (忘記密碼用)
+    @Transactional
+    public boolean updatePasswordByEmail(String email, String newPassword) {
+        // 1. 先檢查密碼格式
+        validatePassword(newPassword);
+
+        // 2. 透過 email 尋找會員 (加上 .orElse(null) 解決型別不匹配)
+        Member member = memberRepository.findByMemEmail(email.trim().toLowerCase()).orElse(null);
+
+        if (member != null) {
+            // 3. 設定新密碼並存檔
+            member.setMemPassword(newPassword);
+            memberRepository.save(member);
+            return true;
+        }
+        return false;
     }
 }

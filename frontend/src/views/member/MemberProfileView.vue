@@ -6,6 +6,8 @@ import { useMemberAuthStore } from '@/stores/memberAuth'
 
 import RecRentUserRecord from '@/components/rec/RecRentUserRecord.vue'
 
+import Swal from 'sweetalert2';
+
 const memberAuth = useMemberAuthStore()
 const member = ref(null)
 const form = ref({})
@@ -51,7 +53,7 @@ const fetchProfile = async () => {
   }
 }
 
-//查詢租借狀態
+// 查詢租借狀態
 const fetchRentalStatus = async () => {
   isLoadingRentStatus.value = true;
   try {
@@ -61,14 +63,14 @@ const fetchRentalStatus = async () => {
       return;
     }
 
-    // 步驟 1: 查詢會員的租借紀錄，目的是為了找到進行中訂單的 ID
+    // 查詢會員的租借紀錄，目的是為了找到進行中訂單的 ID
     const rentListRes = await axios.get(`http://localhost:8080/rec-rent?memId=${memId}`);
     const basicRentInfo = rentListRes.data.find(rent => rent.recStatus === '租借中');
 
     // 如果找到進行中的訂單
     if (basicRentInfo && basicRentInfo.recId) {
       try {
-        // 步驟 2: 使用訂單 ID 去查詢完整的、包含站點名稱的詳細資訊
+        // 使用訂單 ID 去查詢完整的、包含站點名稱的詳細資訊
         const detailsRes = await axios.get(`http://localhost:8080/api/rent-details/${basicRentInfo.recId}`);
         const currentRentDetails = detailsRes.data;
 
@@ -130,29 +132,60 @@ const cancelEdit = () => {
 }
 
 const saveEdit = async () => {
+  // 1. 密碼格式初步檢查 (前端擋路)
+  const passwordRegex = /^(?=.*[A-Za-z])[A-Za-z\d!@#$%^&*()_+=\[\]{}:;"'<>,.?/\-]{6,}$/;
+  if (form.value.memPassword && !passwordRegex.test(form.value.memPassword)) {
+    Swal.fire('格式錯誤', '密碼必須至少 6 碼且包含 1 個英文字母', 'error');
+    return;
+  }
+
+  // 2. 二次確認彈窗
+  const confirmResult = await Swal.fire({
+    title: '確定要變更資料嗎？',
+    text: "修改後將會立即生效",
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#22c55e',
+    cancelButtonColor: '#9ca3af',
+    confirmButtonText: '確定更新',
+    cancelButtonText: '取消'
+  });
+
+  if (!confirmResult.isConfirmed) return;
+
   try {
-    const res = await axios.put(
-      'http://localhost:8080/member/profile',
+    // 修正這裡的路徑與方法
+    const res = await axios.post( // 1. 改回 post
+      'http://localhost:8080/api/members/update', // 2. 指向正確的後端路徑
       {
+        memId: member.value.memId, // 3. 務必傳送 memId，否則後端 findById 會找不到人
         memName: form.value.memName.trim(),
         memPhone: form.value.memPhone.trim(),
         memEmail: form.value.memEmail.trim(),
         memInvoice: form.value.memInvoice.trim(),
+        memPassword: form.value.memPassword,
+        memUsername: member.value.memUsername // 建議也帶上，確保資料完整
       },
       { withCredentials: true }
     )
 
-    if (res.data === '更新成功') {
-      alert('資料已更新')
+    // 4. 注意：後端回傳的是 "會員修改成功"，這裡要對齊字串
+    if (res.data === '會員修改成功') { 
+      Swal.fire({
+        title: '編輯成功',
+        text: '您的資料已同步',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      
       isEdit.value = false
       fetchProfile()
     } else {
-      alert(res.data)
-      form.value = { ...originForm.value }
+      Swal.fire('更新失敗', res.data, 'error');
     }
-
   } catch (e) {
-    alert('系統錯誤')
+    Swal.fire('系統錯誤', '無法連接至伺服器', 'error');
     form.value = { ...originForm.value }
   }
 }
@@ -188,6 +221,17 @@ const saveEdit = async () => {
         <div class="row">
           <label>帳號</label>
           <div class="value">{{ member.memUsername }}</div>
+        </div>
+
+        <div class="row">
+          <label>密碼</label>
+          <input
+            :type="isEdit ? 'password' : 'text'"
+            class="value-input"
+            v-model="form.memPassword"
+            :placeholder="isEdit ? '輸入新密碼以修改' : '********'"
+            :readonly="!isEdit"
+          />
         </div>
 
         <div class="row">
