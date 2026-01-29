@@ -27,7 +27,7 @@ public class ProjectionValidConfig {
             RecRentAnalyzeRepository analyzeRepo) {
         return args -> {
             log.info("==========================================");
-            log.info("🚀 [自我檢查] 開始驗證 Projection SQL 別名映射...");
+            log.info(" [自我檢查] 開始驗證 Projection SQL 別名映射...");
 
             // 檢查 1: 縣市分佈
             validate(() -> spotRepo.getCityDistribution(), "SpotCountByCity (縣市分佈)");

@@ -55,7 +55,10 @@
                 </el-row>
               </div>
             </el-form>
+            <!-- 1. 綁定 formRef (用於JS控制驗證) 與 rules (驗證規則物件) -->
             <el-form
+              ref="formRef"
+              :rules="rules"
               :model="formData"
               label-width="120px"
               label-position="top"
@@ -71,41 +74,35 @@
 
                 <el-row :gutter="20">
                   <el-col :span="12">
-                    <el-form-item label="據點代碼 (Code)" required>
+                    <!-- [修改說明] 2. 設定 prop="spotCode"，對應 rules 中的 key，驗證才會生效 -->
+                    <el-form-item label="據點代碼 (Code)" prop="spotCode" required>
                       <el-input v-model="formData.spotCode" placeholder="例如: TP001" clearable>
                         <template #prefix><i class="fas fa-barcode"></i></template>
                       </el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
-                    <el-form-item label="據點名稱 (Name)" required>
+                    <!-- [修改說明] 2. 設定 prop="spotName" -->
+                    <el-form-item label="據點名稱 (Name)" prop="spotName" required>
                       <el-input v-model="formData.spotName" placeholder="例如: 台北車站店" clearable>
                         <template #prefix><i class="fas fa-store"></i></template>
+                        <template #append>
+                          <el-button @click="geocodeByName" :loading="geoLoading" title="依名稱搜尋座標"><i class="fas fa-search-location"></i></el-button>
+                        </template>
                       </el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
 
-                <!-- ✅ 地址（Autocomplete + Enter geocode） -->
+                <!--地址（Autocomplete + Enter geocode） -->
                 <el-form-item label="地址 (Address)" prop="spotAddress">
-                  <!-- ✅ A方案：加 ref，讓我們可以在載入後主動同步 value -->
-                  <GMapAutocomplete
-                    ref="gmapAutoRef"
-                    @place_changed="onPlaceChangedForForm"
-                    :options="{ fields: ['geometry', 'formatted_address'], componentRestrictions: { country: 'tw' } }"
-                  >
-                    <!-- ✅ A方案：el-input 也加 ref，nextTick 後把值塞回原生 input -->
-                    <el-input
-                      ref="addrElInputRef"
-                      v-model="formData.spotAddress"
-                      placeholder="請輸入完整地址（可用建議清單）"
-                      clearable
-                      @keyup.enter="geocodeAddress({ force: true })"
-                    >
-                      <template #prefix><i class="fas fa-map-marker-alt"></i></template>
-                    </el-input>
-                  </GMapAutocomplete>
-                </el-form-item>
+  <el-input
+    ref="addrElInputRef"
+    v-model="formData.spotAddress"
+    placeholder="請輸入地址"
+    @keyup.enter="geocodeAddress({ force: true })"
+  />
+</el-form-item>
 
                 <!-- 經緯度 -->
                 <el-row :gutter="12">
@@ -140,6 +137,29 @@
                   <el-button @click="manualOverride.lat=false; manualOverride.lng=false">
                     允許自動覆蓋
                   </el-button>
+                </div>
+
+                <!-- [新增] 地圖預覽與精確度提示 -->
+                <div class="map-preview-container" v-if="formData.latitude && formData.longitude">
+                  <div class="precision-info mb-2" v-if="geoPrecision">
+                    <el-tag :type="getPrecisionTagType(geoPrecision)" effect="dark">
+                      <i class="fas fa-crosshairs mr-1"></i>
+                      定位精確度: {{ formatPrecision(geoPrecision) }}
+                    </el-tag>
+                    <span class="text-muted text-xs ml-2"><i class="fas fa-info-circle"></i> 若位置有偏差，可直接拖曳地圖上的紅色標記進行修正</span>
+                  </div>
+                  
+                  <GMapMap
+                    :center="{lat: formData.latitude, lng: formData.longitude}"
+                    :zoom="16"
+                    style="width: 100%; height: 350px; border-radius: 8px; border: 1px solid #dcdfe6;"
+                  >
+                    <GMapMarker
+                      :position="{lat: formData.latitude, lng: formData.longitude}"
+                      :draggable="true"
+                      @dragend="onMarkerDragEnd"
+                    />
+                  </GMapMap>
                 </div>
 
                 <el-alert
@@ -251,26 +271,31 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, reactive, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, reactive, watch, nextTick, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import Swal from 'sweetalert2'
+import { useGoogleMaps } from '@/composables/spot/useGoogleMaps'
 
 defineOptions({ name: 'SpotForm' })
 
 const route = useRoute()
 const router = useRouter()
 
-// ✅ 後端 Controller 是 /spot（沒有 /api）
+//  後端 Controller 是 /spot（沒有 /api）
 const API_BASE = '/spot'
 
-// ✅ A方案：兩個 ref（讓「編輯載入」時可以把地址灌回 input）
-const gmapAutoRef = ref(null)
-const addrElInputRef = ref(null)
+// 3. 定義 formRef 變數，對應 template 中的 ref="formRef"
+const formRef = ref(null)
+
+// 4. 定義驗證規則：必填 (required: true) 與 觸發時機 (trigger: 'blur' 失焦時)
+const rules = {
+  spotCode: [{ required: true, message: '請輸入據點代碼', trigger: 'blur' }],
+  spotName: [{ required: true, message: '請輸入據點名稱', trigger: 'blur' }],
+  spotAddress: [{ required: true, message: '請輸入地址', trigger: 'change' }],
+}
 
 // ========== Geo（地址 → 經緯度）狀態 ==========
-const geoLoading = ref(false)
-const geoError = ref('')
 const manualOverride = reactive({ lat: false, lng: false })
 
 // ========== 狀態定義 ==========
@@ -294,79 +319,22 @@ const formData = ref({
   spotImage: '',
 })
 
-// ✅ A方案：把 spotAddress「強制同步」回 ElementPlus 的原生 input（讓畫面一定顯示）
-const syncAddressToNativeInput = () => {
-  // [修正] Google Maps Autocomplete 腳本初始化可能比 nextTick 慢，
-  // 它會覆蓋掉 input 的值。我們需要延遲執行，確保在它之後才設定值。
-  // 這裡我們嘗試在 100ms 和 500ms 後都設定一次，以確保成功。
-  const updateValue = () => {
-    const comp = addrElInputRef.value
-    const nativeInput =
-      comp?.input ||
-      comp?.$el?.querySelector?.('input') ||
-      document.querySelector?.('input[placeholder="請輸入完整地址（可用建議清單）"]')
-
-    if (nativeInput && nativeInput.value !== formData.value.spotAddress) {
-      nativeInput.value = formData.value.spotAddress || ''
-    }
-  }
-  setTimeout(updateValue, 100)
-  setTimeout(updateValue, 500)
-}
-
-// ========== 地址 Autocomplete：選取後回填座標 ==========
-// ✅ A方案：兼容 place 可能不會從 event 傳入 → 直接從 ref.getPlace() 取
-const onPlaceChangedForForm = (placeFromEvent) => {
-  const place = placeFromEvent || gmapAutoRef.value?.getPlace?.()
-  if (!place?.geometry?.location) return
-
-  if (place.formatted_address) {
-    formData.value.spotAddress = place.formatted_address
-    // 選到地址後也同步一次（避免畫面沒更新）
-    syncAddressToNativeInput()
-  }
-
-  const loc = place.geometry.location
-  formData.value.latitude = Number(loc.lat())
-  formData.value.longitude = Number(loc.lng())
-
-  manualOverride.lat = false
-  manualOverride.lng = false
-  geoError.value = ''
-}
-
-// 文字地址 → Geocoder → 回填座標（尊重手改；force 可強制覆蓋）
-const geocodeAddress = ({ force } = { force: false }) => {
-  const address = (formData.value.spotAddress || '').trim()
-  if (!address) return
-
-  if (!force && (manualOverride.lat || manualOverride.lng)) return
-
-  if (!window.google?.maps?.Geocoder) {
-    geoError.value = 'Google Maps 尚未載入（請確認已載入 places library）'
-    return
-  }
-
-  geoLoading.value = true
-  geoError.value = ''
-
-  const geocoder = new google.maps.Geocoder()
-  geocoder.geocode({ address }, (results, status) => {
-    geoLoading.value = false
-
-    if (status === 'OK' && results?.[0]) {
-      const location = results[0].geometry.location
-      const lat = Number(location.lat())
-      const lng = Number(location.lng())
-
-      if (force || !manualOverride.lat) formData.value.latitude = lat
-      if (force || !manualOverride.lng) formData.value.longitude = lng
-      return
-    }
-
-    geoError.value = `找不到座標，請輸入更完整地址（狀態：${status}）`
-  })
-}
+// ========== 使用 Google Maps Composable ==========
+const {
+  geoLoading,
+  geoError,
+  geoPrecision,
+  gmapAutoRef,
+  addrElInputRef,
+  initPlacesAutocomplete ,
+  syncAddressToNativeInput,
+  onPlaceChangedForForm,
+  geocodeAddress,
+  geocodeByName,
+  onMarkerDragEnd,
+  formatPrecision,
+  getPrecisionTagType
+} = useGoogleMaps(formData, manualOverride)
 
 // 地址變更 → debounce 自動查（尊重手改鎖）
 let geoTimer = null
@@ -382,22 +350,34 @@ watch(
   },
 )
 
+// [新增] 元件銷毀時清除計時器，避免記憶體洩漏
+onUnmounted(() => {
+  if (geoTimer) clearTimeout(geoTimer)
+})
+
 // ========== 初始化：編輯模式載入資料 ==========
 onMounted(async () => {
+//  先等 DOM 畫出來，才能抓到 el-input 裡的原生 input
+  await nextTick()
+  await initPlacesAutocomplete()
   if (isEditMode.value) {
     try {
       const res = await axios.get(`${API_BASE}/${route.params.id}`)
+      console.log('api回傳值 res.data =', res.data)
+      console.log('api回傳 spotAddress =', res.data?.spotAddress)
+
       formData.value = { ...formData.value, ...res.data }
       spotDataForView.value = { ...res.data } // [新增] 將原始資料存入顯示用的 ref
 
       manualOverride.lat = false
       manualOverride.lng = false
+      geoPrecision.value = '' // 既有資料不確定精確度，先留空
 
       if (formData.value.spotImage) {
         previewUrl.value = `http://localhost:8080/${formData.value.spotImage}`
       }
 
-      // ✅ A方案：關鍵！載入完成後，把 spotAddress 一定塞回 input，確保畫面顯示
+      // 關鍵！載入完成後，把 spotAddress 一定塞回 input，確保畫面顯示
       syncAddressToNativeInput()
     } catch (err) {
       console.error('載入失敗', err)
@@ -525,6 +505,17 @@ const deleteImage = async () => {
 
 // ========== 提交表單 ==========
 const submitForm = async () => {
+  //  5. 確保 formRef 已掛載
+  if (!formRef.value) return
+  
+  try {
+    //  6. 執行表單驗證，若驗證失敗會拋出錯誤並跳到 catch 區塊，阻止後續 API 呼叫
+    await formRef.value.validate()
+  } catch (error) {
+    Swal.fire({ icon: 'warning', title: '資料不完整', text: '請檢查必填欄位是否已填寫' })
+    return
+  }
+
   isSubmitting.value = true
   try {
     const payload = {
@@ -680,6 +671,10 @@ const goBack = () => router.back()
   margin-bottom: 20px;
   padding-bottom: 12px;
   border-bottom: 2px solid #409eff;
+}
+
+.map-preview-container {
+  margin-bottom: 20px;
 }
 
 /* ========== 圖片上傳 ========== */
