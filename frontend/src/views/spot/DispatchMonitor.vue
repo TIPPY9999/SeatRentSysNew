@@ -25,9 +25,9 @@
         <div class="card bg-danger text-white shadow-sm h-100">
           <div class="card-body d-flex justify-content-between align-items-center">
             <div>
-              <h6 class="card-title mb-0">急需補給 (庫存過低)</h6>
+              <h6 class="card-title mb-0">急需補給 (可租用率過低)</h6>
               <h2 class="display-6 fw-bold my-2">{{ lowStockSpots.length }}</h2>
-              <small>可用率 &lt; 20%</small>
+              <small>可租用率 &lt; 20%</small>
             </div>
             <i class="fas fa-battery-empty fa-3x opacity-50"></i>
           </div>
@@ -37,9 +37,9 @@
         <div class="card bg-warning text-dark shadow-sm h-100">
           <div class="card-body d-flex justify-content-between align-items-center">
             <div>
-              <h6 class="card-title mb-0">急需清運 (庫存爆滿)</h6>
+              <h6 class="card-title mb-0">建議清運 (可租用率過高)</h6>
               <h2 class="display-6 fw-bold my-2">{{ overStockSpots.length }}</h2>
-              <small>可用率 &gt; 80%</small>
+              <small>可租用率 &gt; 80%</small>
             </div>
             <i class="fas fa-battery-full fa-3x opacity-50"></i>
           </div>
@@ -51,7 +51,7 @@
             <div>
               <h6 class="card-title mb-0">營運正常</h6>
               <h2 class="display-6 fw-bold my-2">{{ normalSpots.length }}</h2>
-              <small>庫存水位健康</small>
+              <small>可租用率健康</small>
             </div>
             <i class="fas fa-check-circle fa-3x opacity-50"></i>
           </div>
@@ -69,11 +69,11 @@
           <thead class="table-light">
             <tr>
               <th>ID</th>
-              <th>站點名稱</th>
-              <th>總車位</th>
-              <th>已租借/使用</th>
-              <th>庫存水位</th>
-              <th>狀態建議</th>
+              <th>租借據點名稱</th>
+              <th>各據點容量上限</th>
+              <th>已租借數</th>
+              <th>可租用率</th>
+              <th>調度建議</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -88,12 +88,12 @@
                   <div 
                     class="progress-bar" 
                     role="progressbar" 
-                    :style="{ width: getUtilizationRate(spot) + '%', backgroundColor: getProgressColor(spot) }"
-                    :aria-valuenow="getUtilizationRate(spot)" 
+                    :style="{ width: getRentableRate(spot) + '%', backgroundColor: getProgressColor(spot) }"
+                    :aria-valuenow="getRentableRate(spot)" 
                     aria-valuemin="0" 
                     aria-valuemax="100"
                   >
-                    {{ getUtilizationRate(spot) }}%
+                    {{ getRentableRate(spot) }}%
                   </div>
                 </div>
               </td>
@@ -126,76 +126,65 @@ const allSpots = ref([]);
 const loading = ref(false);
 const lastUpdateTime = ref('-');
 
-// [Update] 對接真實的 Analyze Controller 路徑
 const API_URL = '/api/analyze/spot-monitor';
 
-// --- 核心邏輯：計算與分類 ---
+const getRentableRate = (spot) => {
+  const total = Number(spot.totalSeats) || 0;
+  const rented = Number(spot.rentedCount) || 0;
+  if (total <= 0) return 0;
 
-const getUtilizationRate = (spot) => {
-  if (!spot.totalSeats) return 0;
-  // [Logic] 庫存水位 = (可用數量 / 總數) * 100
-  // 假設 rentedCount 是「已租借出去(不在站上)」，則可用 = total - rented
-  // 若 rentedCount 是「被佔用(在站上)」，則可用 = total - rented
-  // 這裡假設 rentedCount = "已租借/不在站上"，所以水位(剩餘車輛)是：
-  const available = spot.totalSeats - spot.rentedCount;
-  return Math.round((available / spot.totalSeats) * 100);
+  const available = Math.max(0, total - rented);
+  const rate = Math.round((available / total) * 100);
+
+  return Math.min(100, Math.max(0, rate));
 };
 
-// 判斷邏輯：< 20% 缺車, > 80% 滿車
+
 const getStatusType = (spot) => {
-  const rate = getUtilizationRate(spot);
-  if (rate < 20) return 'LOW';
-  if (rate > 80) return 'HIGH';
+  const rate = getRentableRate(spot);
+  if (rate < 20) return 'NEED_SUPPLY';
+  if (rate > 80) return 'NEED_CLEAR';
   return 'NORMAL';
 };
 
-const lowStockSpots = computed(() => allSpots.value.filter(s => getStatusType(s) === 'LOW'));
-const overStockSpots = computed(() => allSpots.value.filter(s => getStatusType(s) === 'HIGH'));
+const lowStockSpots = computed(() => allSpots.value.filter(s => getStatusType(s) === 'NEED_SUPPLY'));
+const overStockSpots = computed(() => allSpots.value.filter(s => getStatusType(s) === 'NEED_CLEAR'));
 const normalSpots = computed(() => allSpots.value.filter(s => getStatusType(s) === 'NORMAL'));
-
-// --- UI 輔助函式 ---
 
 const getRowClass = (spot) => {
   const type = getStatusType(spot);
-  if (type === 'LOW') return 'table-danger';
-  if (type === 'HIGH') return 'table-warning';
+  if (type === 'NEED_SUPPLY') return 'table-danger';
+  if (type === 'NEED_CLEAR') return 'table-warning';
   return '';
 };
 
 const getProgressColor = (spot) => {
   const type = getStatusType(spot);
-  if (type === 'LOW') return '#dc3545'; // Red
-  if (type === 'HIGH') return '#ffc107'; // Yellow
+  if (type === 'NEED_SUPPLY') return '#dc3545'; // Red
+  if (type === 'NEED_CLEAR') return '#ffc107'; // Yellow
   return '#198754'; // Green
 };
 
 const getStatusBadge = (spot) => {
   const type = getStatusType(spot);
-  if (type === 'LOW') return { class: 'bg-danger', text: '⚠️ 庫存過低' };
-  if (type === 'HIGH') return { class: 'bg-warning text-dark', text: '⚠️ 庫存爆滿' };
+  if (type === 'NEED_SUPPLY')  return { class: 'bg-danger', text: '急需補給' };
+  if (type === 'NEED_CLEAR') return { class: 'bg-warning text-dark', text: '建議清運' };
   return { class: 'bg-success', text: '正常' };
 };
-
-// --- 資料存取 ---
 
 const fetchData = async () => {
   loading.value = true;
   try {
-    // 這裡假設後端回傳 List<SpotDispatchStats>
-    // 若後端尚未實作，可先用假資料測試
     const res = await axios.get(API_URL);
     allSpots.value = res.data;
-    
     lastUpdateTime.value = new Date().toLocaleTimeString();
   } catch (err) {
     console.error('監控數據載入失敗', err);
-    // 模擬假資料以供預覽
-    allSpots.value = [
-      { spotId: 1, spotName: '台北車站 A出口', totalSeats: 20, rentedCount: 18 }, // 剩 2 (10%) -> Low
-      { spotId: 2, spotName: '信義威秀', totalSeats: 15, rentedCount: 1 },      // 剩 14 (93%) -> High
-      { spotId: 3, spotName: '大安森林公園', totalSeats: 30, rentedCount: 15 },  // 剩 15 (50%) -> Normal
-    ];
-    lastUpdateTime.value = new Date().toLocaleTimeString() + ' (模擬數據)';
+    Swal.fire({
+      icon: 'error',
+      title: '載入失敗',
+      text: '無法獲取站點監控數據，請稍後再試。'
+    });
   } finally {
     loading.value = false;
   }
@@ -204,8 +193,8 @@ const fetchData = async () => {
 const notifyDispatch = (spot) => {
   const type = getStatusType(spot);
   let msg = '';
-  if (type === 'LOW') msg = `請派員前往 [${spot.spotName}] 補充設備！`;
-  else if (type === 'HIGH') msg = `請派員前往 [${spot.spotName}] 回收設備！`;
+  if (type === 'NEED_SUPPLY') msg = `請派員前往 [${spot.spotName}] 補充設備！`;
+  else if (type === 'NEED_CLEAR') msg = `請派員前往 [${spot.spotName}] 回收設備！`;
   else msg = `[${spot.spotName}] 目前狀態正常，確定要派單？`;
 
   Swal.fire({
@@ -217,8 +206,6 @@ const notifyDispatch = (spot) => {
     cancelButtonText: '取消'
   }).then((result) => {
     if (result.isConfirmed) {
-      // 呼叫後端發送通知 API
-      // axios.post('/api/dispatch/notify', { spotId: spot.spotId })
       Swal.fire('已發送', '管理員已收到通知', 'success');
     }
   });

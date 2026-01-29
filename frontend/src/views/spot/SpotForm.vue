@@ -296,6 +296,8 @@ const rules = {
 }
 
 // ========== Geo（地址 → 經緯度）狀態 ==========
+// [關鍵] 手動鎖定旗標。當使用者手動修改經緯度或拖曳地圖標記時，
+// 此旗標會設為 true，用來防止 `watch` 自動觸發的 geocodeAddress 覆蓋掉手動輸入。
 const manualOverride = reactive({ lat: false, lng: false })
 
 // ========== 狀態定義 ==========
@@ -319,7 +321,10 @@ const formData = ref({
   spotImage: '',
 })
 
-// ========== 使用 Google Maps Composable ==========
+/**
+ * [核心] 引入並使用 useGoogleMaps Composable。
+ * 將所有地圖相關的狀態 (geoLoading) 和方法 (geocodeByName) 解構出來，直接在 template 和 script 中使用。
+ */
 const {
   geoLoading,
   geoError,
@@ -336,7 +341,13 @@ const {
   getPrecisionTagType
 } = useGoogleMaps(formData, manualOverride)
 
-// 地址變更 → debounce 自動查（尊重手改鎖）
+/**
+ * [途徑 A-2 的觸發點] 監聽地址輸入框的變化。
+ * 使用 setTimeout 實現防抖 (Debounce) 機制：
+ * - 當使用者連續輸入時，會不斷清除舊的計時器。
+ * - 直到使用者停止輸入 700 毫秒後，才會真正執行 geocodeAddress。
+ * - 這樣可以避免在打字過程中發送大量不必要的 API 請求。
+ */
 let geoTimer = null
 watch(
   () => formData.value.spotAddress,
@@ -350,16 +361,20 @@ watch(
   },
 )
 
-// [新增] 元件銷毀時清除計時器，避免記憶體洩漏
+// [優化] 元件銷毀時清除計時器，避免在頁面切換後，計時器依然執行，導致非預期的行為或記憶體洩漏。
 onUnmounted(() => {
   if (geoTimer) clearTimeout(geoTimer)
 })
 
 // ========== 初始化：編輯模式載入資料 ==========
 onMounted(async () => {
-//  先等 DOM 畫出來，才能抓到 el-input 裡的原生 input
+  // [初始化步驟 1] 等待 Vue 將模板渲染成真實的 DOM。
+  // 這是必要的，因為 initPlacesAutocomplete 需要抓取 <el-input> 內部的 <input> 元素。
   await nextTick()
+  // [初始化步驟 2] 呼叫 Composable 中的初始化函式，將 Google Autocomplete 綁定到地址輸入框。
   await initPlacesAutocomplete()
+
+  // 如果是編輯模式，則從後端載入既有資料。
   if (isEditMode.value) {
     try {
       const res = await axios.get(`${API_BASE}/${route.params.id}`)
@@ -377,7 +392,8 @@ onMounted(async () => {
         previewUrl.value = `http://localhost:8080/${formData.value.spotImage}`
       }
 
-      // 關鍵！載入完成後，把 spotAddress 一定塞回 input，確保畫面顯示
+      // [關鍵] 載入資料後，呼叫 Composable 中的同步函式。
+      // 確保從 API 取得的地址能夠正確顯示在被 Google 腳本控制的輸入框中。
       syncAddressToNativeInput()
     } catch (err) {
       console.error('載入失敗', err)

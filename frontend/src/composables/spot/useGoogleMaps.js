@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import Swal from 'sweetalert2'
 
 /**
- * Google Maps 邏輯封裝
+ * [核心] Google Maps 相關邏輯的組合式函數 (Composable)
  * @param {Ref} formData - 表單資料的 ref 物件
  * @param {Object} manualOverride - 手動覆蓋座標的 reactive 狀態
  */
@@ -35,7 +35,12 @@ export function useGoogleMaps(formData, manualOverride) {
     return (type === 'ROOFTOP' || type === 'PLACES_API' || type === 'MANUAL') ? 'success' : (type === 'RANGE_INTERPOLATED' ? 'warning' : 'info')
   }
 
-  // 把 spotAddress「強制同步」回 ElementPlus 的原生 input
+  /**
+   * [關鍵] 將 formData 中的 spotAddress「強制同步」回 ElementPlus 的原生 input 元素。
+   * 這是為了解決 Google Maps Autocomplete 腳本會覆蓋 Vue 響應式更新的問題。
+   * 透過多次延遲執行，確保在 Google 初始化完成後，我們的值能成功寫入。
+   * @returns {void}
+   */
   const syncAddressToNativeInput = () => {
     const updateValue = () => {
       const comp = addrElInputRef.value
@@ -76,7 +81,11 @@ export function useGoogleMaps(formData, manualOverride) {
   }
 
   // ========== 核心邏輯 ==========
-  // 初始化：把 Google Places Autocomplete 綁到 Element Plus 的原生 input
+  /**
+   * [初始化] 將 Google Places Autocomplete 功能綁定到地址輸入框上。
+   * 這個函式必須在元件掛載 (mounted) 後呼叫，確保能抓取到 DOM 元素。
+   * @returns {Promise<void>}
+   */
 const initPlacesAutocomplete = async () => {
   // 注意：要在元件 mounted 後、DOM 出來後才抓得到 input
   const comp = addrElInputRef.value
@@ -105,12 +114,16 @@ const initPlacesAutocomplete = async () => {
 
 
 
-  // 地址 Autocomplete：選取後回填座標
+  /**
+   * [途徑 A-1] 當使用者從 Google Autocomplete 下拉選單中選取一個地點時觸發。
+   * @param {google.maps.places.PlaceResult} placeFromEvent - Google API 回傳的地點物件。
+   */
   const onPlaceChangedForForm = (placeFromEvent) => {
     const place = placeFromEvent || gmapAutoRef.value?.getPlace?.()
     if (!place?.geometry?.location) return
 
     // 如果 Google Place 有名稱，且我們的「據點名稱」欄位是空的，就自動帶入
+    // 這是為了提升使用者體驗，選了「台北101」，名稱欄位就自動填上。
     if (place.name && !formData.value.spotName) {
       formData.value.spotName = place.name
     }
@@ -124,17 +137,24 @@ const initPlacesAutocomplete = async () => {
     formData.value.latitude = Number(loc.lat())
     formData.value.longitude = Number(loc.lng())
 
+    // 標記精確度，並重置手動鎖定
     geoPrecision.value = 'PLACES_API'
     manualOverride.lat = false
     manualOverride.lng = false
     geoError.value = ''
   }
 
-  // 文字地址 → Geocoder → 回填座標
+  /**
+   * [途徑 A-2] 將文字地址透過 Geocoder API 轉換為經緯度。
+   * @param {Object} options - 選項物件
+   * @param {boolean} options.force - 是否強制執行，無視 `manualOverride` 鎖定。
+   */
   const geocodeAddress = ({ force } = { force: false }) => {
     const address = (formData.value.spotAddress || '').trim()
     if (!address) return
 
+    // [關鍵] 如果使用者手動修改過座標 (manualOverride 為 true)，
+    // 且不是強制執行 (force 為 false)，則直接返回，以保護使用者的手動輸入。
     if (!force && (manualOverride.lat || manualOverride.lng)) return
 
     if (!window.google?.maps?.Geocoder) {
@@ -164,7 +184,10 @@ const initPlacesAutocomplete = async () => {
     })
   }
 
-  // 依據點名稱搜尋座標
+  /**
+   * [途徑 B] 依據「據點名稱」搜尋經緯度與地址。
+   * 當使用者點擊名稱欄位旁的搜尋按鈕時觸發。
+   */
   const geocodeByName = () => {
     const name = (formData.value.spotName || '').trim()
     if (!name) {
@@ -194,7 +217,11 @@ const initPlacesAutocomplete = async () => {
     })
   }
 
-  // 拖曳地圖標記結束後，更新座標
+  /**
+   * [途徑 C] 當使用者在地圖上拖曳標記 (Marker) 後觸發。
+   * 這是最高優先權的操作，會直接更新座標並啟用「手動鎖定」。
+   * @param {google.maps.MapMouseEvent} event - 拖曳事件物件，包含新的經緯度。
+   */
   const onMarkerDragEnd = (event) => {
     const lat = event.latLng.lat()
     const lng = event.latLng.lng()
@@ -205,6 +232,7 @@ const initPlacesAutocomplete = async () => {
     geoPrecision.value = 'MANUAL'
   }
 
+  // 將狀態和方法導出，供 Vue 元件使用
   return {
     // State
     geoLoading,
