@@ -91,8 +91,14 @@ const handleSponsorSubmit = async () => {
   paymentWindow.document.write("<html><body style='display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;'><div><h2>正在導向綠界支付...</h2></div></body></html>");
 
   try {
-    const response = await axios.post('http://localhost:8080/api/payment/sponsor', null, {
-      params: { amount: amount.value }
+  const apiUrl = window.APP_CONFIG?.API_URL || 'http://localhost:8080';
+    const frontendUrl = window.location.origin;
+    const response = await axios.post(`${apiUrl}/api/payment/sponsor`, null, {
+      params: { 
+        amount: amount.value,
+        // 💡 修正 2：傳遞當前的 Tunnel 網址給後端，讓後端產生正確的 ReturnURL
+        baseUrl: frontendUrl 
+      }
     });
 
     const tempDiv = document.createElement('div');
@@ -107,7 +113,7 @@ const handleSponsorSubmit = async () => {
       // 延後移除，確保表單已提交
       setTimeout(() => {
         if (document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
-      }, 2000);
+      }, 500);
     } else {
       throw new Error("找不到金流表單內容");
     }

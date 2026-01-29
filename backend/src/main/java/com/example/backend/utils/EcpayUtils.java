@@ -18,7 +18,7 @@ public class EcpayUtils {
     // 💡 記得更換為你目前的 Localtunnel 網址
     private static final String BASE_URL = "https://ceola-unreigning-paraphrastically.ngrok-free.dev";
 
-    public String genCheckOutForm(String tradeNo, String totalAmount, String itemName) {
+    public String genCheckOutForm(String tradeNo, String totalAmount, String itemName, String baseUrl) {
         Map<String, String> params = new TreeMap<>();
         params.put("MerchantID", MERCHANT_ID);
         params.put("MerchantTradeNo", tradeNo);
@@ -27,8 +27,8 @@ public class EcpayUtils {
         params.put("TotalAmount", totalAmount);
         params.put("TradeDesc", "PlatformTransaction");
         params.put("ItemName", itemName);
-        params.put("ReturnURL", BASE_URL + "/api/payment/callback");
-        params.put("OrderResultURL", BASE_URL + "/api/payment/payment-success"); // 💡 支付完跳轉回來的網址
+        params.put("ReturnURL", baseUrl + "/api/payment/callback");
+        params.put("OrderResultURL", baseUrl + "/api/payment/payment-success"); // 💡 支付完跳轉回來的網址
         params.put("ChoosePayment", "ALL");
         params.put("EncryptType", "1");
 

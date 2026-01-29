@@ -21,6 +21,8 @@ export default defineConfig({
     },
   },
   server: {
+    //允許cloudflare和localhost進入
+    host: true, allowedHosts: [".trycloudflare.com", "localhost"],
     proxy: {
       // ⚠️ 重點修正 1：針對「據點 (Spot)」的特殊處理
       // 前端呼叫 /api/spot -> Vite 幫忙去掉 /api -> 後端收到 /spot
@@ -55,6 +57,8 @@ export default defineConfig({
       // 5. 座位與據點的備用規則 (預防他們前端改用 /seat 開頭)
       '/seat': { target: 'http://localhost:8080', changeOrigin: true },
       '/spot': { target: 'http://localhost:8080', changeOrigin: true },
+
+     
     },
   },
 })

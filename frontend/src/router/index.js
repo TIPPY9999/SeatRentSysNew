@@ -112,6 +112,11 @@ const routes = [
         name: 'sponsor',
         component: () => import('@/views/ecpay/SponsorView.vue'),
       },
+      {
+        path: '/payment-success',
+        name: 'payment-success',
+        component: () => import('@/views/ecpay/PaymentSuccessView.vue'),
+      },
      
       // 訂單確認與付款頁
       {

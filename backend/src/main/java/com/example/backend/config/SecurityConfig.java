@@ -100,13 +100,22 @@ public class SecurityConfig {
                 configuration.setAllowedOrigins(Arrays.asList(
                                 "http://localhost:5173",
                                 "https://*.ngrok-free.dev", // 💡 增加 ngrok 萬用字元
+                                "https://*.trycloudflare.com",
                                 "https://*.loca.lt"));
 
                 configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                 configuration.setAllowedHeaders(Arrays.asList("*"));
                 configuration.setAllowCredentials(true);
 
+                // 2. 專門給綠界回傳用的設定 (關鍵：不可有 Credentials)
+                CorsConfiguration ecpayConfig = new CorsConfiguration();
+                ecpayConfig.setAllowedOrigins(Arrays.asList("*")); // 這裡可以直接用 *
+                ecpayConfig.setAllowedMethods(Arrays.asList("POST", "GET"));
+                ecpayConfig.setAllowedHeaders(Arrays.asList("*"));
+                ecpayConfig.setAllowCredentials(false); // 💡 這行是解決 400 的核心
+
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/api/payment/payment-success", ecpayConfig);
                 source.registerCorsConfiguration("/**", configuration);
                 return source;
         }
