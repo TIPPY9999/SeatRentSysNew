@@ -34,6 +34,7 @@ public class MaintenanceStaff {
     // 你後來 ADD 的欄位：isActive default 1
     @Column(name = "isActive", nullable = false)
     private Boolean isActive;
+    
 
     public MaintenanceStaff() {}
 
