@@ -256,6 +256,11 @@ const routes = [
         name: 'admin-snake-game',
         component: SnakeGame,
       },
+      {
+        path: 'sponsors',
+        name: 'admin-sponsors',
+        component: () => import('@/views/ecpay/SponsorLog.vue'),
+      },
 
       // [核心功能] 會員管理
       {
