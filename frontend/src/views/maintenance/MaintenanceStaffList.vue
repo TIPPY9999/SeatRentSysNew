@@ -11,7 +11,6 @@ import {
   computeStaffTaskStats,
   computeOverallStaffStats,
   isCompletedStatus,
-  isMaintenanceTask,
 } from '@/composables/maintenance/useStaffStatus'
 
 const router = useRouter()
@@ -265,53 +264,37 @@ const handleViewTasks = (cardType) => {
 }
 
 // 計算任務列表資料 (根據 taskType 篩選)
+// ✅【修正#1】任務列表分類也改成嚴格判定，確保「點卡片進去的清單」跟圖卡一致
 const detailTaskList = computed(() => {
   if (!detailCurrentStaff.value || !detailCurrentTaskType.value) return []
 
   const staffId = detailCurrentStaff.value.staffId
   const cardType = detailCurrentTaskType.value
-  const matchFn = (t) => t.assignedStaffId === staffId
+  const matchFn = (t) => t?.assignedStaffId === staffId
+
+  const isDone = (t) => isCompletedStatus(t?.issueStatus)
+  const isMaint = (t) => isMaintenanceTicketStrict(t)
 
   let filtered = []
   switch (cardType) {
     case 'repair-pending':
-      filtered = allTickets.value.filter(
-        (t) =>
-          matchFn(t) &&
-          !isMaintenanceTask(t.issueType, t.issueDesc) &&
-          !isCompletedStatus(t.issueStatus),
-      )
+      filtered = (allTickets.value || []).filter((t) => matchFn(t) && !isMaint(t) && !isDone(t))
       break
     case 'maintenance-pending':
-      filtered = allTickets.value.filter(
-        (t) =>
-          matchFn(t) &&
-          isMaintenanceTask(t.issueType, t.issueDesc) &&
-          !isCompletedStatus(t.issueStatus),
-      )
+      filtered = (allTickets.value || []).filter((t) => matchFn(t) && isMaint(t) && !isDone(t))
       break
     case 'repair-completed':
-      filtered = allTickets.value.filter(
-        (t) =>
-          matchFn(t) &&
-          !isMaintenanceTask(t.issueType, t.issueDesc) &&
-          isCompletedStatus(t.issueStatus),
-      )
+      filtered = (allTickets.value || []).filter((t) => matchFn(t) && !isMaint(t) && isDone(t))
       break
     case 'maintenance-completed':
-      filtered = allTickets.value.filter(
-        (t) =>
-          matchFn(t) &&
-          isMaintenanceTask(t.issueType, t.issueDesc) &&
-          isCompletedStatus(t.issueStatus),
-      )
+      filtered = (allTickets.value || []).filter((t) => matchFn(t) && isMaint(t) && isDone(t))
       break
     default:
-      filtered = allTickets.value.filter((t) => matchFn(t))
+      filtered = (allTickets.value || []).filter((t) => matchFn(t))
   }
 
   // 排序：最新在上
-  const getTime = (t) => new Date(t.reportedAt || t.startAt || t.resolvedAt || 0).getTime()
+  const getTime = (t) => new Date(t?.reportedAt || t?.startAt || t?.resolvedAt || 0).getTime()
   filtered.sort((a, b) => getTime(b) - getTime(a))
 
   return filtered
@@ -358,6 +341,31 @@ const getTargetLabel = (t) => {
   if (t.spotId) return `機台 #${t.spotId}`
   return '未指定'
 }
+
+// ✅【修正#1】嚴格判定保養單：只認 issueType === '保養'
+// 避免「檢查 / 例行 / 盤點」之類字眼被誤判成保養
+const isMaintenanceTicketStrict = (t) => String(t?.issueType || '').trim() === '保養'
+
+// ✅【修正#1】人員詳情四卡：在 Dialog 內用「嚴格判定」重新算一次
+// 這樣就算 composable 判定有問題，詳情圖卡也不會顯示錯
+const detailStaffStats = computed(() => {
+  const staffId = detailCurrentStaff.value?.staffId
+  if (!staffId) {
+    return { repairCurrent: 0, maintainCurrent: 0, repairDone: 0, maintainDone: 0 }
+  }
+
+  const mine = (allTickets.value || []).filter((t) => t?.assignedStaffId === staffId)
+
+  const current = mine.filter((t) => !isCompletedStatus(t?.issueStatus))
+  const done = mine.filter((t) => isCompletedStatus(t?.issueStatus))
+
+  const repairCurrent = current.filter((t) => !isMaintenanceTicketStrict(t)).length
+  const maintainCurrent = current.filter((t) => isMaintenanceTicketStrict(t)).length
+  const repairDone = done.filter((t) => !isMaintenanceTicketStrict(t)).length
+  const maintainDone = done.filter((t) => isMaintenanceTicketStrict(t)).length
+
+  return { repairCurrent, maintainCurrent, repairDone, maintainDone }
+})
 
 // ✅ 【移除】舊的 Swal 程式碼片段已清除，改用 el-dialog (見 template 區塊)
 
@@ -1015,7 +1023,7 @@ onMounted(async () => {
                 <span class="mt-statCard__label">待修任務</span>
               </div>
               <div class="mt-statCard__value">
-                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.repairCurrent || 0 }}
+                {{ detailStaffStats.repairCurrent }}
               </div>
             </div>
           </el-col>
@@ -1032,7 +1040,7 @@ onMounted(async () => {
                 <span class="mt-statCard__label">待保養</span>
               </div>
               <div class="mt-statCard__value">
-                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.maintainCurrent || 0 }}
+                {{ detailStaffStats.maintainCurrent }}
               </div>
             </div>
           </el-col>
@@ -1049,7 +1057,7 @@ onMounted(async () => {
                 <span class="mt-statCard__label">維修完成</span>
               </div>
               <div class="mt-statCard__value">
-                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.repairDone || 0 }}
+                {{ detailStaffStats.repairDone }}
               </div>
             </div>
           </el-col>
@@ -1066,7 +1074,7 @@ onMounted(async () => {
                 <span class="mt-statCard__label">保養完成</span>
               </div>
               <div class="mt-statCard__value">
-                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.maintainDone || 0 }}
+                {{ detailStaffStats.maintainDone }}
               </div>
             </div>
           </el-col>
