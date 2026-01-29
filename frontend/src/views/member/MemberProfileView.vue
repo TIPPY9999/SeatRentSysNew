@@ -198,7 +198,17 @@ const saveEdit = async () => {
     <div v-if="member">
       <!-- 頭像 + 名稱 -->
       <div class="profile-header">
-        <div class="avatar">👤</div>
+        <div class="avatar">
+          <img 
+            class="member-photo" 
+            :src="member.memImage ? `/members/${member.memImage}` : '/members/default.png'" 
+            @error="(e) => e.target.src = '/members/default.png'"
+            alt="會員頭像"
+          />
+          <div v-if="isEdit" class="photo-edit-hint">
+            <span>📷</span>
+          </div>
+        </div>
         <div class="name">{{ member.memName }}</div>
       </div>
 
@@ -330,15 +340,34 @@ const saveEdit = async () => {
 }
 
 .avatar {
-  width: 96px;
-  height: 96px;
+  width: 120px;          /* 稍微加大一點比較好看 */
+  height: 120px;
   border-radius: 50%;
-  background: #e0ecff;
-  font-size: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 10px;
+  background: #f0f2f5;
+  margin: 0 auto 15px;
+  position: relative;     /* 為了定位編輯圖示 */
+  overflow: hidden;       /* 確保圖片超出圓圈會被裁切 */
+  border: 4px solid #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.member-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;      /* 關鍵：保持比例填充 */
+  display: block;
+}
+
+/* [新增] 編輯模式的半透明遮罩 */
+.photo-edit-hint {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  color: white;
+  padding: 4px 0;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 .name {

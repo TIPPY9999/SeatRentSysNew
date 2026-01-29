@@ -49,6 +49,10 @@ public class MemberController {
             response.put("memPoints", member.getMemPoints());
             response.put("memName", member.getMemName());
             response.put("memUsername", member.getMemUsername());
+            response.put("memEmail", member.getMemEmail());
+            response.put("memPhone", member.getMemPhone());
+            response.put("memInvoice", member.getMemInvoice());
+            response.put("memImage", member.getMemImage());
 
             return ResponseEntity.ok(response);
         } else {
