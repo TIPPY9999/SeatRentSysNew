@@ -21,12 +21,12 @@ public class PaymentApiController {
      * 1. 產生租借結帳表單
      */
     @PostMapping(value = "/checkout", produces = "text/html;charset=UTF-8")
-    public String checkout(@RequestParam("recId") String recId) {
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") // 允許前端跨域請求
+    public String checkout(@RequestParam("recId") String recId, @RequestParam("amount") String amount) {
         RecRent order = recRentRepository.findByRecId(recId);
         if (order == null)
             return "<h2>訂單不存在</h2>";
 
-        String amount = String.valueOf(order.getRecRequestPay());
         String itemName = "租借費用-" + order.getRecId();
         // 加入時間戳避免綠界重複訂單編號錯誤
         String tradeNo = order.getRecId() + "X" + System.currentTimeMillis() / 1000;

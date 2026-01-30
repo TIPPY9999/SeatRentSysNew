@@ -9,7 +9,6 @@ const route = useRoute();
 const isLoading = ref(false);
 const recId = ref('');
 const totalFee = ref(0); // [新增] 用於儲存總金額
-
 onMounted(() => {
   // [修改] 從 route.query 獲取訂單ID與金額
   recId.value = route.query.recId;
@@ -26,16 +25,17 @@ const handleCheckout = async () => {
   isLoading.value = true;
   try {
     // 1. 準備要送到後端的資料 (Content-Type: application/x-www-form-urlencoded)
+
+
     const params = new URLSearchParams();
     params.append('recId', recId.value);
     params.append('amount', totalFee.value);
 
     // 2. 呼叫後端 API
-    const response = await axios.post('http://localhost:8080/api/payOrder/checkout', params);
+    const response = await axios.post('http://localhost:8080/api/payment/checkout', params);
     
     // 3. 處理後端回傳的 HTML 字串
     const payHtml = response.data;
-
     if (!payHtml || (typeof payHtml === 'string' && payHtml.includes('Error'))) {
       throw new Error('訂單資訊有誤，無法付款');
     }
@@ -47,7 +47,8 @@ const handleCheckout = async () => {
     // 4. 從容器中尋找表單
     const form = div.querySelector('form');
     if (form) {
-      // 找到表單後才將其容器附加到 body 並提交
+      // 找到表單後，設定在新分頁開啟並提交
+      form.target = '_blank';
       div.style.display = 'none'; 
       document.body.appendChild(div);
       form.submit();

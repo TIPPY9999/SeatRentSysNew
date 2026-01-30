@@ -160,7 +160,7 @@ const proceedWithRent = async () => {
       // 重置流程，也許導航到使用者訂單頁面
       selectedSeat.value = null
       agreedToTerms.value = false
-      // 可以考慮使用 router.push 導向到一個「我的租借」頁面
+      router.push({ name: 'rec-rent-user', params: { action: 'record' } })
     } else {
       errorMessage.value = `租借失敗，伺服器回應狀態碼: ${response.status}`
     }
