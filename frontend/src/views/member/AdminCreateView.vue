@@ -15,26 +15,71 @@ const admin = reactive({
   admName: '',
   admEmail: '',
   admRole: 1,
+  adminImage: 'default.png' // 11號以後預設圖片
 })
 
-const submitCreate = () => {
-  axios
-    .post('http://localhost:8080/admins', {
-      ...admin,
+// 驗證邏輯
+const validateForm = () => {
+  // 1. 信箱格式驗證：需包含 @ 且結尾為 .com
+  const emailRegex = /^[^\s@]+@[^\s@]+\.com$/
+  if (!emailRegex.test(admin.admEmail)) {
+    Swal.fire({
+      icon: 'warning',
+      title: '格式錯誤',
+      text: '信箱必須包含 @ 且以 .com 結尾',
+      confirmButtonColor: '#409eff'
     })
+    return false
+  }
+
+  // 2. 密碼格式驗證：至少 6 碼且包含至少 1 個英文字母
+  const passwordRegex = /^(?=.*[a-zA-Z]).{6,}$/
+  if (!passwordRegex.test(admin.admPassword)) {
+    Swal.fire({
+      icon: 'warning',
+      title: '密碼格式錯誤',
+      text: '密碼需至少 6 個字元，並包含至少一個英文字母',
+      confirmButtonColor: '#409eff'
+    })
+    return false
+  }
+
+  // 3. 必填檢查
+  if (!admin.admUsername || !admin.admName) {
+    Swal.fire({
+      icon: 'warning',
+      title: '資料未填寫',
+      text: '帳號與姓名為必填項目',
+      confirmButtonColor: '#409eff'
+    })
+    return false
+  }
+
+  return true
+}
+
+const submitCreate = () => {
+  if (!validateForm()) return
+
+  axios
+    .post('http://localhost:8080/admins', admin)
     .then((res) => {
       Swal.fire({
+        icon: 'success',
         title: '新增成功',
-        html: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#67c23a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 12 12 8 8 12"></polyline><line x1="12" y1="16" x2="12" y2="8"></line></svg><br><br>${res.data || '管理員已成功建立'}`,
-        confirmButtonColor: '#409eff'
+        text: '管理員帳號已建立',
+        timer: 1500,
+        showConfirmButton: false
       }).then(() => {
         router.push('/admin/admins')
       })
     })
     .catch((err) => {
+      console.error('API Error:', err)
       Swal.fire({
+        icon: 'error',
         title: '新增失敗',
-        html: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f56c6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg><br><br>${err.response?.data || '請檢查輸入資料'}`,
+        text: err.response?.data || '帳號可能已存在，請檢查輸入內容',
         confirmButtonColor: '#409eff'
       })
     })
@@ -48,7 +93,6 @@ const goBack = () => {
 <template>
   <div class="create-page">
     <div class="form-card">
-      <!-- 標題區域 -->
       <div class="card-header">
         <div class="header-icon">
           <i class="fas fa-user-plus"></i>
@@ -57,7 +101,6 @@ const goBack = () => {
         <p>建立新的系統管理員帳號</p>
       </div>
 
-      <!-- 表單內容 -->
       <el-form @submit.prevent="submitCreate" label-position="top" class="admin-form">
         <el-form-item label="帳號" required>
           <el-input
@@ -72,7 +115,7 @@ const goBack = () => {
           <el-input
             type="password"
             v-model="admin.admPassword"
-            placeholder="請輸入密碼"
+            placeholder="至少 6 碼且包含英文字母"
             prefix-icon="Lock"
             autocomplete="new-password"
             show-password
@@ -89,9 +132,8 @@ const goBack = () => {
 
         <el-form-item label="信箱" required>
           <el-input
-            type="email"
             v-model="admin.admEmail"
-            placeholder="請輸入電子郵件"
+            placeholder="example@mail.com"
             prefix-icon="Message"
           />
         </el-form-item>
@@ -112,7 +154,12 @@ const goBack = () => {
         </el-form-item>
 
         <div class="form-actions">
-          <el-button type="primary" size="large" @click="submitCreate" class="submit-btn">
+          <el-button 
+            type="primary" 
+            size="large" 
+            native-type="submit" 
+            class="submit-btn"
+          >
             <i class="fas fa-check mr-2"></i> 確認新增
           </el-button>
           <el-button size="large" @click="goBack" class="back-btn">
@@ -231,11 +278,18 @@ const goBack = () => {
   background: linear-gradient(135deg, #5b9bd5 0%, #7cb9e8 100%);
   border: none;
   transition: all 0.3s ease;
+  cursor: pointer;
+  color: white;
 }
 
 .submit-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(91, 155, 213, 0.35);
+  filter: brightness(1.1);
+}
+
+.submit-btn:active {
+  transform: scale(0.95);
 }
 
 .back-btn {
@@ -247,6 +301,7 @@ const goBack = () => {
   background: transparent;
   color: #606266;
   transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .back-btn:hover {
@@ -255,8 +310,14 @@ const goBack = () => {
   background: rgba(91, 155, 213, 0.05);
 }
 
+.back-btn:active {
+  transform: scale(0.95);
+}
+
 /* ========== 工具類 ========== */
-.mr-2 { margin-right: 8px; }
+.mr-2 { 
+  margin-right: 8px; 
+}
 
 /* ========== 響應式設計 ========== */
 @media (max-width: 520px) {

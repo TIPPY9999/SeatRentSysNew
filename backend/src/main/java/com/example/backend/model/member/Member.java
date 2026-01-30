@@ -56,6 +56,9 @@ public class Member {
     @Column(name = "memInvoice", length = 20)
     private String memInvoice;
 
+    @Column(name = "memImage", length = 255)
+    private String memImage;
+
     public Member() {
     }
 
@@ -162,6 +165,14 @@ public class Member {
 
     public void setMemInvoice(String memInvoice) {
         this.memInvoice = memInvoice;
+    }
+
+    public String getMemImage() {
+        return memImage;
+    }
+
+    public void setMemImage(String memImage) {
+        this.memImage = memImage;
     }
 
 }

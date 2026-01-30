@@ -49,6 +49,10 @@ public class MemberController {
             response.put("memPoints", member.getMemPoints());
             response.put("memName", member.getMemName());
             response.put("memUsername", member.getMemUsername());
+            response.put("memEmail", member.getMemEmail());
+            response.put("memPhone", member.getMemPhone());
+            response.put("memInvoice", member.getMemInvoice());
+            response.put("memImage", member.getMemImage());
 
             return ResponseEntity.ok(response);
         } else {
@@ -122,4 +126,55 @@ public class MemberController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // 1. 停權 API (對應前端的 confirmBanMember)
+    @PostMapping("/ban")
+    public ResponseEntity<?> banMember(@RequestBody Map<String, Object> payload) {
+        try {
+            // 從前端傳來的 JSON 取得 memId (前端傳的是 { memId: xxx, reason: yyy })
+            Integer memId = (Integer) payload.get("memId");
+
+            // 找到該會員
+            Member member = memberService.findById(memId);
+            if (member == null) {
+                return ResponseEntity.status(404).body("找不到該會員");
+            }
+
+            // 將狀態設為 0 (停權)
+            member.setMemStatus(0);
+
+            // 儲存變更 (直接用你現有的 update 方法，密碼傳 null 代表不改密碼)
+            memberService.update(member, null);
+
+            return ResponseEntity.ok("會員已成功停權");
+        } catch (Exception e) {
+            e.printStackTrace(); // 在後端終端機印出錯誤細節
+            return ResponseEntity.status(500).body("停權失敗：" + e.getMessage());
+        }
+    }
+
+    // 2. 重新啟用 API (對應前端的 activateMember)
+    @PostMapping("/activate")
+    public ResponseEntity<?> activateMember(@RequestBody Map<String, Object> payload) {
+        try {
+            Integer memId = (Integer) payload.get("memId");
+
+            Member member = memberService.findById(memId);
+            if (member == null) {
+                return ResponseEntity.status(404).body("找不到該會員");
+            }
+
+            // 將狀態設為 1 (啟用)
+            member.setMemStatus(1);
+
+            // 儲存變更
+            memberService.update(member, null);
+
+            return ResponseEntity.ok("會員已重新啟用");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("啟用失敗：" + e.getMessage());
+        }
+    }
+
 }

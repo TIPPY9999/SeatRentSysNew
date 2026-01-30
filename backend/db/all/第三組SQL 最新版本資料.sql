@@ -16,7 +16,7 @@ DROP TABLE member;
 DROP TABLE admin;
 DROP VIEW V_RentDetails
 --============BUILD TABLE==============
---===========奕穎  ver 2026/1/21 ==============
+--===========奕穎  ver 2026/1/30 更新會員欄位 ==============
 /** =========================================================
    1) 建立 member & admin
    ========================================================= */
@@ -49,6 +49,22 @@ CREATE TABLE member
     memInvoice VARCHAR(20) NULL
     --發票載具
 );
+
+--===========新增會員照片欄位 ==============
+ALTER TABLE member 
+ADD memImage VARCHAR(255) CONSTRAINT DF_member_memImage DEFAULT 'default.png';
+
+UPDATE member SET memImage = '01.jpg' WHERE memId = 1;
+UPDATE member SET memImage = '02.jpg' WHERE memId = 2;
+UPDATE member SET memImage = '03.jpg' WHERE memId = 3;
+UPDATE member SET memImage = '04.jpg' WHERE memId = 4;
+UPDATE member SET memImage = '05.jpg' WHERE memId = 5;
+UPDATE member SET memImage = '06.jpg' WHERE memId = 6;
+UPDATE member SET memImage = '07.jpg' WHERE memId = 7;
+UPDATE member SET memImage = '08.jpg' WHERE memId = 8;
+UPDATE member SET memImage = '09.jpg' WHERE memId = 9;
+UPDATE member SET memImage = '10.jpg' WHERE memId = 10;
+
 
 CREATE TABLE admin
 (
@@ -398,15 +414,23 @@ CREATE TABLE redemption_log
 CREATE INDEX idx_redemption_memId ON redemption_log(memId);
 CREATE INDEX idx_redemption_time ON redemption_log(redeemTime);
 
-CREATE TABLE SponsorshipRecord (
+CREATE TABLE SponsorshipRecord
+(
     SponsorID INT IDENTITY(1,1) PRIMARY KEY,
-    MemberID INT NOT NULL,                  -- 關聯會員
-    MerchantTradeNo NVARCHAR(50) NOT NULL,  -- 傳給綠界的唯一訂單號
-    TradeNo NVARCHAR(50),                   -- 綠界內部的交易序號
-    Amount DECIMAL(10) NOT NULL,         -- 贊助金額
-    SponsorComment NVARCHAR(500),           -- 贊助者的留言 (新需求)
-    Status INT DEFAULT 0,                   -- 0:待處理, 1:成功, 2:失敗
-    PaymentType NVARCHAR(20),               -- 支付方式
+    MemberID INT NOT NULL,
+    -- 關聯會員
+    MerchantTradeNo NVARCHAR(50) NOT NULL,
+    -- 傳給綠界的唯一訂單號
+    TradeNo NVARCHAR(50),
+    -- 綠界內部的交易序號
+    Amount DECIMAL(10) NOT NULL,
+    -- 贊助金額
+    SponsorComment NVARCHAR(500),
+    -- 贊助者的留言 (新需求)
+    Status INT DEFAULT 0,
+    -- 0:待處理, 1:成功, 2:失敗
+    PaymentType NVARCHAR(20),
+    -- 支付方式
     CreatedAt DATETIME DEFAULT GETDATE(),
     UpdatedAt DATETIME DEFAULT GETDATE(),
     CONSTRAINT FK_Sponsorship_Member FOREIGN KEY (MemberID) REFERENCES Member(memID),
