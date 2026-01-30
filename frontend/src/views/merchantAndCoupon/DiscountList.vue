@@ -1,6 +1,5 @@
 <template>
   <div class="discount-list-container">
-    <!-- ========== Header 區域 ========== -->
     <section class="content-header">
       <div class="container-fluid">
         <div class="row align-items-center">
@@ -24,7 +23,6 @@
       </div>
     </section>
 
-    <!-- ========== 統計卡片 ========== -->
     <section class="content">
       <div class="container-fluid">
         <transition name="fade-slide" appear>
@@ -72,7 +70,6 @@
               </el-col>
             </el-row>
 
-            <!-- ========== 主要表格卡片 ========== -->
             <el-card shadow="hover" class="table-card">
               <template #header>
                 <div class="card-header-content">
@@ -86,7 +83,6 @@
                 </div>
               </template>
 
-              <!-- 搜尋區塊 -->
               <div class="filter-bar">
                 <el-input
                   v-model="keyword"
@@ -101,9 +97,8 @@
                 </el-button>
               </div>
 
-              <!-- 表格 -->
               <el-table
-                :data="discounts"
+                :data="paginatedDiscounts"
                 v-loading="loading"
                 stripe
                 highlight-current-row
@@ -116,10 +111,8 @@
                     <span class="id-tag">#{{ row.couponId }}</span>
                   </template>
                 </el-table-column>
-                <!-- 圖片欄位 -->
                 <el-table-column label="圖片" width="90" align="center">
                   <template #default="{ row }">
-                    <!-- 讓可點擊區域變大，並阻止事件冒泡到 el-table -->
                     <div class="img-cell" @click.stop>
                       <el-image
                         v-if="row.couponImg"
@@ -221,6 +214,17 @@
                 </el-table-column>
               </el-table>
 
+              <div style="margin-top: 20px; display: flex; justify-content: center;">
+                <el-pagination
+                  v-model:current-page="currentPage"
+                  v-model:page-size="pageSize"
+                  :page-sizes="[5, 10, 15, 20]"
+                  layout="total, sizes, prev, pager, next, jumper"
+                  :total="filteredDiscounts.length"
+                  background
+                />
+              </div>
+
               <el-empty
                 v-if="discounts.length === 0 && !loading"
                 description="目前沒有優惠券資料"
@@ -231,17 +235,28 @@
       </div>
     </section>
 
-    <!-- ========== 編輯彈窗 ========== -->
     <el-dialog
       v-model="isEditModalOpen"
       :title="editingDiscount.couponId ? `編輯優惠券 #${editingDiscount.couponId}` : '新增優惠券'"
       width="600px"
+      top="5vh"
       class="modern-dialog"
       :close-on-click-modal="false"
     >
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+        <el-button 
+          type="warning" 
+          plain 
+          size="small" 
+          @click="handleQuickFill"
+          style="border-style: dashed;"
+        >
+          <i class="fas fa-magic mr-1"></i> 一鍵填入測試資料
+        </el-button>
+      </div>
+
       <el-form
         :model="editingDiscount"
-        label-width="100px"
         label-position="top"
         class="modern-form"
       >
@@ -250,6 +265,7 @@
             <template #prefix><i class="fas fa-tag"></i></template>
           </el-input>
         </el-form-item>
+
         <el-form-item label="優惠描述">
           <el-input
             v-model="editingDiscount.couponDescription"
@@ -258,6 +274,7 @@
             placeholder="請輸入優惠描述"
           />
         </el-form-item>
+
         <el-form-item label="隸屬商家" required>
           <el-select
             v-model="editingDiscount.merchantId"
@@ -274,6 +291,7 @@
             </el-option>
           </el-select>
         </el-form-item>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="開始日期">
@@ -298,6 +316,7 @@
             </el-form-item>
           </el-col>
         </el-row>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="所需點數">
@@ -308,33 +327,42 @@
               />
             </el-form-item>
           </el-col>
+          
           <el-col :span="12">
-            <el-form-item label="上傳圖片">
-              <el-upload
-                class="upload-demo"
-                action="#"
-                :auto-upload="false"
-                :show-file-list="false"
-                :on-change="onFileChange"
-                accept="image/*"
-              >
-                <el-button type="info" plain><i class="fas fa-upload mr-1"></i>選擇圖片</el-button>
-              </el-upload>
+            <el-form-item label="優惠圖片">
+              <div class="upload-container">
+                <el-upload
+                  action="#"
+                  :auto-upload="false"
+                  :show-file-list="false"
+                  :on-change="onFileChange"
+                  accept="image/*"
+                >
+                  <el-button type="info" plain style="width: 100%;">
+                    <i class="fas fa-upload mr-1"></i>選擇圖片
+                  </el-button>
+                </el-upload>
+
+                <div v-if="imagePreview" class="preview-box">
+                  <el-image 
+                    :src="imagePreview" 
+                    fit="cover" 
+                    class="preview-img-fill"
+                  />
+                  <div class="preview-overlay" @click="imagePreview = null; selectedFile = null">
+                    <i class="fas fa-times"></i>
+                  </div>
+                </div>
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
-        <div v-if="imagePreview" class="image-preview">
-          <el-image :src="imagePreview" fit="contain" class="preview-img" />
-        </div>
       </el-form>
+
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="isEditModalOpen = false">
-            <i class="fas fa-times mr-1"></i> 取消
-          </el-button>
-          <el-button type="primary" @click="handleSave" class="save-btn">
-            <i class="fas fa-save mr-1"></i> 儲存資料
-          </el-button>
+          <el-button @click="isEditModalOpen = false">取消</el-button>
+          <el-button type="primary" @click="handleSave">儲存資料</el-button>
         </div>
       </template>
     </el-dialog>
@@ -342,7 +370,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue' // 修正：補上 computed
 import axios from 'axios'
 import Swal from 'sweetalert2'
 
@@ -351,6 +379,23 @@ const discounts = ref([])
 const merchants = ref([])
 const keyword = ref('')
 const loading = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(15)
+
+// 搜尋過濾邏輯 
+const filteredDiscounts = computed(() => {
+  if (!keyword.value) return discounts.value;
+  return discounts.value.filter(discount => 
+    discount.couponName && discount.couponName.toLowerCase().includes(keyword.value.toLowerCase())
+  );
+});
+
+// 分頁邏輯 
+const paginatedDiscounts = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+  return filteredDiscounts.value.slice(start, end);
+});
 
 // Modal 與圖片控制
 const isEditModalOpen = ref(false)
@@ -421,7 +466,7 @@ const fetchMerchants = async () => {
   }
 }
 
-// 3. 上、下架手動切換 (核心功能)
+// 3. 上、下架手動切換
 const handleStatusChange = async (id, action) => {
   const actionText = action === 'relist' ? '上架' : '下架'
 
@@ -572,6 +617,33 @@ const deleteDiscount = (id) => {
     }
   })
 }
+// 一鍵填入測試資料
+const handleQuickFill = () => {
+  const templates = [
+    { name: '新春限時 8 折券', desc: '全店消費不限金額即可享有 8 折優惠', points: 50 },
+    { name: '拿鐵咖啡買一送一', desc: '限中杯以上拿鐵，每人限領一次', points: 30 },
+    { name: '百元抵用券', desc: '消費滿 500 元即可折抵 100 元', points: 100 },
+    { name: '下午茶套餐組合優惠', desc: '指定蛋糕加飲料現折 50 元', points: 20 },
+    { name: 'VIP 會員獨享禮', desc: '憑此券兌換精美好禮一份', points: 150 }
+  ];
+
+  const randomTpl = templates[Math.floor(Math.random() * templates.length)];
+  const now = new Date();
+  const future = new Date();
+  future.setDate(now.getDate() + 60);
+  const formatDate = (date) => date.toISOString().split('T')[0];
+
+  editingDiscount.value = {
+    ...editingDiscount.value,
+    couponName: randomTpl.name,
+    couponDescription: randomTpl.desc,
+    pointsRequired: randomTpl.points,
+    startDate: formatDate(now),
+    endDate: formatDate(future),
+    couponStatus: 1,
+    merchantId: merchants.value.length > 0 ? merchants.value[merchants.value.length - 1].merchantId : null
+  };
+};
 
 onMounted(() => {
   fetchDiscounts()
@@ -1018,5 +1090,41 @@ onMounted(() => {
   .filter-input {
     width: 100%;
   }
+ .upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.preview-box {
+  position: relative;
+  width: 100%;
+  height: 120px; /* 固定預覽高度 */
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #dcdfe6;
+}
+
+.preview-img-fill {
+  width: 100%;
+  height: 100%;
+}
+
+.preview-overlay {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 12px;
+}
 }
 </style>

@@ -1,10 +1,15 @@
 package com.example.backend.controller.payment;
 
+import com.example.backend.model.merchantAndCoupon.SponsorshipRecord;
 import com.example.backend.model.rec.RecRent;
 import com.example.backend.repository.rec.RecRentRepository;
+import com.example.backend.service.merchantAndCoupon.PaymentService;
 import com.example.backend.utils.EcpayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
 import java.util.Map;
 
 @RestController
@@ -15,99 +20,109 @@ public class PaymentApiController {
     private RecRentRepository recRentRepository;
 
     @Autowired
+    private com.example.backend.repository.merchantAndCoupon.SponsorshipRepository sponsorshipRepository; // 💡 注入贊助
+                                                                                                          // Repository
+
+    @Autowired
     private EcpayUtils ecpayUtils;
 
+    @Autowired
+    private PaymentService paymentService;
+
     /**
-     * 1. 產生租借結帳表單
+     * 1. 產生租借結帳表單 (維持原樣)
      */
     @PostMapping(value = "/checkout", produces = "text/html;charset=UTF-8")
-    public String checkout(@RequestParam("recId") String recId) {
+    public String checkout(@RequestParam("recId") String recId, @RequestParam("baseUrl") String baseUrl) {
         RecRent order = recRentRepository.findByRecId(recId);
         if (order == null)
             return "<h2>訂單不存在</h2>";
 
         String amount = String.valueOf(order.getRecRequestPay());
         String itemName = "租借費用-" + order.getRecId();
-        // 加入時間戳避免綠界重複訂單編號錯誤
         String tradeNo = order.getRecId() + "X" + System.currentTimeMillis() / 1000;
 
-        return ecpayUtils.genCheckOutForm(tradeNo, amount, itemName);
+        return ecpayUtils.genCheckOutForm(tradeNo, amount, itemName, baseUrl);
     }
 
     /**
      * 2. 產生贊助表單
+     * 💡 修改：加入 memberId 與 comment，並在跳轉前存入資料庫
      */
     @PostMapping(value = "/sponsor", produces = "text/html;charset=UTF-8")
-    public String sponsor(@RequestParam("amount") String amount) {
-        String donateId = "SPN" + System.currentTimeMillis();
-        String itemName = "贊助支持-TWD" + amount;
-        return ecpayUtils.genCheckOutForm(donateId, amount, itemName);
+    public String sponsor(@RequestParam("memberId") Integer memberId,
+            @RequestParam("amount") BigDecimal amount,
+            @RequestParam(value = "comment", required = false) String comment,
+            @RequestParam("baseUrl") String baseUrl) {
+
+        // 所有的髒活（存資料庫、產表單）都丟給 Service
+        return paymentService.createSponsorshipOrder(memberId, amount, comment, baseUrl);
     }
 
     /**
      * 3. 綠界瀏覽器跳轉頁 (OrderResultURL)
-     * 負責通知前端 Vue 關閉彈窗
      */
     @RequestMapping(value = "/payment-success", method = { RequestMethod.GET,
             RequestMethod.POST }, produces = "text/html;charset=UTF-8")
-    public String paymentSuccess(jakarta.servlet.http.HttpServletRequest request) {
-        // 💡 嘗試從 Request 獲取所有參數
-        Map<String, String[]> parameterMap = request.getParameterMap();
-        Map<String, String> formData = new java.util.HashMap<>();
+    public String paymentSuccess(@RequestParam Map<String, String> formData) {
 
-        parameterMap.forEach((key, values) -> {
-            formData.put(key, values[0]);
-        });
-        // Log 記錄
-        System.out.println(">>> 進入 payment-success，方法：" + request.getMethod());
-        System.out.println(">>> 參數內容：" + formData);
+        String rtnCode = formData.getOrDefault("RtnCode", "0");
+        String tradeNo = formData.get("MerchantTradeNo");
 
-        // 💡 關鍵邏輯：如果收到的是 POST 且沒有參數（綠界跳轉常見問題）
-        // 或者我們想確保 JavaScript 一定能執行，強制導向一次 GET
-        if (request.getMethod().equals("POST") && formData.isEmpty()) {
-            System.out.println(">>> 檢測到空 POST，強制重導向至 GET 以觸發跳轉邏輯");
-            return "redirect:/api/payment/payment-success";
+        if (tradeNo != null && tradeNo.startsWith("SPN")) {
+            paymentService.processPaymentResult(formData);
         }
 
-        // 這裡回傳原本的 HTML/JS 程式碼
-        return "payment_success_page"; // 指向你的 HTML 模板或直接回傳 String
+        String message = "1".equals(rtnCode) ? "訂單支付成功！" : "支付過程似乎有誤，請洽管理員。";
+        String icon = "1".equals(rtnCode) ? "success" : "error";
+
+        return "<html><head><meta charset='UTF-8'><script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script></head>"
+                +
+                "<body><script>window.onload = function() {" +
+                "  Swal.fire({ title: '" + message + "', icon: '" + icon
+                + "', confirmButtonText: '確定', allowOutsideClick: false }).then((result) => {" +
+                "    if (result.isConfirmed) {" +
+                "      if (window.opener) { window.opener.postMessage('PAYMENT_SUCCESS', '*'); window.close(); }" +
+                "      else { window.location.href = 'http://localhost:5173/'; }" +
+                "    }" +
+                "  });" +
+                "};</script></body></html>";
     }
 
     /**
      * 4. 綠界後台非同步回傳 (ReturnURL)
-     * 負責正式更新資料庫狀態，並回傳 1|OK 給綠界
      */
     @PostMapping("/callback")
     public String callback(@RequestParam Map<String, String> formData) {
         String ecpayTradeNo = formData.get("MerchantTradeNo");
         String rtnCode = formData.get("RtnCode");
         String tradeAmt = formData.get("TradeAmt");
-        String paymentType = formData.get("PaymentType");
 
-        // 綠界規定：RtnCode 為 "1" 代表付款成功
         if ("1".equals(rtnCode)) {
-            // 還原原始 ID (去掉 X 之後的時間戳)
-            String realId = ecpayTradeNo.contains("X") ? ecpayTradeNo.split("X")[0] : ecpayTradeNo;
-
-            // A. 處理贊助邏輯
-            if (realId.startsWith("SPN")) {
-                System.out.println("【贊助成功確認】訂單號：" + realId + "，實收金額：" + tradeAmt);
+            // A. 處理贊助紀錄更新
+            if (ecpayTradeNo.startsWith("SPN")) {
+                // 💡 修正：直接呼叫 Service，它會處理狀態變更 + 會員加點
+                paymentService.processPaymentResult(formData);
                 return "1|OK";
             }
 
-            // B. 處理租借訂單邏輯
+            // B. 處理租借訂單更新
+            String realId = ecpayTradeNo.contains("X") ? ecpayTradeNo.split("X")[0] : ecpayTradeNo;
             RecRent order = recRentRepository.findByRecId(realId);
             if (order != null) {
                 order.setRecStatus("PAID");
                 order.setRecPayment((int) Double.parseDouble(tradeAmt));
-                order.setRecPayBy(paymentType); // 紀錄付款方式 (如 CreditCard)
+                order.setRecPayBy(formData.get("PaymentType"));
                 recRentRepository.save(order);
-                System.out.println("【訂單支付成功】訂單號：" + realId);
                 return "1|OK";
             }
         }
-
-        System.out.println("【支付失敗或異常】編號：" + ecpayTradeNo + "，狀態碼：" + rtnCode);
         return "0|Error";
+    }
+
+    @GetMapping("/admin/sponsors")
+    public ResponseEntity<?> getAllSponsors() {
+        // 假設你在 SponsorshipRepository 裡有 findAll()
+        return ResponseEntity.ok(sponsorshipRepository.findAllByOrderBySponsorIdDesc());
     }
 }

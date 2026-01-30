@@ -23,6 +23,12 @@
             ${{ p }}
           </button>
         </div>
+        <div class="points-hint" style="margin: 10px 0; color: #e67e22; font-weight: bold;">
+          <i class="bi bi-gift-fill"></i>
+          感謝支持！本次贊助您將獲得 
+          <span style="font-size: 1.2rem;">{{ amount }}</span> 
+          點數回饋
+        </div>
         <el-input-number v-model="amount" :min="10" :step="50" class="custom-input" />
       </div>
       <div class="payment-methods">
@@ -32,6 +38,19 @@
           <span class="radio-label">綠界科技 ECPay 安全支付</span>
         </label>
       </div>
+      <div class="comment-area" style="margin-top: 20px;">
+  <p class="section-title">給我們的鼓勵 (留言)：</p>
+  <el-input
+    v-model="comment"
+    type="textarea"
+    :rows="3"
+    placeholder="寫下您想說的話..."
+    maxlength="500"
+    show-word-limit
+    class="custom-textarea"
+  />
+</div>
+<hr>
       <button @click="handleSponsorSubmit" :disabled="isLoading" class="checkout-btn sponsor-btn">
         <span v-if="isLoading" class="loader"></span>
         {{ isLoading ? '準備導向支付頁面...' : '立即贊助' }}
@@ -41,32 +60,35 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { StarFilled, SuccessFilled } from '@element-plus/icons-vue';
 import { useRouter } from 'vue-router';
+// 💡 導入你的會員 Store
+import { useMemberAuthStore } from '@/stores/memberAuth'; 
 
 const isLoading = ref(false);
 const isSuccess = ref(false);
 const amount = ref(100);
+const comment = ref(""); // 💡 留言板變數
 const router = useRouter();
+const memberAuthStore = useMemberAuthStore();
 
-// 💡 1. 定義單一的訊息處理函數
+// 💡 統一使用 Store 的資料 (與蛇蛇遊戲一致)
+const memberId = computed(() => memberAuthStore.member?.memId);
+
 const messageHandler = (event) => {
-  // 這裡印出 log 是為了讓你知道通訊到底有沒有成功
-  console.log("SponsorView 收到視窗訊息來自:", event.origin);
-  console.log("訊息內容:", event.data);
-
   if (event.data === 'PAYMENT_SUCCESS') {
-    console.log("✅ 檢測到支付成功標記，切換畫面");
     isSuccess.value = true;
     isLoading.value = false;
+    // 成功後順便刷新一下全站點數 (如果有需要的話)
+    if (typeof memberAuthStore.refreshPoints === 'function') {
+        memberAuthStore.refreshPoints();
+    }
   }
 };
 
-// 💡 2. 生命週期管理（確保只掛載一次）
 onMounted(() => {
-  console.log("SponsorView 已掛載，正在監聽 PAYMENT_SUCCESS...");
   window.addEventListener('message', messageHandler);
 });
 
@@ -75,10 +97,14 @@ onUnmounted(() => {
 });
 
 const handleSponsorSubmit = async () => {
-  // 檢查是否登入（避免 401 導致後續報錯）
+  // 1. 檢查登入狀態
+  if (!memberId.value) {
+    alert("請先登入後再進行贊助，讓我們能記錄您的貢獻！");
+    router.push({ path: '/login', query: { redirect: '/sponsor' } });
+    return;
+  }
+
   isLoading.value = true;
-  
-  // 💡 修正 windowName 避免包含特殊字元，使用簡單字串
   const windowName = "ecpayPaymentWindow";
   const paymentWindow = window.open("", windowName);
   
@@ -91,8 +117,17 @@ const handleSponsorSubmit = async () => {
   paymentWindow.document.write("<html><body style='display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;'><div><h2>正在導向綠界支付...</h2></div></body></html>");
 
   try {
-    const response = await axios.post('http://localhost:8080/api/payment/sponsor', null, {
-      params: { amount: amount.value }
+    const apiUrl = window.APP_CONFIG?.API_URL || 'http://localhost:8080';
+    const frontendUrl = window.location.origin;
+
+    // 💡 修正：將參數完整傳遞給整合後的後端
+    const response = await axios.post(`${apiUrl}/api/payment/sponsor`, null, {
+      params: { 
+        memberId: memberId.value, // 從 computed 拿值
+        amount: amount.value,
+        comment: comment.value,   // 傳送留言板內容
+        baseUrl: frontendUrl 
+      }
     });
 
     const tempDiv = document.createElement('div');
@@ -104,17 +139,14 @@ const handleSponsorSubmit = async () => {
     if (form) {
       form.target = windowName; 
       form.submit();
-      // 延後移除，確保表單已提交
       setTimeout(() => {
         if (document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
-      }, 2000);
-    } else {
-      throw new Error("找不到金流表單內容");
+      }, 500);
     }
   } catch (error) {
     console.error("導向失敗", error);
     if (paymentWindow) paymentWindow.close();
-    alert("產單失敗，請確認登入狀態或稍後再試。");
+    alert("系統忙碌中，請稍後再試。");
     isLoading.value = false;
   }
 };
@@ -174,6 +206,23 @@ const handleSponsorSubmit = async () => {
   border-radius: 50%; width: 18px; height: 18px; animation: spin 1s linear infinite;
 }
 
+.section-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+  display: block;
+  text-align: left;
+}
+
+.custom-textarea :deep(.el-textarea__inner) {
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  transition: border-color 0.3s;
+}
+
+.custom-textarea :deep(.el-textarea__inner:focus) {
+  border-color: #2a9d8f;
+}
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .note { font-size: 0.8rem; color: #888; text-align: center; margin-top: 1.2rem; }
 </style>
