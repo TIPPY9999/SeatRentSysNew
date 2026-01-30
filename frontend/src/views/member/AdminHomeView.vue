@@ -307,7 +307,7 @@ onUnmounted(() => {
     <main class="dashboard-inner fade-in-up">
       <header class="header-section">
         <div class="header-left">
-          <h1>Hello, {{ adminName }} <span class="wave">👋</span></h1>
+          <h1>{{ adminName }} <span class="wave"></span></h1>
           <p class="subtitle">Take@Seat 營運控制中心</p>
         </div>
         <div class="header-right">

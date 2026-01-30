@@ -397,6 +397,21 @@ CREATE TABLE redemption_log
 -- 建議加上索引，未來資料量大時查詢較快
 CREATE INDEX idx_redemption_memId ON redemption_log(memId);
 CREATE INDEX idx_redemption_time ON redemption_log(redeemTime);
+
+CREATE TABLE SponsorshipRecord (
+    SponsorID INT IDENTITY(1,1) PRIMARY KEY,
+    MemberID INT NOT NULL,                  -- 關聯會員
+    MerchantTradeNo NVARCHAR(50) NOT NULL,  -- 傳給綠界的唯一訂單號
+    TradeNo NVARCHAR(50),                   -- 綠界內部的交易序號
+    Amount DECIMAL(10) NOT NULL,         -- 贊助金額
+    SponsorComment NVARCHAR(500),           -- 贊助者的留言 (新需求)
+    Status INT DEFAULT 0,                   -- 0:待處理, 1:成功, 2:失敗
+    PaymentType NVARCHAR(20),               -- 支付方式
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_Sponsorship_Member FOREIGN KEY (MemberID) REFERENCES Member(memID),
+    CONSTRAINT UC_MerchantTradeNo UNIQUE (MerchantTradeNo)
+);
 --========================== 翊庭 TABLE END===================
 --============子桓 TABLE ver.20260121============
 CREATE TABLE recRent

@@ -57,7 +57,8 @@ const menuGroups = [
     items: [
       { path: '/admin/merchants', icon: 'fas fa-store', title: '商家管理', prefix: '/admin/merchants' },
       { path: '/admin/discounts', icon: 'fas fa-ticket-alt', title: '優惠券管理', prefix: '/admin/discounts' },
-      { path: '/admin/redemption-logs', icon: 'fas fa-chart-bar', title: '兌換紀錄報表', prefix: '/admin/redemption' }
+      { path: '/admin/redemption-logs', icon: 'fas fa-chart-bar', title: '兌換紀錄報表', prefix: '/admin/redemption' },
+      { path: '/admin/sponsors', icon: 'fas fa-chart-bar', title: '贊助商管理', prefix: '/admin/sponsors' }
     ]
   },
   {

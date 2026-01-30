@@ -11,7 +11,6 @@ import {
   computeStaffTaskStats,
   computeOverallStaffStats,
   isCompletedStatus,
-  isMaintenanceTask,
 } from '@/composables/maintenance/useStaffStatus'
 
 const router = useRouter()
@@ -130,48 +129,115 @@ const handleDelete = async (row) => {
         <div style="width: 80px; height: 80px; margin: 0 auto 16px; background: linear-gradient(135deg, #f56c6c 0%, #f89898 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
           <i class="fas fa-user-slash" style="font-size: 36px; color: white;"></i>
         </div>
-        <p style="font-size: 16px; margin-bottom: 8px;">即將停用 <b style="color: #f56c6c;">${row.staffName}</b></p>
-        <p style="color: #909399; font-size: 13px;">刪除的資料可在歷史紀錄中查看並恢復</p>
+        <p style="font-size: 16px; margin-bottom: 20px;">即將停用 <b style="color: #f56c6c;">${row.staffName}</b></p>
+        
+        <div style="text-align: left; margin-bottom: 12px;">
+            <label style="font-size: 13px; color: #606266; font-weight: bold; margin-bottom: 4px; display: block;">停用原因 (必選)</label>
+            <select id="swal-reason-select" class="swal2-select" style="display: flex; width: 100%; margin: 0; padding: 0.5em; border: 1px solid #d9d9d9; border-radius: 4px;">
+                <option value="" disabled selected>請選擇...</option>
+                <option value="已終止合作">已終止合作</option>
+                <option value="其他">其他原因</option>
+            </select>
+        </div>
+
+        <div style="text-align: left;">
+            <label style="font-size: 13px; color: #606266; font-weight: bold; margin-bottom: 4px; display: block;">詳細備註 (選填)</label>
+            <textarea id="swal-reason-note" class="swal2-textarea" placeholder="可在此補充詳細說明..." style="margin: 0; width: 100%; height: 80px; font-size: 14px; border: 1px solid #d9d9d9; box-sizing: border-box;"></textarea>
+        </div>
       </div>
     `,
-    icon: null,
     showCancelButton: true,
     confirmButtonColor: '#f56c6c',
     cancelButtonColor: '#909399',
-    confirmButtonText: '<i class="fas fa-user-slash mr-1"></i> 確認停用',
+    confirmButtonText: '<i class="fas fa-user-slash mr-1"></i> 確認並停用',
     cancelButtonText: '取消',
     showClass: { popup: 'animate__animated animate__fadeInDown animate__faster' },
     hideClass: { popup: 'animate__animated animate__fadeOutUp animate__faster' },
     customClass: { popup: 'custom-swal-popup' },
+    // 透過 preConfirm 抓取兩個欄位的值
+    preConfirm: () => {
+      const selectVal = document.getElementById('swal-reason-select').value
+      const noteVal = document.getElementById('swal-reason-note').value
+
+      if (!selectVal) {
+        Swal.showValidationMessage('請選擇停用原因')
+        return false
+      }
+
+      // 回傳組合後的物件
+      return { selectVal, noteVal }
+    },
   })
 
   if (result.isConfirmed) {
+    const { selectVal, noteVal } = result.value
+
+    // 組合最終顯示的字串，例如："已終止合作 (詳細說明...)"
+    // 如果沒有備註，就只存選單的值
+    const finalReason = noteVal ? `${selectVal}：${noteVal}` : selectVal
+
+    //取得當天日期(格式 YYYY/MM/DD )
+    const today = new Date().toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+
     try {
+      loading.value = true
+
+      // --- 組合新的備註字串 (保持與歷史紀錄頁面的格式相容) ---
+      const originalNote = row.staffNote || ''
+      const newNote = `[停用原因：${finalReason}] [停用日期：${today}] \n${originalNote}`
+
+      // 1. 先更新備註
+      await maintenanceApi.updateStaff(row.staffId, {
+        ...row,
+        staffNote: newNote,
+      })
+
+      // 2. 再執行停用
       await maintenanceApi.deleteStaff(row.staffId)
+
       await fetchStaff()
+
       await Swal.fire({
         icon: 'success',
-        title: '停用成功',
-        html: `<span><b>${row.staffName}</b> 已移至歷史紀錄</span>`,
-        timer: 1000,
+        title: '已停用',
+        html: `
+          <div style="text-align:center;">
+            <span><b>${row.staffName}</b> 已移至歷史紀錄</span><br/>
+            <span style="color: #909399; font-size: 13px; margin-top: 8px; display: inline-block; background: #f4f4f5; padding: 4px 8px; border-radius: 4px;">
+              原因：${selectVal}
+            </span>
+          </div>
+        `,
+        timer: 900,
         timerProgressBar: true,
         showConfirmButton: false,
-        showClass: { popup: 'animate__animated animate__bounceIn' },
       })
     } catch (error) {
       const errorMsg = error?.response?.data?.message || error?.message || ''
+
       if (
         errorMsg.includes('未完成') ||
         errorMsg.includes('工單') ||
         error?.response?.status === 400
       ) {
+        // 發生轉移需求時
         transferForm.value = {
           deleteStaffId: row.staffId,
           deleteStaffName: row.staffName,
           targetStaffId: null,
         }
         showTransferDialog.value = true
+
+        // 額外提示：剛剛選的原因沒有存成功，轉移後可能需要重新操作(視後端邏輯而定)
+      } else {
+        Swal.fire('錯誤', '停用失敗，請稍後再試', 'error')
       }
+    } finally {
+      loading.value = false
     }
   }
 }
@@ -198,53 +264,37 @@ const handleViewTasks = (cardType) => {
 }
 
 // 計算任務列表資料 (根據 taskType 篩選)
+// ✅【修正#1】任務列表分類也改成嚴格判定，確保「點卡片進去的清單」跟圖卡一致
 const detailTaskList = computed(() => {
   if (!detailCurrentStaff.value || !detailCurrentTaskType.value) return []
 
   const staffId = detailCurrentStaff.value.staffId
   const cardType = detailCurrentTaskType.value
-  const matchFn = (t) => t.assignedStaffId === staffId
+  const matchFn = (t) => t?.assignedStaffId === staffId
+
+  const isDone = (t) => isCompletedStatus(t?.issueStatus)
+  const isMaint = (t) => isMaintenanceTicketStrict(t)
 
   let filtered = []
   switch (cardType) {
     case 'repair-pending':
-      filtered = allTickets.value.filter(
-        (t) =>
-          matchFn(t) &&
-          !isMaintenanceTask(t.issueType, t.issueDesc) &&
-          !isCompletedStatus(t.issueStatus),
-      )
+      filtered = (allTickets.value || []).filter((t) => matchFn(t) && !isMaint(t) && !isDone(t))
       break
     case 'maintenance-pending':
-      filtered = allTickets.value.filter(
-        (t) =>
-          matchFn(t) &&
-          isMaintenanceTask(t.issueType, t.issueDesc) &&
-          !isCompletedStatus(t.issueStatus),
-      )
+      filtered = (allTickets.value || []).filter((t) => matchFn(t) && isMaint(t) && !isDone(t))
       break
     case 'repair-completed':
-      filtered = allTickets.value.filter(
-        (t) =>
-          matchFn(t) &&
-          !isMaintenanceTask(t.issueType, t.issueDesc) &&
-          isCompletedStatus(t.issueStatus),
-      )
+      filtered = (allTickets.value || []).filter((t) => matchFn(t) && !isMaint(t) && isDone(t))
       break
     case 'maintenance-completed':
-      filtered = allTickets.value.filter(
-        (t) =>
-          matchFn(t) &&
-          isMaintenanceTask(t.issueType, t.issueDesc) &&
-          isCompletedStatus(t.issueStatus),
-      )
+      filtered = (allTickets.value || []).filter((t) => matchFn(t) && isMaint(t) && isDone(t))
       break
     default:
-      filtered = allTickets.value.filter((t) => matchFn(t))
+      filtered = (allTickets.value || []).filter((t) => matchFn(t))
   }
 
   // 排序：最新在上
-  const getTime = (t) => new Date(t.reportedAt || t.startAt || t.resolvedAt || 0).getTime()
+  const getTime = (t) => new Date(t?.reportedAt || t?.startAt || t?.resolvedAt || 0).getTime()
   filtered.sort((a, b) => getTime(b) - getTime(a))
 
   return filtered
@@ -291,6 +341,31 @@ const getTargetLabel = (t) => {
   if (t.spotId) return `機台 #${t.spotId}`
   return '未指定'
 }
+
+// ✅【修正#1】嚴格判定保養單：只認 issueType === '保養'
+// 避免「檢查 / 例行 / 盤點」之類字眼被誤判成保養
+const isMaintenanceTicketStrict = (t) => String(t?.issueType || '').trim() === '保養'
+
+// ✅【修正#1】人員詳情四卡：在 Dialog 內用「嚴格判定」重新算一次
+// 這樣就算 composable 判定有問題，詳情圖卡也不會顯示錯
+const detailStaffStats = computed(() => {
+  const staffId = detailCurrentStaff.value?.staffId
+  if (!staffId) {
+    return { repairCurrent: 0, maintainCurrent: 0, repairDone: 0, maintainDone: 0 }
+  }
+
+  const mine = (allTickets.value || []).filter((t) => t?.assignedStaffId === staffId)
+
+  const current = mine.filter((t) => !isCompletedStatus(t?.issueStatus))
+  const done = mine.filter((t) => isCompletedStatus(t?.issueStatus))
+
+  const repairCurrent = current.filter((t) => !isMaintenanceTicketStrict(t)).length
+  const maintainCurrent = current.filter((t) => isMaintenanceTicketStrict(t)).length
+  const repairDone = done.filter((t) => !isMaintenanceTicketStrict(t)).length
+  const maintainDone = done.filter((t) => isMaintenanceTicketStrict(t)).length
+
+  return { repairCurrent, maintainCurrent, repairDone, maintainDone }
+})
 
 // ✅ 【移除】舊的 Swal 程式碼片段已清除，改用 el-dialog (見 template 區塊)
 
@@ -948,7 +1023,7 @@ onMounted(async () => {
                 <span class="mt-statCard__label">待修任務</span>
               </div>
               <div class="mt-statCard__value">
-                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.repairCurrent || 0 }}
+                {{ detailStaffStats.repairCurrent }}
               </div>
             </div>
           </el-col>
@@ -965,7 +1040,7 @@ onMounted(async () => {
                 <span class="mt-statCard__label">待保養</span>
               </div>
               <div class="mt-statCard__value">
-                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.maintainCurrent || 0 }}
+                {{ detailStaffStats.maintainCurrent }}
               </div>
             </div>
           </el-col>
@@ -982,7 +1057,7 @@ onMounted(async () => {
                 <span class="mt-statCard__label">維修完成</span>
               </div>
               <div class="mt-statCard__value">
-                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.repairDone || 0 }}
+                {{ detailStaffStats.repairDone }}
               </div>
             </div>
           </el-col>
@@ -999,7 +1074,7 @@ onMounted(async () => {
                 <span class="mt-statCard__label">保養完成</span>
               </div>
               <div class="mt-statCard__value">
-                {{ staffTicketStatMap.get(detailCurrentStaff.staffId)?.maintainDone || 0 }}
+                {{ detailStaffStats.maintainDone }}
               </div>
             </div>
           </el-col>

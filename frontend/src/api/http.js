@@ -7,6 +7,17 @@
 import axios from 'axios'
 import Swal from 'sweetalert2'
 
+
+const TUNNEL_API = window.APP_CONFIG?.API_URL; // 從設定檔抓 Tunnel 網址
+const LOCAL_API = "http://localhost:8080";
+
+let currentBaseURL = LOCAL_API; // 預設用本機
+if (window.location.hostname.includes("trycloudflare.com")) { 
+// 而且設定檔裡面有填 Tunnel 網址 
+if (TUNNEL_API) { currentBaseURL = TUNNEL_API; console.log("🌐 偵測到外部連線，切換至 Tunnel API");
+ } else { console.log("⚠️ 雖然在 Tunnel，但設定檔未填 API_URL，仍使用 Localhost"); } 
+} else { console.log("🏠 偵測到本機連線，使用 Localhost API");}
+
 // 建立 axios 實體
 const http = axios.create({
   baseURL: '/api', // Vite Proxy 會將 /api 轉發到 http://localhost:8080

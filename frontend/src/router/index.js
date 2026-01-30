@@ -115,6 +115,11 @@ const routes = [
         name: 'sponsor',
         component: () => import('@/views/ecpay/SponsorView.vue'),
       },
+      {
+        path: '/payment-success',
+        name: 'payment-success',
+        component: () => import('@/views/ecpay/PaymentSuccessView.vue'),
+      },
      
       // 訂單確認與付款頁
       {
@@ -250,6 +255,11 @@ const routes = [
         path: 'snake-game',
         name: 'admin-snake-game',
         component: SnakeGame,
+      },
+      {
+        path: 'sponsors',
+        name: 'admin-sponsors',
+        component: () => import('@/views/ecpay/SponsorLog.vue'),
       },
 
       // [核心功能] 會員管理

@@ -46,10 +46,14 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
                 SELECT
                     s.spotId as spotId,
                     s.spotName as spotName,
-                    (SELECT COUNT(*) FROM seats st WHERE st.spotId = s.spotId AND st.seatsStatus = '啟用') as totalSeats,
-                    (SELECT COUNT(*) FROM recRent r WHERE r.spotIdRent = s.spotId AND r.recStatus = '租借中') as rentedCount
+                    20 as totalSeats,
+                    (SELECT COUNT(*) -- 計算已租借數量
+                       FROM recRent r
+                      WHERE r.spotIdRent = s.spotId
+                        AND r.recStatus = N'租借中') as rentedCount
                 FROM renting_Spot s
-                WHERE s.spotStatus = '營運中'
+                WHERE s.spotStatus = N'營運中'
             """, nativeQuery = true)
     List<SpotMonitor> getSpotRealtimeStatus();
+
 }
