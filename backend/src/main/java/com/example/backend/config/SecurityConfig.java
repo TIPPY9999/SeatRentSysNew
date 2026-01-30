@@ -51,7 +51,9 @@ public class SecurityConfig {
                          "/api/**",      // 放行所有後端 API (工單、金流、座位、分析...)
                         "/rec-rent/**", // 解決前端歸還座位時，PUT請求被CSRF阻擋的問題
                         "/login/**",    // 放行所有登入請求
-                        "/oauth2/**"    // 放行 OAuth2 相關 (通常不需要，但加著保險)
+                        "/oauth2/**",// 放行 OAuth2 相關 (通常不需要，但加著保險)
+                        "/spot/**",
+                        "/seats/**"    
                 ))
 
                                 // 2. 載入自定義的 CORS 設定
@@ -67,7 +69,14 @@ public class SecurityConfig {
                                                                 "/images/**")
                                                 .permitAll()
                                                 .requestMatchers(
-                                                                "/api/**", "/login/**", "/oauth2/**", "/api/auth/**")
+                                                                "/api/**",  //其實下方API前綴都已經被包含了，只是寫了也不影響就不特別刪除。
+                                                                "/login/**", 
+                                                                "/oauth2/**", 
+                                                                "/api/auth/**",
+                                                                "/api/analyze/**",
+                                                                "/api/forgot-password/**",
+                                                                "/api/admin/forgot-password/**",
+                                                                "/api/payment/**")
                                                 .permitAll()
                                                 .anyRequest().permitAll() // 開發期間放行所有請求
                                 )

@@ -18,7 +18,7 @@ public class AnalyzeProjections {
 
     // 站點即時監控 (名稱、總座位、已租借)
     public interface SpotMonitor {
-        Integer getSpotId(); // [Add] 新增 ID 以便前端進行調度操作
+        Integer getSpotId(); // 新增 ID 以便前端進行調度操作
 
         String getSpotName();
 
