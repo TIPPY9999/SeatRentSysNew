@@ -30,20 +30,44 @@ public class PaymentApiController {
     private PaymentService paymentService;
 
     /**
-     * 1. 產生租借結帳表單 (維持原樣)
+     * 1. 產生租借結帳表單 (維持原樣)==========================(翌帆註解2026-1-31整合發生衝突，故先保留此段)
      */
-    @PostMapping(value = "/checkout", produces = "text/html;charset=UTF-8")
-    public String checkout(@RequestParam("recId") String recId, @RequestParam("baseUrl") String baseUrl) {
-        RecRent order = recRentRepository.findByRecId(recId);
-        if (order == null)
-            return "<h2>訂單不存在</h2>";
+//     @PostMapping(value = "/checkout", produces = "text/html;charset=UTF-8")
+// <<<<<<< HEAD
+//     public String checkout(@RequestParam("recId") String recId, @RequestParam("baseUrl") String baseUrl) {
+// =======
+//     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") // 允許前端跨域請求
+//     public String checkout(@RequestParam("recId") String recId, @RequestParam("amount") String amount) {
+// >>>>>>> rec
+//         RecRent order = recRentRepository.findByRecId(recId);
+//         if (order == null)
+//             return "<h2>訂單不存在</h2>";
 
-        String amount = String.valueOf(order.getRecRequestPay());
-        String itemName = "租借費用-" + order.getRecId();
-        String tradeNo = order.getRecId() + "X" + System.currentTimeMillis() / 1000;
+//         String itemName = "租借費用-" + order.getRecId();
+//         String tradeNo = order.getRecId() + "X" + System.currentTimeMillis() / 1000;
 
-        return ecpayUtils.genCheckOutForm(tradeNo, amount, itemName, baseUrl);
+//         return ecpayUtils.genCheckOutForm(tradeNo, amount, itemName, baseUrl);
+//     }
+
+        @PostMapping(value = "/checkout", produces = "text/html;charset=UTF-8")
+        public String checkout(
+        @RequestParam("recId") String recId,
+        @RequestParam("baseUrl") String baseUrl
+    ) {
+    RecRent order = recRentRepository.findByRecId(recId);
+    if (order == null) {
+        return "<h2>訂單不存在</h2>";
     }
+
+    // 金額由後端訂單資料決定（不可相信前端）
+        String amount = String.valueOf(order.getRecPayment());
+
+        String itemName = "租借費用-" + order.getRecId();
+        String tradeNo = order.getRecId() + "X" + (System.currentTimeMillis() / 1000);
+
+    return ecpayUtils.genCheckOutForm(tradeNo, amount, itemName, baseUrl);
+}
+
 
     /**
      * 2. 產生贊助表單
