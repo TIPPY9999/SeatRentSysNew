@@ -3,11 +3,13 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Swal from 'sweetalert2'
+import { useAdminAuthStore } from '@/stores/adminAuth'
 
 const router = useRouter()
 const members = ref([])
 const keyword = ref('')
 const loading = ref(false)
+const authStore = useAdminAuthStore()
 
 // --- 分頁控制 ---
 const currentPage = ref(1)
@@ -17,28 +19,24 @@ const pageSize = 6
 const showModal = ref(false)
 const selectedMember = ref(null)
 
-// 取得會員 (保留原 SweetAlert 邏輯)
+// --- 狀態切換與停權彈窗 ---
+const filterStatus = ref(1) // 1: 啟用, 0: 停用
+const showBanModal = ref(false)
+const banReason = ref('')
+const memberToBan = ref(null)
+
+// 取得會員
 const fetchMembers = async () => {
   loading.value = true
   try {
     const res = await axios.get('http://localhost:8080/api/members')
     members.value = res.data
     currentPage.value = 1 
-    if (res.data.length === 0) {
-      Swal.fire({
-        icon: 'info',
-        title: '查無會員資料',
-        text: '目前系統中沒有任何會員',
-        confirmButtonText: '確定',
-        confirmButtonColor: '#409eff'
-      })
-    }
   } catch (error) {
     Swal.fire({
       icon: 'error',
       title: '載入失敗',
-      text: error.response?.data?.message || '取得會員資料失敗',
-      confirmButtonText: '確定',
+      text: '取得會員資料失敗',
       confirmButtonColor: '#f56c6c'
     })
   } finally {
@@ -46,13 +44,18 @@ const fetchMembers = async () => {
   }
 }
 
+// 過濾與分頁
+const filteredMembers = computed(() => {
+  return members.value.filter(m => m.memStatus === filterStatus.value)
+})
+
 const paginatedMembers = computed(() => {
   const start = (currentPage.value - 1) * pageSize
-  return members.value.slice(start, start + pageSize)
+  return filteredMembers.value.slice(start, start + pageSize)
 })
 
 const totalPages = computed(() => {
-  return Math.ceil(members.value.length / pageSize) || 1
+  return Math.ceil(filteredMembers.value.length / pageSize) || 1
 })
 
 const openMemberDetail = (member) => {
@@ -109,25 +112,52 @@ const searchMembers = async () => {
   }
 }
 
-// 停權邏輯 (保留原刪除 API 與提示)
-const deleteMember = async (memId, memName) => {
-  const result = await Swal.fire({
-    title: '確定要刪除這個會員嗎？',
-    html: `會員：<strong>${memName}</strong> (ID: ${memId})<br>此操作無法復原！`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#f56c6c',
-    cancelButtonColor: '#909399',
-    confirmButtonText: '確定刪除',
-    cancelButtonText: '取消'
-  })
-  if (!result.isConfirmed) return
+// 停權邏輯
+const openBanModal = (member) => {
+  memberToBan.value = member
+  banReason.value = ''
+  showBanModal.value = true
+}
+
+const confirmBanMember = async () => {
+  if (!banReason.value.trim()) {
+    Swal.fire({ icon: 'warning', title: '請輸入原因', confirmButtonColor: '#e6a23c' })
+    return
+  }
   try {
-    await axios.get('http://localhost:8080/api/members/delete', { params: { memId } })
-    Swal.fire({ icon: 'success', title: '刪除成功', timer: 2000, showConfirmButton: false })
+    await axios.post('http://localhost:8080/api/members/ban', {
+      memId: memberToBan.value.memId,
+      reason: banReason.value
+    })
+    showBanModal.value = false
+    Swal.fire({ icon: 'success', title: '該會員已移至停權區', timer: 1500, showConfirmButton: false })
     fetchMembers()
   } catch (error) {
-    Swal.fire({ icon: 'error', title: '刪除失敗' })
+    Swal.fire({ icon: 'error', title: '操作失敗' })
+  }
+}
+
+// 恢復啟用 (加回 SweetAlert 確認)
+const activateMember = async (member) => {
+  const result = await Swal.fire({
+    title: '確定要重新啟用嗎？',
+    text: `即將恢復會員：${member.memName} 的權限`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#67c23a',
+    cancelButtonColor: '#909399',
+    confirmButtonText: '確定啟用',
+    cancelButtonText: '取消'
+  })
+
+  if (result.isConfirmed) {
+    try {
+      await axios.post('http://localhost:8080/api/members/activate', { memId: member.memId })
+      Swal.fire({ icon: 'success', title: '已重新啟用', timer: 1500, showConfirmButton: false })
+      fetchMembers()
+    } catch (error) {
+      Swal.fire({ icon: 'error', title: '恢復失敗' })
+    }
   }
 }
 
@@ -140,6 +170,20 @@ const clearSearch = () => {
   keyword.value = ''
   fetchMembers()
 }
+
+const checkPermission = (actionCallback) => {
+  const role = authStore.admin?.role; 
+  if (authStore.isLogin && Number(role) === 9) {
+    actionCallback();
+  } else {
+    Swal.fire({
+      icon: 'lock',
+      title: '權限不足',
+      text: '您目前的身分是一般管理員，無法執行此操作。',
+      confirmButtonColor: '#f56c6c'
+    });
+  }
+};
 
 onMounted(fetchMembers)
 </script>
@@ -155,7 +199,7 @@ onMounted(fetchMembers)
           <input
             v-model="keyword"
             type="text"
-            placeholder="模糊搜尋：帳號 / 姓名 / Email / 手機"
+            placeholder="搜尋：帳號 / 姓名 / Email / 手機"
             @keyup.enter="searchMembers"
             :disabled="loading"
           />
@@ -171,7 +215,19 @@ onMounted(fetchMembers)
         </button>
       </div>
       <div class="create-bar">
-        <button class="btn-create" @click="router.push('/admin/members/create')">
+        <div class="status-toggle-group">
+          <button 
+            class="toggle-btn" 
+            :class="{ active: filterStatus === 1 }" 
+            @click="filterStatus = 1"
+          >啟用員工</button>
+          <button 
+            class="toggle-btn" 
+            :class="{ active: filterStatus === 0 }" 
+            @click="filterStatus = 0"
+          >停用員工</button>
+        </div>
+        <button class="btn-create" @click="checkPermission(() => router.push('/admin/members/create'))">
           <i class="fas fa-user-plus"></i> 新增會員
         </button>
       </div>
@@ -190,7 +246,11 @@ onMounted(fetchMembers)
           </tr>
         </thead>
         <tbody>
-          <tr v-for="m in paginatedMembers" :key="m.memId">
+          <tr 
+            v-for="m in paginatedMembers" 
+            :key="m.memId" 
+            :class="{ 'row-active': selectedMember?.memId === m.memId && showModal }"
+          >
             <td class="col-id id-link-cell" @click="openMemberDetail(m)">{{ m.memId }}</td>
             <td class="col-info">
               <div class="info-cell">
@@ -212,8 +272,23 @@ onMounted(fetchMembers)
             </td>
             <td class="col-action">
               <div class="action-btns">
-                <button class="btn-box-edit" @click="router.push(`/admin/members/edit/${m.memId}`)">修改</button>
-                <button class="btn-box-del" @click="deleteMember(m.memId, m.memName)">停權</button>
+                <button 
+                  v-if="filterStatus === 1" 
+                  class="btn-box-edit" 
+                  @click="checkPermission(() => router.push(`/admin/members/edit/${m.memId}`))"
+                >修改</button>
+                
+                <button 
+                  v-if="m.memStatus === 1"
+                  class="btn-box-del" 
+                  @click="checkPermission(() => openBanModal(m))"
+                >停權</button>
+                
+                <button 
+                  v-else
+                  class="btn-box-active" 
+                  @click="checkPermission(() => activateMember(m))"
+                >啟用</button>
               </div>
             </td>
           </tr>
@@ -221,10 +296,31 @@ onMounted(fetchMembers)
       </table>
     </div>
 
-    <div class="pagination-bar" v-if="members.length > pageSize">
+    <div class="pagination-bar" v-if="filteredMembers.length > pageSize">
       <button class="btn-page" :disabled="currentPage === 1" @click="currentPage--">上一頁</button>
       <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 頁</span>
       <button class="btn-page" :disabled="currentPage === totalPages" @click="currentPage++">下一頁</button>
+    </div>
+
+    <div v-if="showBanModal" class="modal-overlay" @click.self="showBanModal = false">
+      <div class="ban-card">
+        <div class="ban-header">
+          <span>停權會員</span>
+          <button class="close-x" @click="showBanModal = false">&times;</button>
+        </div>
+        <div class="ban-body">
+          <label>停權原因 <span class="required">*</span></label>
+          <textarea v-model="banReason" placeholder="請輸入停權原因..."></textarea>
+          <div class="ban-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            注意：停權後該會員將無法使用服務，直到重新啟用為止。
+          </div>
+        </div>
+        <div class="ban-footer">
+          <button class="btn-close-modal" @click="showBanModal = false">取消</button>
+          <button class="btn-confirm-ban" @click="confirmBanMember">確認停權</button>
+        </div>
+      </div>
     </div>
 
     <div v-if="showModal && selectedMember" class="modal-overlay" @click.self="showModal = false">
@@ -284,7 +380,9 @@ onMounted(fetchMembers)
             </div>
           </div>
         </div>
-        <div class="card-footer"><button class="btn-close-modal" @click="showModal = false">關閉視窗</button></div>
+        <div class="card-footer">
+          <button class="btn-close-modal" @click="showModal = false">關閉視窗</button>
+        </div>
       </div>
     </div>
   </div>
@@ -304,7 +402,6 @@ onMounted(fetchMembers)
   margin-bottom: 20px;
 }
 
-/* 工具列與搜尋框樣式 */
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -359,7 +456,6 @@ onMounted(fetchMembers)
   cursor: pointer;
 }
 
-/* 按鈕懸浮效果強化 */
 .btn-search {
   padding: 10px 18px;
   background: #409eff;
@@ -367,12 +463,12 @@ onMounted(fetchMembers)
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-search:hover {
   background: #66b1ff;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(64, 158, 255, 0.3);
 }
 
@@ -383,13 +479,41 @@ onMounted(fetchMembers)
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-refresh:hover {
   background: #85ce61;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(103, 194, 58, 0.3);
+}
+
+.create-bar {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.status-toggle-group {
+  display: flex;
+  border: 1px solid #409eff;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.toggle-btn {
+  padding: 8px 16px;
+  border: none;
+  background: white;
+  color: #409eff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.toggle-btn.active {
+  background: #409eff;
+  color: white;
 }
 
 .btn-create {
@@ -399,16 +523,15 @@ onMounted(fetchMembers)
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-create:hover {
   background: #85ce61;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(103, 194, 58, 0.3);
 }
 
-/* 表格對齊與樣式 */
 .table-container {
   background: white;
   border-radius: 12px;
@@ -434,7 +557,6 @@ th {
   font-weight: 600;
 }
 
-/* 固定寬度 */
 .col-id {
   width: 70px;
 }
@@ -458,10 +580,9 @@ th {
 }
 
 .col-action {
-  width: 140px;
+  width: 160px;
 }
 
-/* 會員資訊內容樣式 */
 .info-cell {
   display: flex;
   align-items: center;
@@ -472,7 +593,7 @@ th {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  object-fit: cover; /* 關鍵：確保照片不會被壓扁 */
+  object-fit: cover;
   border: 1px solid #eee;
 }
 
@@ -491,16 +612,11 @@ th {
   color: #909399;
 }
 
-/* 其他小組件樣式 */
 .id-link-cell {
   color: #409eff;
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
-}
-
-.id-link-cell:hover {
-  color: #66b1ff;
 }
 
 .points-val {
@@ -526,11 +642,10 @@ th {
   border: 1px solid #fbc4c4;
 }
 
-/* 操作按鈕修改：藍色/紅色背景方塊 */
 .action-btns {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .btn-box-edit {
@@ -545,7 +660,8 @@ th {
 
 .btn-box-edit:hover {
   background-color: #66b1ff;
-  transform: scale(1.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(64, 158, 255, 0.3);
 }
 
 .btn-box-del {
@@ -560,13 +676,29 @@ th {
 
 .btn-box-del:hover {
   background-color: #f78989;
-  transform: scale(1.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(245, 108, 108, 0.3);
 }
 
-/* 分頁條 */
+.btn-box-active {
+  background-color: #67c23a;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-box-active:hover {
+  background-color: #85ce61;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(103, 194, 58, 0.3);
+}
+
 .pagination-bar {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   gap: 20px;
   margin-top: 25px;
@@ -578,15 +710,14 @@ th {
   border: 1px solid #dcdfe6;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-page:not(:disabled):hover {
-  border-color: #409eff;
-  color: #409eff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(64, 158, 255, 0.2);
 }
 
-/* 彈窗樣式 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -600,11 +731,76 @@ th {
   z-index: 2000;
 }
 
+.ban-card {
+  background: white;
+  width: 450px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.ban-header {
+  background: #ffc107;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  align-items: center;
+}
+
+.ban-body {
+  padding: 20px;
+}
+
+.ban-body textarea {
+  width: 100%;
+  height: 120px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: none;
+}
+
+.ban-warning {
+  margin-top: 15px;
+  background: #fff9db;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #856404;
+}
+
+.ban-footer {
+  padding: 15px 20px;
+  text-align: right;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-confirm-ban {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-confirm-ban:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+}
+
 .compact-card {
   background: white;
   width: 600px;
   border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
 .card-header {
@@ -612,6 +808,7 @@ th {
   border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .card-body {
@@ -632,8 +829,18 @@ th {
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  object-fit: cover; /* 關鍵：確保照片不會被壓扁 */
-  border: 2px solid #409eff; /* 加個藍色邊框更有質感 */
+  object-fit: cover;
+  border: 2px solid #409eff;
+}
+
+.sidebar-name {
+  margin-top: 10px;
+  font-size: 1.1rem;
+}
+
+.sidebar-user {
+  font-size: 12px;
+  color: #999;
 }
 
 .compact-main {
@@ -667,11 +874,7 @@ th {
 .grid-item label {
   font-size: 11px;
   color: #bbb;
-}
-
-.grid-item span {
-  font-size: 14px;
-  font-weight: 500;
+  margin-bottom: 4px;
 }
 
 .text-green {
@@ -686,12 +889,10 @@ th {
 
 .status-text-active {
   color: #409eff;
-  font-weight: bold;
 }
 
 .status-text-inactive {
   color: #f56c6c;
-  font-weight: bold;
 }
 
 .card-footer {
@@ -705,24 +906,41 @@ th {
   background: #909399;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: all 0.3s;
 }
 
 .btn-close-modal:hover {
   background: #a6a9ad;
+  transform: translateY(-1px);
 }
 
 .close-x {
   border: none;
   background: none;
-  font-size: 22px;
+  font-size: 24px;
   cursor: pointer;
-  color: #ccc;
+  color: #333;
+  transition: all 0.2s;
 }
 
 .close-x:hover {
   color: #f56c6c;
+  transform: rotate(90deg);
+}
+
+.required {
+  color: red;
+}
+
+.row-active {
+  background-color: #ecf5ff !important; /* 淡淡的藍色選中感 */
+  transition: background-color 0.3s;
+}
+
+.row-active .id-link-cell {
+  color: #66b1ff;
+  text-shadow: 0 0 2px rgba(64, 158, 255, 0.2);
 }
 </style>

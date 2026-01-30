@@ -61,6 +61,7 @@ public class AdminController {
         old.setAdmName(admin.getAdmName());
         old.setAdmEmail(admin.getAdmEmail());
         old.setAdmRole(admin.getAdmRole());
+        old.setAdminImage(admin.getAdminImage());
 
         // 密碼：有傳才更新
         if (admin.getAdmPassword() != null && !admin.getAdmPassword().isBlank()) {
