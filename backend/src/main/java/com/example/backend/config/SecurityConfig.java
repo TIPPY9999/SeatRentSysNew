@@ -129,7 +129,8 @@ public class SecurityConfig {
                                 "https://*.ngrok-free.dev",
                                 "https://*.trycloudflare.com",
                                 "https://*.loca.lt"));
-                frontendConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                // 加入 PATCH 方法，支援 /toggle 狀態切換 API(翌帆工單系統有用到)
+                frontendConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                 frontendConfig.setAllowedHeaders(Arrays.asList("*"));
                 frontendConfig.setAllowCredentials(true);
 

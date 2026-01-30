@@ -5,71 +5,71 @@
 
 // ==================== 優先級配置 ====================
 export const priorityConfig = {
-  LOW: { 
-    color: '#909399', 
-    bgColor: '#f4f4f5', 
-    icon: '🔵', 
-    text: '低優先', 
+  LOW: {
+    color: '#909399',
+    bgColor: '#f4f4f5',
+    icon: '🔵',
+    text: '低優先',
     desc: '可稍後處理',
-    tagType: 'info'
+    tagType: 'info',
   },
-  NORMAL: { 
-    color: '#409eff', 
-    bgColor: '#ecf5ff', 
-    icon: '🟢', 
-    text: '普通', 
+  NORMAL: {
+    color: '#409eff',
+    bgColor: '#ecf5ff',
+    icon: '🟢',
+    text: '普通',
     desc: '正常排程處理',
-    tagType: ''
+    tagType: '',
   },
-  HIGH: { 
-    color: '#e6a23c', 
-    bgColor: '#fdf6ec', 
-    icon: '🟠', 
-    text: '高優先', 
+  HIGH: {
+    color: '#e6a23c',
+    bgColor: '#fdf6ec',
+    icon: '🟠',
+    text: '高優先',
     desc: '優先安排處理',
-    tagType: 'warning'
+    tagType: 'warning',
   },
-  URGENT: { 
-    color: '#f56c6c', 
-    bgColor: '#fef0f0', 
-    icon: '🔴', 
-    text: '緊急', 
+  URGENT: {
+    color: '#f56c6c',
+    bgColor: '#fef0f0',
+    icon: '🔴',
+    text: '緊急',
     desc: '立即處理',
-    tagType: 'danger'
+    tagType: 'danger',
   },
 }
 
 // ==================== 狀態配置 ====================
 export const statusConfig = {
-  REPORTED: { 
-    text: '已通報', 
-    icon: '📋', 
+  REPORTED: {
+    text: '已通報',
+    icon: '📋',
     tagType: 'info',
-    color: '#17a2b8'
+    color: '#17a2b8',
   },
-  ASSIGNED: { 
-    text: '已指派', 
-    icon: '👤', 
+  ASSIGNED: {
+    text: '已指派',
+    icon: '👤',
     tagType: 'primary',
-    color: '#007bff'
+    color: '#007bff',
   },
-  UNDER_MAINTENANCE: { 
-    text: '維修中', 
-    icon: '🔧', 
+  UNDER_MAINTENANCE: {
+    text: '維修中',
+    icon: '🔧',
     tagType: 'warning',
-    color: '#ffc107'
+    color: '#ffc107',
   },
-  RESOLVED: { 
-    text: '已完成', 
-    icon: '✅', 
+  RESOLVED: {
+    text: '已完成',
+    icon: '✅',
     tagType: 'success',
-    color: '#28a745'
+    color: '#28a745',
   },
-  CANCELLED: { 
-    text: '已取消', 
-    icon: '❌', 
+  CANCELLED: {
+    text: '已取消',
+    icon: '❌',
     tagType: 'info',
-    color: '#6c757d'
+    color: '#6c757d',
   },
 }
 
@@ -82,35 +82,30 @@ export const issueTypeOptions = [
 
 // ==================== 結案結果配置 ====================
 export const resultConfig = {
-  NO_ISSUE: { 
-    text: '未發現問題', 
-    icon: '✔️', 
-    color: '#909399',
-    desc: '檢查後未發現異常'
-  },
-  FIXED: { 
-    text: '已修復', 
-    icon: '✅', 
+  FIXED: {
+    text: '已修復',
+    icon: '✅',
     color: '#67c23a',
-    desc: '問題已成功修復'
+    desc: '問題已成功修復',
   },
-  REPLACED: { 
-    text: '已更換', 
-    icon: '🔄', 
+  MAINTAINED: {
+    text: '已保養',
+    icon: '🔧',
     color: '#409eff',
-    desc: '已更換損壞零件'
+    desc: '保養作業已完成',
   },
-  NOT_FIXABLE: { 
-    text: '無法修復', 
-    icon: '❌', 
+
+  UNFIXABLE: {
+    text: '無法修復',
+    icon: '❌',
     color: '#f56c6c',
-    desc: '問題無法修復，需更換設備'
+    desc: '問題無法修復，需更換設備',
   },
-  OTHER: { 
-    text: '其他', 
-    icon: '📋', 
+  OTHER: {
+    text: '其他',
+    icon: '📋',
     color: '#e6a23c',
-    desc: '其他情況'
+    desc: '其他情況',
   },
 }
 

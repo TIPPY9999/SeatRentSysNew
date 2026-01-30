@@ -103,7 +103,7 @@ const handleDemoFill = () => {
   form.staffName = '江小魚'
   form.staffCompany = '小魚科技股份有限公司'
   form.staffPhone = '0988-123-456'
-  form.staffEmail = 'demo_user@example.com'
+  form.staffEmail = 'swagsnail860701@gmail.com'
   form.staffNote = '資深維護工程師，負責北區機台維修，週一至週五 09:00~18:00 可聯繫。'
   form.isActive = true
 

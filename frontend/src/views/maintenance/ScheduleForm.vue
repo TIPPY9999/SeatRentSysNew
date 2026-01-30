@@ -14,6 +14,13 @@ const { scheduleTypeConfig, priorityConfig, formatScheduleDetail } = useSchedule
 const isEdit = computed(() => !!route.params.id)
 const pageTitle = computed(() => (isEdit.value ? '編輯排程' : '新增排程'))
 
+// FIX: 驗證 route param id 是否為有效數字（防止字串 ID 如 DEMO_xxx 進入編輯頁）
+const isValidRouteId = computed(() => {
+  if (!route.params.id) return true // 新增模式不需驗證
+  const id = route.params.id
+  return /^\d+$/.test(id) // 必須是純數字
+})
+
 // ====== 步驟控制 ======
 const currentStep = ref(0)
 const steps = [
@@ -266,6 +273,19 @@ const getStaffName = computed(() => {
 })
 
 onMounted(async () => {
+  // FIX: 編輯模式下，檢查 route.params.id 是否為有效數字
+  // 防止使用者手動輸入 URL 帶入非數字 ID（如 DEMO_xxx）導致後端 400/500 錯誤
+  if (isEdit.value && !isValidRouteId.value) {
+    await Swal.fire({
+      icon: 'error',
+      title: '排程 ID 異常',
+      html: '<p>無法讀取此排程資料。</p><p style="color:#909399;font-size:13px;">請返回列表頁面。</p>',
+      confirmButtonColor: '#f56c6c',
+    })
+    router.replace('/admin/maintenance/schedule')
+    return
+  }
+
   await loadOptions()
   await loadSchedule()
 })

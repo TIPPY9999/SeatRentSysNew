@@ -54,6 +54,10 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 const allTickets = ref([])
 const ticketLoading = ref(false)
 
+// ====== 機台與椅子資料快取（用於顯示目標名稱）======
+const allSpots = ref([])
+const allSeats = ref([])
+
 // ====== 狀態篩選（全部 / 維護中 / 維修中 / 閒置中）======
 const statusFilter = ref('ALL') // 'ALL' | 'UNDER_MAINTENANCE' | 'ASSIGNED' | 'IDLE'
 
@@ -337,8 +341,14 @@ const closeDetailDialog = () => {
 
 // 格式化目標標籤
 const getTargetLabel = (t) => {
-  if (t.seatsId) return `椅子 #${t.seatsId}`
-  if (t.spotId) return `機台 #${t.spotId}`
+  if (t.seatsId) {
+    const seat = allSeats.value.find((s) => s.seatsId === t.seatsId)
+    return seat ? `椅子: ${seat.seatsName}` : `椅子 #${t.seatsId}`
+  }
+  if (t.spotId) {
+    const spot = allSpots.value.find((s) => s.spotId === t.spotId)
+    return spot ? `機台: ${spot.spotName}` : `機台 #${t.spotId}`
+  }
   return '未指定'
 }
 
@@ -496,14 +506,49 @@ const maintainingCount = computed(() => overallStats.value.underMaintenance)
 const assignedCount = computed(() => overallStats.value.assigned)
 const idleCount = computed(() => overallStats.value.idle)
 
+// ✅ 讓排程頁建立工單後，人員頁能即時同步圖卡
+const onTicketsChanged = async () => {
+  await fetchTickets()
+}
+
+// ============================================================================
+// ✅ 【任務1修正】onMounted 使用 Promise.all 並行載入，提升效能與資料連動性
+// ============================================================================
 onMounted(async () => {
-  await fetchStaff()
-  await fetchTickets() // ✅ 重要：先載 tickets，名單才能即時有狀態
+  try {
+    // 【效能優化】同時呼叫四個 API，避免序列等待
+    const [staffRes, ticketsRes, spotsRes, seatsRes] = await Promise.all([
+      maintenanceApi.getAllStaff(),
+      maintenanceApi.getAllTickets(),
+      maintenanceApi.getAllSpots(),
+      maintenanceApi.getAllSeats(),
+    ])
+    
+    // 【資料連動】同步更新 staffList、allTickets、allSpots、allSeats
+    staffList.value = staffRes.data || []
+    allTickets.value = ticketsRes.data || []
+    allSpots.value = spotsRes.data || []
+    allSeats.value = seatsRes.data || []
+    
+    loading.value = false
+    ticketLoading.value = false
+  } catch (err) {
+    console.error('載入人員或工單資料失敗:', err)
+    loading.value = false
+    ticketLoading.value = false
+  }
+
+  // ✅ 監聽跨頁事件：排程建立工單後會觸發
+  window.addEventListener('maintenance:tickets-changed', onTicketsChanged)
+
   setTimeout(() => {
     pageVisible.value = true
-    // ✅ 等 transition / DOM 完整後再 layout
     setTimeout(() => doLayoutSafe(), 150)
   }, 100)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('maintenance:tickets-changed', onTicketsChanged)
 })
 </script>
 
