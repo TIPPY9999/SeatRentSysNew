@@ -318,25 +318,27 @@ onMounted(() => {
       <GMapMarker v-if="searchResultMarker" :key="'search-result'" :position="searchResultMarker" />
 
       <GMapInfoWindow
+        :header-disabled
         :opened="infoWindow.opened"
         :position="infoWindow.position"
-        :options="{ pixelOffset: { width: 0, height: -32 } }"
+        :options="{ pixelOffset: { width: 0, height: -35 }, headerDisabled: true }"
         @closeclick="closeInfoWindow"
       >
         <div class="info-window-content">
           <!-- 顯示站點資訊 -->
           <div v-if="infoWindow.spot">
-            <h5>{{ infoWindow.title }}</h5>
-            <p>
-              <!-- <strong>ID:</strong> {{ infoWindow.spot.id }}--><strong>狀態:</strong>
-              {{ infoWindow.spot.status }}
-            </p>
+            <span
+              ><h5>{{ infoWindow.title }}</h5></span
+            >
+            <!-- <strong>ID:</strong> {{ infoWindow.spot.id }}-->
+            <strong>狀態: {{ infoWindow.spot.status }}</strong>
+
             <!-- 當數量載入中時顯示讀取訊息 -->
             <div v-if="infoWindow.isLoadingCounts" class="loading-text">查詢中...</div>
             <!-- 載入完成後顯示數量與按鈕 -->
-            <div v-else>
-              <span style="color: darkgreen"
-                ><strong>可租借數量:</strong> {{ infoWindow.spot.seatCount }}</span
+            <div v-else style="font-size: 15 px">
+              <span style="color: darkgreen">
+                <strong>可租借數量:</strong> {{ infoWindow.spot.seatCount }}</span
               >
               <span> | </span>
               <span style="color: darkblue"
@@ -410,7 +412,9 @@ onMounted(() => {
 }
 .info-window-content {
   padding: 0px;
-  min-width: 200px;
+  min-height: 50px;
+  min-width: 150px;
+  /* overflow: unset; */
 }
 .info-window-content h4,
 .info-window-content p {
@@ -420,8 +424,8 @@ onMounted(() => {
 /* 在 Google 地圖中查看的連結樣式 */
 .info-window-content .map-link {
   display: block;
-  margin-top: 10px;
-  font-weight: 500;
+  margin-top: 3px;
+  font-weight: 400;
   text-decoration: none;
   color: #007bff;
 }
@@ -481,11 +485,11 @@ onMounted(() => {
 /* --- 新增/修改的搜尋列樣式 --- */
 .search-bar-container {
   position: absolute;
-  top: 30px;
+  top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  width: 280px;
-  height: 48px;
+  width: 275px;
+  height: 45px;
   z-index: 10;
   background-color: white;
   border-radius: 8px;
@@ -497,11 +501,10 @@ onMounted(() => {
 
 .search-bar-container :deep(.search-input) {
   flex-grow: 12;
-  width: 100%;
-  height: 58px;
+  width: 130%;
+  height: 68px;
   border: none;
   outline: none;
-  padding: 0 13px;
   font-size: 2.2rem;
   background-color: transparent;
 }
@@ -512,20 +515,18 @@ onMounted(() => {
 }
 
 .search-button {
-  height: 30px;
+  height: 33px;
   margin-left: 8px;
   padding: 8px;
   border: none;
   background-color: #007bff;
   color: white;
-  border-radius: 10px;
+  border-radius: 7px;
   cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 1.9rem;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
 .search-button:hover {

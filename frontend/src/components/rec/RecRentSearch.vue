@@ -95,6 +95,79 @@ const goToPage = (page) => {
 
 onMounted(loadRents)
 
+// 匯出 CSV 格式
+const exportToCsv = () => {
+  if (rentList.value.length === 0) {
+    alert('沒有可匯出的資料。')
+    return
+  }
+
+  // 定義 CSV 檔案的表頭
+  const headers = [
+    '訂單狀態',
+    '訂單編號',
+    '會員編號',
+    '會員姓名',
+    '座椅編號',
+    '租借點編號',
+    '租借點名稱',
+    '歸還點編號',
+    '歸還點名稱',
+    '租借時間',
+    '歸還時間',
+    '費用',
+  ]
+  // 將每一筆訂單資料轉換為 CSV 的一列
+  const rows = rentList.value.map((rent) =>
+    [
+      `"${rent.recStatus || ''}"`,
+      `"${rent.recId || ''}"`,
+      `"${rent.memId || ''}"`,
+      `"${rent.memName || ''}"`,
+      `"${rent.seatsId || ''}"`,
+      `"${rent.spotIdRent || ''}"`,
+      `"${rent.rentSpotName || ''}"`,
+      `"${rent.spotIdReturn || ''}"`,
+      `"${rent.returnSpotName || ''}"`,
+      `"${rent.recRentDT2 ? rent.recRentDT2.replace('T', ' ') : ''}"`,
+      `"${rent.recReturnDT2 ? rent.recReturnDT2.replace('T', ' ') : ''}"`,
+      `"${rent.recPayment || ''}"`,
+    ].join(','),
+  )
+
+  // 組合表頭和所有列，並添加 BOM 以確保 Excel 能正確讀取 UTF-8
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n')
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.setAttribute('download', 'rent_data.csv')
+  document.body.appendChild(link)
+  // 模擬點擊以下載檔案
+  link.click()
+  // 釋放記憶體
+  document.body.removeChild(link)
+  URL.revokeObjectURL(link.href)
+}
+
+// 匯出 JSON 格式
+const exportToJson = () => {
+  if (rentList.value.length === 0) {
+    alert('沒有可匯出的資料。')
+    return
+  }
+
+  // 將資料轉換為格式化的 JSON 字串
+  const jsonContent = JSON.stringify(rentList.value, null, 2)
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = 'rent_data.json'
+  // 模擬點擊以下載檔案
+  link.click()
+  // 釋放記憶體
+  URL.revokeObjectURL(link.href)
+}
+
 // Expose the loadRents method to the parent component
 defineExpose({
   loadRents,
@@ -102,78 +175,50 @@ defineExpose({
 </script>
 
 <template>
-  
-
-    <!-- 搜尋表單 -->
-    <div class="search-form-container">
-      <div class="search-form">
-        <div class="form-group-search">
-          <label>訂單編號:</label>
-          <input
-            v-model="searchCriteria.recId"
-            type="text"
-            placeholder="依訂單編號"
-            @keyup.enter="loadRents"
-          />
-        </div>
-        <div class="form-group-search">
-          <label>會員編號:</label>
-          <input
-            v-model="searchCriteria.memId"
-            type="text"
-            placeholder="依會員編號"
-            @keyup.enter="loadRents"
-          />
-        </div>
-        <div class="form-group-search">
-          <label>會員姓名:</label>
-          <input
-            v-model="searchCriteria.memName"
-            type="text"
-            placeholder="依會員姓名(模糊)"
-            @keyup.enter="loadRents"
-          />
-        </div>
-        <div class="form-group-search">
-          <label>訂單狀態:</label>
-          <select v-model="searchCriteria.recStatus" @keyup.enter="loadRents">
-            <option value="">所有狀態</option>
-            <option value="租借中">租借中</option>
-            <option value="已完成">已完成</option>
-            <option value="未歸還">未歸還</option>
-            <option value="已取消">已取消</option>
-          </select>
-        </div>
-        <div class="form-group-search">
-          <label>站點編號:</label>
-          <input
-            v-model="searchCriteria.spotId"
-            type="text"
-            placeholder="依站點編號"
-            @keyup.enter="loadRents"
-          />
-        </div>
-        <div class="form-group-search">
-          <label>站點名稱:</label>
-          <input
-            v-model="searchCriteria.spotName"
-            type="text"
-            placeholder="依站點名稱(模糊)"
-            @keyup.enter="loadRents"
-          />
-        </div>
-        <div class="form-group-search">
-          <label>租借日期:</label>
-          <input v-model="searchCriteria.rentDate" type="date" />
-        </div>
-        <div class="form-group-search">
-          <label>歸還日期:</label>
-          <input v-model="searchCriteria.returnDate" type="date" />
-        </div>
+  <!-- 搜尋表單 -->
+  <div class="search-form-container">
+    <div class="search-form">
+      <div class="form-group-search">
+        <label>訂單編號:</label>
+        <input v-model="searchCriteria.recId" type="text" placeholder="依訂單編號" @keyup.enter="loadRents" />
       </div>
-      
+      <div class="form-group-search">
+        <label>會員編號:</label>
+        <input v-model="searchCriteria.memId" type="text" placeholder="依會員編號" @keyup.enter="loadRents" />
+      </div>
+      <div class="form-group-search">
+        <label>會員姓名:</label>
+        <input v-model="searchCriteria.memName" type="text" placeholder="依會員姓名(模糊)" @keyup.enter="loadRents" />
+      </div>
+      <div class="form-group-search">
+        <label>訂單狀態:</label>
+        <select v-model="searchCriteria.recStatus" @keyup.enter="loadRents">
+          <option value="">所有狀態</option>
+          <option value="租借中">租借中</option>
+          <option value="已完成">已完成</option>
+          <option value="未歸還">未歸還</option>
+          <option value="已取消">已取消</option>
+        </select>
+      </div>
+      <div class="form-group-search">
+        <label>站點編號:</label>
+        <input v-model="searchCriteria.spotId" type="text" placeholder="依站點編號" @keyup.enter="loadRents" />
+      </div>
+      <div class="form-group-search">
+        <label>站點名稱:</label>
+        <input v-model="searchCriteria.spotName" type="text" placeholder="依站點名稱(模糊)" @keyup.enter="loadRents" />
+      </div>
+      <div class="form-group-search">
+        <label>租借日期:</label>
+        <input v-model="searchCriteria.rentDate" type="date" />
+      </div>
+      <div class="form-group-search">
+        <label>歸還日期:</label>
+        <input v-model="searchCriteria.returnDate" type="date" />
+      </div>
     </div>
-<div class="view-section active">
+  </div>
+  <div class="view-section active">
     <div class="search-actions">
       <button class="btn-primary" @click="loadRents">搜尋</button>
       <button class="btn-secondary" @click="clearSearch">清除</button>
@@ -185,6 +230,9 @@ defineExpose({
         <option :value="100">100 筆/頁</option>
         <option :value="200">200 筆/頁</option>
       </select>
+      <!-- 匯出按鈕 -->
+      <button class="btn-info" @click="exportToCsv" style="margin-left: auto">匯出 CSV</button>
+      <button class="btn-info" @click="exportToJson">匯出 JSON</button>
     </div>
     <table>
       <thead>
@@ -251,18 +299,10 @@ defineExpose({
       </div>
 
       <div class="floating-nav right" v-if="rentList.length > 0">
-        <button
-          class="btn-float"
-          :disabled="currentPage === totalPages"
-          @click="goToPage(currentPage + 1)"
-        >
+        <button class="btn-float" :disabled="currentPage === totalPages" @click="goToPage(currentPage + 1)">
           下頁
         </button>
-        <button
-          class="btn-float"
-          :disabled="currentPage === totalPages"
-          @click="goToPage(totalPages)"
-        >
+        <button class="btn-float" :disabled="currentPage === totalPages" @click="goToPage(totalPages)">
           末頁
         </button>
       </div>
@@ -321,7 +361,7 @@ defineExpose({
 
 .search-actions {
   display: flex;
-  justify-content:flex-start;
+  justify-content: flex-start;
   gap: 8px;
   margin-bottom: 10px;
 }
@@ -388,7 +428,7 @@ tbody tr:nth-child(even):hover {
 
 .view-section.active {
   color: #000000;
-  padding:  0;
+  padding: 0;
   display: block;
 }
 
@@ -423,6 +463,15 @@ button:hover {
 
 .btn-secondary:hover {
   background: #a6a9ad;
+}
+
+.btn-info {
+  background: #17a2b8;
+  color: white;
+}
+
+.btn-info:hover {
+  background: #1ab5cf;
 }
 
 /* ========== 圓形操作按鈕 ========== */
@@ -513,7 +562,8 @@ h2 button {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  transition: left 0.3s ease-in-out; /* 配合側邊欄動畫平滑移動 */
+  transition: left 0.3s ease-in-out;
+  /* 配合側邊欄動畫平滑移動 */
 }
 
 .floating-nav.left {
@@ -526,10 +576,12 @@ h2 button {
 
 /* 針對 AdminLTE 側邊欄的響應式調整 (Desktop) */
 @media (min-width: 992px) {
+
   /* 當側邊欄展開時 (預設) - 避開 250px 的側邊欄 */
   :global(body:not(.sidebar-collapse)) .floating-nav.left {
     left: 255px;
   }
+
   /* 當側邊欄收合時 (sidebar-collapse) - 避開約 73px 的小側邊欄 */
   :global(body.sidebar-collapse) .floating-nav.left {
     left: 80px;
