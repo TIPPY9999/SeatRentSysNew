@@ -1,6 +1,7 @@
 package com.example.backend.controller.member;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -62,6 +63,7 @@ public class AdminController {
         old.setAdmEmail(admin.getAdmEmail());
         old.setAdmRole(admin.getAdmRole());
         old.setAdminImage(admin.getAdminImage());
+        old.setUpdatedAt(java.time.LocalDateTime.now());
 
         // 密碼：有傳才更新
         if (admin.getAdmPassword() != null && !admin.getAdmPassword().isBlank()) {
@@ -113,5 +115,84 @@ public class AdminController {
         adminService.update(admin);
 
         return "管理員已啟用（admId=" + admId + "）";
+    }
+
+    // 停職 API (對應前端的 confirmBanAdmin)
+    @PostMapping("/ban")
+    public ResponseEntity<?> banAdmin(@RequestBody Map<String, Object> payload) {
+        try {
+            Object idObj = payload.get("admId");
+            if (idObj == null)
+                return ResponseEntity.badRequest().body("缺少 admId");
+            Integer admId = Integer.valueOf(idObj.toString());
+
+            Admin admin = adminService.findById(admId);
+            if (admin == null)
+                return ResponseEntity.status(404).body("找不到該管理員");
+
+            // 修改狀態
+            admin.setAdmStatus(0);
+            admin.setUpdatedAt(java.time.LocalDateTime.now());
+
+            // 關鍵：因為 Service 的 update 會跑 normalize (檢查 trim)
+            // 如果你的資料庫欄位有空值，這邊建議直接用 repository 存，
+            // 或者確保 admin 物件內容是完整的。
+            // 這裡我們直接呼叫原本的 update：
+            adminService.update(admin);
+
+            return ResponseEntity.ok("管理員已停職");
+        } catch (Exception e) {
+            e.printStackTrace(); // 這行很重要，請看 Eclipse/IntelliJ 的 Console 報什麼錯
+            return ResponseEntity.status(500).body("操作失敗：" + e.getMessage());
+        }
+    }
+
+    // 重新啟用 API (對應前端的 activateAdmin)
+    @PostMapping("/activate")
+    public ResponseEntity<?> activateAdmin(@RequestBody Map<String, Object> payload) {
+        try {
+            // 取得 admId
+            Integer admId = (Integer) payload.get("admId");
+
+            Admin admin = adminService.findById(admId);
+            if (admin == null) {
+                return ResponseEntity.status(404).body("找不到該管理員");
+            }
+
+            // 將狀態設為 1 (啟用)
+            admin.setAdmStatus(1);
+            admin.setUpdatedAt(java.time.LocalDateTime.now());
+
+            // 儲存變更
+            adminService.update(admin);
+
+            return ResponseEntity.ok("管理員已重新啟用");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("啟用失敗：" + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/role")
+    public ResponseEntity<?> updateRole(@PathVariable Integer id, @RequestBody Map<String, Integer> payload) {
+        try {
+            // 透過 Service 找到管理員
+            Admin admin = adminService.findById(id);
+            if (admin == null) {
+                return ResponseEntity.status(404).body("找不到該管理員");
+            }
+
+            // 更新權限
+            admin.setAdmRole(payload.get("admRole"));
+            admin.setUpdatedAt(java.time.LocalDateTime.now()); // 確保更新時間有變動
+
+            // 呼叫 Service 的 update 方法存回資料庫
+            adminService.update(admin);
+
+            return ResponseEntity.ok("權限更新成功");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("更新失敗：" + e.getMessage());
+        }
     }
 }

@@ -220,12 +220,12 @@ onMounted(fetchMembers)
             class="toggle-btn" 
             :class="{ active: filterStatus === 1 }" 
             @click="filterStatus = 1"
-          >啟用員工</button>
+          >啟用會員</button>
           <button 
             class="toggle-btn" 
             :class="{ active: filterStatus === 0 }" 
             @click="filterStatus = 0"
-          >停用員工</button>
+          >停用會員</button>
         </div>
         <button class="btn-create" @click="checkPermission(() => router.push('/admin/members/create'))">
           <i class="fas fa-user-plus"></i> 新增會員
@@ -240,7 +240,7 @@ onMounted(fetchMembers)
             <th class="col-id">ID</th>
             <th class="col-info">會員資訊</th>
             <th class="col-points">點數</th>
-            <th class="col-date">註冊日期</th>
+            <th class="col-date">{{ filterStatus === 1 ? '註冊日期' : '停用日期' }}</th>
             <th class="col-status">狀態</th>
             <th class="col-action">操作</th>
           </tr>
@@ -264,7 +264,9 @@ onMounted(fetchMembers)
               </div>
             </td>
             <td class="col-points"><span class="points-val">{{ m.memPoints }}</span></td>
-            <td class="col-date">{{ formatDateOnly(m.createdAt) }}</td>
+            <td class="col-date">
+              {{ filterStatus === 1 ? formatDateOnly(m.createdAt) : formatDateOnly(m.updatedAt) }}
+            </td>
             <td class="col-status">
               <span class="status-badge" :class="m.memStatus === 1 ? 'status-active' : 'status-inactive'">
                 {{ m.memStatus === 1 ? '啟用' : '停用' }}

@@ -1,40 +1,73 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Swal from 'sweetalert2'
+import { useAdminAuthStore } from '@/stores/adminAuth'
 
 const router = useRouter()
 const admins = ref([])
-const loading = ref(false)
 const keyword = ref('')
+const loading = ref(false)
+const authStore = useAdminAuthStore()
 
-// 分頁控制：一頁 5 筆
+const showRoleModal = ref(false)
+const adminToEditRole = ref(null)
+const selectedRole = ref(1)
+
+// --- 分頁控制 ---
 const currentPage = ref(1)
-const pageSize = 5 
+const pageSize = 5
 
-// 統計數據邏輯
-const totalAdmins = computed(() => admins.value.length)
-const superAdmins = computed(() => admins.value.filter(a => a.admRole === 9).length)
-const normalAdmins = computed(() => admins.value.filter(a => a.admRole === 1).length)
+// --- 統計數據邏輯 --- 
+const totalAdmins = computed(() => 
+  admins.value.filter(a => a.admStatus === 1).length
+)
+const superAdmins = computed(() => 
+  admins.value.filter(a => a.admRole === 9 && a.admStatus === 1).length
+)
+const normalAdmins = computed(() => 
+  admins.value.filter(a => a.admRole === 1 && a.admStatus === 1).length
+)
 
-// 取得所有資料
+// --- 狀態切換與停權彈窗 ---
+const filterStatus = ref(1) // 1: 啟用, 0: 停用
+const showBanModal = ref(false)
+const banReason = ref('')
+const adminToBan = ref(null)
+
+// 取得管理員
 const fetchAdmins = async () => {
   loading.value = true
   try {
     const res = await axios.get('http://localhost:8080/admins')
     admins.value = res.data
-    currentPage.value = 1 
+    currentPage.value = 1
   } catch (error) {
-    Swal.fire({ 
-      icon: 'error', 
-      title: '載入失敗', 
-      text: '取得管理員資料失敗' 
+    Swal.fire({
+      icon: 'error',
+      title: '載入失敗',
+      text: '取得管理員資料失敗',
+      confirmButtonColor: '#ff4d4f'
     })
   } finally {
     loading.value = false
   }
 }
+
+// 過濾與分頁 (狀態過濾)
+const filteredAdmins = computed(() => {
+  return admins.value.filter(a => a.admStatus === filterStatus.value)
+})
+
+const paginatedAdmins = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredAdmins.value.slice(start, start + pageSize)
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredAdmins.value.length / pageSize) || 1
+})
 
 // 模糊搜尋
 const searchAdmins = async () => {
@@ -76,44 +109,68 @@ const searchAdmins = async () => {
   }
 }
 
-// 分頁邏輯
-const paginatedAdmins = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return admins.value.slice(start, start + pageSize)
-})
 
-const totalPages = computed(() => {
-  return Math.ceil(admins.value.length / pageSize) || 1
-})
+// --- 權限檢查邏輯 ---
+const checkPermission = (actionCallback) => {
+  const role = authStore.admin?.admRole || authStore.admin?.role;
+  if (Number(role) === 9) {
+    actionCallback();
+  } else {
+    Swal.fire({
+      icon: 'lock',
+      title: '權限不足',
+      text: '您目前是一般管理員，無法執行此操作。',
+      confirmButtonColor: '#ff4d4f'
+    });
+  }
+};
 
-// 停職操作
-const deleteAdmin = async (admId, admName) => {
+// 停權操作
+const openBanModal = (admin) => {
+  adminToBan.value = admin
+  banReason.value = ''
+  showBanModal.value = true
+}
+
+const confirmBanAdmin = async () => {
+  if (!banReason.value.trim()) {
+    Swal.fire({ icon: 'warning', title: '請輸入原因', confirmButtonColor: '#f39c12' })
+    return
+  }
+  try {
+    // 假設後端 API 為 /admins/ban，並將狀態改為 0
+    await axios.post('http://localhost:8080/admins/ban', {
+      admId: adminToBan.value.admId,
+      reason: banReason.value
+    })
+    showBanModal.value = false
+    Swal.fire({ icon: 'success', title: '該管理員已停職', timer: 1500, showConfirmButton: false })
+    fetchAdmins()
+  } catch (error) {
+    Swal.fire({ icon: 'error', title: '操作失敗' })
+  }
+}
+
+// 恢復啟用
+const activateAdmin = async (admin) => {
   const result = await Swal.fire({
-    title: '確定要將此管理員停職嗎？',
-    html: `管理員：<strong>${admName}</strong> (ID: ${admId})`,
-    icon: 'warning',
+    title: '確定要重新啟用嗎？',
+    text: `將恢復管理員：${admin.admName} 的存取權限`,
+    icon: 'question',
     showCancelButton: true,
-    confirmButtonColor: '#ff4d4f',
+    confirmButtonColor: '#52c41a',
     cancelButtonColor: '#8c8c8c',
-    confirmButtonText: '確定停職',
+    confirmButtonText: '確定啟用',
     cancelButtonText: '取消'
   })
-  
+
   if (result.isConfirmed) {
     try {
-      await axios.get('http://localhost:8080/admins/delete', { params: { admId } })
-      Swal.fire({ 
-        icon: 'success', 
-        title: '已執行停職', 
-        timer: 1500, 
-        showConfirmButton: false 
-      })
+      await axios.post('http://localhost:8080/admins/activate', { admId: admin.admId })
+      Swal.fire({ icon: 'success', title: '已恢復啟用', timer: 1500, showConfirmButton: false })
       fetchAdmins()
     } catch (error) {
-      Swal.fire({ 
-        icon: 'error', 
-        title: '操作失敗' 
-      })
+      Swal.fire({ icon: 'error', title: '恢復失敗' })
     }
   }
 }
@@ -123,7 +180,6 @@ const formatDate = (dt) => {
   return dt.substring(0, 10).replace(/-/g, '/')
 }
 
-// 根據 ID 補零並獲取圖片路徑
 const getAvatar = (id) => {
   if (id >= 1 && id <= 10) {
     const fileName = String(id).padStart(2, '0')
@@ -132,13 +188,38 @@ const getAvatar = (id) => {
   return '/admin/default.png'
 }
 
-// 權限樣式與文字
-const getRoleClass = (role) => {
-  return role === 9 ? 'role-super' : 'role-normal'
+// 開啟彈窗
+const openRoleModal = (admin) => {
+  adminToEditRole.value = admin
+  selectedRole.value = admin.admRole
+  showRoleModal.value = true
 }
 
-const getRoleText = (role) => {
-  return role === 9 ? '超級管理員' : '一般管理員'
+// 儲存變更並跳出 SweetAlert 確認
+const handleUpdateRole = async () => {
+  const result = await Swal.fire({
+    title: '確定要變更權限嗎？',
+    text: `將管理員「${adminToEditRole.value.admName}」的角色變更為：${selectedRole.value === 9 ? '超級管理員' : '一般管理員'}`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#1890ff',
+    cancelButtonColor: '#8c8c8c',
+    confirmButtonText: '確定更新',
+    cancelButtonText: '取消'
+  })
+
+  if (result.isConfirmed) {
+    try {
+      await axios.post(`http://localhost:8080/admins/${adminToEditRole.value.admId}/role`, {
+        admRole: selectedRole.value
+      })
+      showRoleModal.value = false
+      Swal.fire({ icon: 'success', title: '權限已更新', timer: 1500, showConfirmButton: false })
+      fetchAdmins() // 重新整理列表
+    } catch (error) {
+      Swal.fire({ icon: 'error', title: '更新失敗' })
+    }
+  }
 }
 
 onMounted(fetchAdmins)
@@ -146,45 +227,45 @@ onMounted(fetchAdmins)
 
 <template>
   <div class="admin-main-container">
-    <div class="header-info-card">
-      <div class="header-icon">
-        <i class="fas fa-user-shield"></i>
+      <div class="header-info-card">
+        <div class="header-icon">
+          <i class="fas fa-user-shield"></i>
+        </div>
+        <div class="header-content">
+          <h2>管理員列表</h2>
+          <p>管理系統管理員帳號與權限</p>
+        </div>
       </div>
-      <div class="header-content">
-        <h2>管理員列表</h2>
-        <p>管理系統管理員帳號與權限</p>
-      </div>
-    </div>
 
-    <div class="statistics-row">
-      <div class="stat-item blue-left">
-        <div class="stat-icon-box bg-blue-icon">
-          <i class="fas fa-users"></i>
+      <div class="statistics-row">
+        <div class="stat-item blue-left">
+          <div class="stat-icon-box bg-blue-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-data">
+            <div class="stat-value">{{ totalAdmins }}</div>
+            <div class="stat-label">管理員總數</div>
+          </div>
         </div>
-        <div class="stat-data">
-          <div class="stat-value">{{ totalAdmins }}</div>
-          <div class="stat-label">管理員總數</div>
+        <div class="stat-item red-left">
+          <div class="stat-icon-box bg-red-icon">
+            <i class="fas fa-crown"></i>
+          </div>
+          <div class="stat-data">
+            <div class="stat-value">{{ superAdmins }}</div>
+            <div class="stat-label">超級管理員</div>
+          </div>
+        </div>
+        <div class="stat-item green-left">
+          <div class="stat-icon-box bg-green-icon">
+            <i class="fas fa-user-tie"></i>
+          </div>
+          <div class="stat-data">
+            <div class="stat-value">{{ normalAdmins }}</div>
+            <div class="stat-label">一般管理員</div>
+          </div>
         </div>
       </div>
-      <div class="stat-item red-left">
-        <div class="stat-icon-box bg-red-icon">
-          <i class="fas fa-crown"></i>
-        </div>
-        <div class="stat-data">
-          <div class="stat-value">{{ superAdmins }}</div>
-          <div class="stat-label">超級管理員</div>
-        </div>
-      </div>
-      <div class="stat-item green-left">
-        <div class="stat-icon-box bg-green-icon">
-          <i class="fas fa-user-tie"></i>
-        </div>
-        <div class="stat-data">
-          <div class="stat-value">{{ normalAdmins }}</div>
-          <div class="stat-label">一般管理員</div>
-        </div>
-      </div>
-    </div>
 
     <div class="search-filter-bar">
       <div class="search-input-group">
@@ -200,9 +281,24 @@ onMounted(fetchAdmins)
         <button class="btn-action-search" @click="searchAdmins">搜尋</button>
         <button class="btn-action-all" @click="fetchAdmins">顯示全部</button>
       </div>
-      <button class="btn-add-admin" @click="router.push('/admin/admins/create')">
-        <i class="fas fa-plus"></i> 新增管理員
-      </button>
+
+      <div class="action-right-group">
+        <div class="status-toggle-group">
+          <button 
+            class="toggle-btn" 
+            :class="{ active: filterStatus === 1 }" 
+            @click="filterStatus = 1"
+          >啟用員工</button>
+          <button 
+            class="toggle-btn" 
+            :class="{ active: filterStatus === 0 }" 
+            @click="filterStatus = 0"
+          >停職員工</button>
+        </div>
+        <button class="btn-add-admin" @click="checkPermission(() => router.push('/admin/admins/create'))">
+          <i class="fas fa-plus"></i> 新增管理員
+        </button>
+      </div>
     </div>
 
     <div class="table-wrapper-card">
@@ -214,7 +310,7 @@ onMounted(fetchAdmins)
             <th class="col-w-email">Email</th>
             <th class="col-w-role">權限</th>
             <th class="col-w-date">到職日</th>
-            <th class="col-w-date">更新時間</th>
+            <th class="col-w-date">{{ filterStatus === 1 ? '更新時間' : '停職日' }}</th>
             <th class="col-w-btn">操作</th>
           </tr>
         </thead>
@@ -224,7 +320,7 @@ onMounted(fetchAdmins)
             <td class="align-left">
               <div class="user-info-flex">
                 <div class="avatar-box">
-                  <img :src="getAvatar(a.admId)" alt="管理員頭像" />
+                  <img :src="getAvatar(a.admId)" />
                 </div>
                 <div class="name-account-stack">
                   <span class="full-name">{{ a.admName }}</span>
@@ -234,16 +330,27 @@ onMounted(fetchAdmins)
             </td>
             <td class="align-left">{{ a.admEmail }}</td>
             <td>
-              <span class="role-badge" :class="getRoleClass(a.admRole)">
-                {{ getRoleText(a.admRole) }}
+              <span 
+                class="role-badge" 
+                :class="a.admRole === 9 ? 'role-super' : 'role-normal'"
+                @click="checkPermission(() => openRoleModal(a))" 
+                style="cursor: pointer;"
+              >
+                {{ a.admRole === 9 ? '超級管理員' : '一般管理員' }}
+                <i class="fas fa-edit" style="font-size: 10px; margin-left: 4px;"></i>
               </span>
             </td>
             <td>{{ formatDate(a.createdAt) }}</td>
             <td>{{ formatDate(a.updatedAt) }}</td>
             <td>
               <div class="op-button-group">
-                <button class="btn-op-edit" @click="router.push(`/admin/admins/edit/${a.admId}`)">修改</button>
-                <button class="btn-op-stop" @click="deleteAdmin(a.admId, a.admName)">停職</button>
+                <template v-if="filterStatus === 1">
+                  <button class="btn-op-edit" @click="checkPermission(() => router.push(`/admin/admins/edit/${a.admId}`))">修改</button>
+                  <button class="btn-op-stop" @click="checkPermission(() => openBanModal(a))">停職</button>
+                </template>
+                <template v-else>
+                  <button class="btn-box-active" @click="checkPermission(() => activateAdmin(a))">啟用</button>
+                </template>
               </div>
             </td>
           </tr>
@@ -251,10 +358,52 @@ onMounted(fetchAdmins)
       </table>
     </div>
 
-    <div class="page-control-footer" v-if="admins.length > pageSize">
+    <div class="page-control-footer" v-if="filteredAdmins.length > pageSize">
       <button class="page-nav-btn" :disabled="currentPage === 1" @click="currentPage--">上一頁</button>
       <span class="page-current-info">第 {{ currentPage }} / {{ totalPages }} 頁</span>
       <button class="page-nav-btn" :disabled="currentPage === totalPages" @click="currentPage++">下一頁</button>
+    </div>
+
+    <div v-if="showBanModal" class="modal-overlay" @click.self="showBanModal = false">
+      <div class="ban-card">
+        <div class="ban-header">
+          <span>管理員停職處理</span>
+          <button class="close-x" @click="showBanModal = false">&times;</button>
+        </div>
+        <div class="ban-body">
+          <label>停職原因 <span class="required">*</span></label>
+          <textarea v-model="banReason" placeholder="請詳細輸入停職原因..."></textarea>
+          <div class="ban-warning">
+            <i class="fas fa-exclamation-triangle"></i> 注意：停職後該帳號將無法登入後台系統。
+          </div>
+        </div>
+        <div class="ban-footer">
+          <button class="btn-close-modal" @click="showBanModal = false">取消</button>
+          <button class="btn-confirm-ban" @click="confirmBanAdmin">確認停職</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div v-if="showRoleModal" class="modal-overlay" @click.self="showRoleModal = false">
+    <div class="ban-card" style="width: 350px;"> <div class="ban-header" style="background: #1890ff;">
+        <span>編輯 {{ adminToEditRole.admName }} 的職位</span>
+        <button class="close-x" @click="showRoleModal = false">&times;</button>
+      </div>
+      <div class="ban-body">
+        <p style="color: #909399; font-size: 14px; margin-bottom: 15px;">請勾選要指派給此員工的職位：</p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" v-model="selectedRole" :value="9"> 超級管理員 (ADMIN)
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" v-model="selectedRole" :value="1"> 一般管理員 (EMPLOYEE)
+          </label>
+        </div>
+      </div>
+      <div class="ban-footer">
+        <button class="btn-close-modal" @click="showRoleModal = false">取消</button>
+        <button class="btn-confirm-ban" style="background: #1890ff;" @click="handleUpdateRole">儲存變更</button>
+      </div>
     </div>
   </div>
 </template>
@@ -301,7 +450,7 @@ onMounted(fetchAdmins)
   font-size: 14px;
 }
 
-/* 統計卡片 */
+/* 統計卡片容器：控制三欄等寬 */
 .statistics-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -309,6 +458,7 @@ onMounted(fetchAdmins)
   margin-bottom: 24px;
 }
 
+/* 單個統計項目 */
 .stat-item {
   background-color: #ffffff;
   border-radius: 16px;
@@ -321,16 +471,17 @@ onMounted(fetchAdmins)
   border-left-style: solid;
 }
 
-.blue-left {
-  border-left-color: #1890ff;
+/* 左側邊框顏色 */
+.blue-left { 
+  border-left-color: #1890ff; 
 }
 
-.red-left {
-  border-left-color: #ff4d4f;
+.red-left { 
+  border-left-color: #ff4d4f; 
 }
 
-.green-left {
-  border-left-color: #52c41a;
+.green-left { 
+  border-left-color: #52c41a; 
 }
 
 .stat-icon-box {
@@ -344,7 +495,7 @@ onMounted(fetchAdmins)
   font-size: 20px;
 }
 
-.bg-blue-icon {
+.bg-blue-icon { 
   background-color: #1890ff; 
 }
 
@@ -362,40 +513,6 @@ onMounted(fetchAdmins)
   color: #303133;
 }
 
-/* 按鈕選取與動態效果 */
-.btn-action-search, 
-.btn-action-all, 
-.btn-add-admin, 
-.btn-op-edit, 
-.btn-op-stop, 
-.page-nav-btn {
-  transition: all 0.2s ease;
-  cursor: pointer;
-  user-select: none;
-  outline: none;
-}
-
-.btn-action-search:hover, 
-.btn-action-all:hover, 
-.btn-add-admin:hover, 
-.btn-op-edit:hover, 
-.btn-op-stop:hover, 
-.page-nav-btn:hover:not(:disabled) {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.btn-action-search:active, 
-.btn-action-all:active, 
-.btn-add-admin:active, 
-.btn-op-edit:active, 
-.btn-op-stop:active, 
-.page-nav-btn:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-/* 工具列樣式 */
 .search-filter-bar {
   display: flex;
   justify-content: space-between;
@@ -429,27 +546,65 @@ onMounted(fetchAdmins)
   border: 1px solid #dcdfe6;
   border-radius: 8px;
   width: 300px;
-  transition: border-color 0.2s;
 }
 
-.icon-input-wrap input:focus {
-  border-color: #1890ff;
+.action-right-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-toggle-group {
+  display: flex;
+  border: 1px solid #1890ff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.toggle-btn {
+  padding: 8px 16px;
+  border: none;
+  background: white;
+  color: #1890ff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.toggle-btn.active {
+  background: #1890ff;
+  color: white;
+}
+
+.btn-action-search,
+.btn-action-all,
+.btn-add-admin,
+.btn-op-edit,
+.btn-op-stop,
+.btn-box-active,
+.page-nav-btn {
+  transition: all 0.2s ease;
+  cursor: pointer;
   outline: none;
 }
 
-.btn-action-search {
-  background-color: #1890ff;
-  color: #ffffff;
-  border: none;
-  padding: 0 20px;
-  border-radius: 8px;
+.btn-action-search:hover,
+.btn-action-all:hover,
+.btn-add-admin:hover,
+.btn-op-edit:hover,
+.btn-op-stop:hover,
+.btn-box-active:hover,
+.page-nav-btn:hover:not(:disabled), 
+.role-badge:hover{
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.btn-action-all {
-  background-color: #ffffff;
-  border: 1px solid #dcdfe6;
-  padding: 0 20px;
-  border-radius: 8px;
+.btn-action-search:active,
+.btn-add-admin:active,
+.btn-op-stop:active {
+  transform: scale(0.95);
 }
 
 .btn-add-admin {
@@ -460,7 +615,21 @@ onMounted(fetchAdmins)
   border-radius: 8px;
 }
 
-/* 表格樣式 */
+.btn-action-search {
+  background-color: #1890ff;
+  color: white;
+  border: none;
+  padding: 0 20px;
+  border-radius: 8px;
+}
+
+.btn-action-all {
+  background-color: white;
+  border: 1px solid #dcdfe6;
+  padding: 0 20px;
+  border-radius: 8px;
+}
+
 .table-wrapper-card {
   background-color: #ffffff;
   border-radius: 16px;
@@ -486,26 +655,10 @@ onMounted(fetchAdmins)
   border-bottom: 1px solid #ebeef5;
 }
 
-/* 針對 ID 欄位給予特定的左邊距 */
-.data-list-table td:first-child, 
-.data-list-table th:first-child {
-  padding-left: 24px;
-}
-
-.align-left {
-  text-align: left !important;
-}
-
 .user-info-flex {
   display: flex;
   align-items: center;
   gap: 12px;
-  text-align: left;
-}
-
-.col-w-info {
-  text-align: left !important;
-  padding-left: 16px !important;
 }
 
 .avatar-box img {
@@ -529,36 +682,32 @@ onMounted(fetchAdmins)
   color: #909399;
 }
 
-/* 權限標籤 (Badge) */
 .role-badge {
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
   color: white;
-  display: inline-block;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .role-super {
   background: linear-gradient(135deg, #f56c6c 0%, #ff8e8e 100%);
-  box-shadow: 0 2px 6px rgba(245, 108, 108, 0.3);
 }
 
 .role-normal {
   background: linear-gradient(135deg, #409eff 0%, #79bbff 100%);
-  box-shadow: 0 2px 6px rgba(64, 158, 255, 0.3);
 }
 
-/* 操作按鈕顏色 */
 .op-button-group {
   display: flex;
-  justify-content: flex-start;
   gap: 8px;
 }
 
 .btn-op-edit {
   background-color: #1890ff;
-  color: #ffffff;
+  color: white;
   border: none;
   padding: 6px 14px;
   border-radius: 6px;
@@ -566,20 +715,135 @@ onMounted(fetchAdmins)
 
 .btn-op-stop {
   background-color: #ff4d4f;
-  color: #ffffff;
+  color: white;
   border: none;
   padding: 6px 14px;
   border-radius: 6px;
 }
 
-/* 分頁 */
+.btn-box-active {
+  background-color: #52c41a;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.ban-card {
+  background: white;
+  width: 450px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ban-header {
+  background: #f39c12;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  color: white;
+  font-weight: bold;
+}
+
+.ban-body {
+  padding: 20px;
+}
+
+.ban-body textarea {
+  width: 100%;
+  height: 120px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: none;
+}
+
+.ban-warning {
+  margin-top: 15px;
+  background: #fff9db;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #856404;
+}
+
+.ban-footer {
+  padding: 15px 20px;
+  text-align: right;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-confirm-ban {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-confirm-ban:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+}
+
+.btn-close-modal {
+  padding: 8px 20px;
+  background: #909399;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-close-modal:hover {
+  background: #a6a9ad;
+  transform: translateY(-1px);
+}
+
+.close-x {
+  border: none;
+  background: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.close-x:hover {
+  color: #f56c6c;
+  transform: rotate(90deg);
+}
+
+.required {
+  color: red;
+}
+
 .page-control-footer {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 16px;
   margin-top: 24px;
-  padding: 0 20px 40px 0;
 }
 
 .page-nav-btn {
@@ -587,11 +851,5 @@ onMounted(fetchAdmins)
   background-color: #ffffff;
   border: 1px solid #dcdfe6;
   border-radius: 8px;
-}
-
-.page-nav-btn:disabled {
-  color: #c0c4cc;
-  background-color: #f5f7fa;
-  cursor: not-allowed;
 }
 </style>
