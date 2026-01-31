@@ -102,9 +102,9 @@ const fetchRentalStatus = async () => {
 onMounted(fetchProfile)
 
 const formatDate = (dt) => {
-  if (!dt) return ''
-  return dt.split('T')[0]
-}
+  if (!dt) return '';
+  return dt.substring(0, 10).replace(/-/g, '-'); 
+};
 
 // [新增] 格式化日期時間的函式
 const formatDateTime = (dt) => {
@@ -132,14 +132,34 @@ const cancelEdit = () => {
 }
 
 const saveEdit = async () => {
-  // 1. 密碼格式初步檢查 (前端擋路)
+  // 密碼格式初步檢查 (前端擋路)
   const passwordRegex = /^(?=.*[A-Za-z])[A-Za-z\d!@#$%^&*()_+=\[\]{}:;"'<>,.?/\-]{6,}$/;
   if (form.value.memPassword && !passwordRegex.test(form.value.memPassword)) {
     Swal.fire('格式錯誤', '密碼必須至少 6 碼且包含 1 個英文字母', 'error');
     return;
   }
 
-  // 2. 二次確認彈窗
+  const phoneRegex = /^09\d{8}$/;
+  if (!phoneRegex.test(form.value.memPhone.trim())) {
+    Swal.fire('格式錯誤', '手機號碼請輸入 09 開頭的 10 碼數字', 'error');
+    return;
+  }
+
+  // Email 格式：標準電子郵件，結尾需為 .com
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]*com$/;
+  if (!emailRegex.test(form.value.memEmail.trim())) {
+    Swal.fire('格式錯誤', 'Email 格式不正確（需包含 @ 且以 .com 結尾）', 'error');
+    return;
+  }
+
+  // 發票載具：/ 開頭，後接 7 碼大寫英文或數字
+  const invoiceRegex = /^\/[A-Z0-9]{7}$/;
+  if (form.value.memInvoice && !invoiceRegex.test(form.value.memInvoice.trim())) {
+    Swal.fire('格式錯誤', '發票載具格式錯誤（應為 / 開頭加上 7 碼大寫英數）', 'error');
+    return;
+  }
+
+  // 二次確認彈窗
   const confirmResult = await Swal.fire({
     title: '確定要變更資料嗎？',
     text: "修改後將會立即生效",
@@ -325,11 +345,9 @@ const saveEdit = async () => {
 .profile-page {
   max-width: 720px;
   margin: 0 auto;
-  min-height: 100vh;      /* 至少佔滿整個視窗高度 */
-  display: flex;          /* 使用 Flexbox 排版 */
-  flex-direction: column; /* 內容垂直排列 */
-  justify-content: center;/* 垂直置中 */
-  padding: 40px 0;        /* 增加上下邊距，避免在小螢幕時貼邊 */
+  width: 100%;
+  padding: 40px 20px 0 20px; 
+  margin-bottom: 10px; /* 改用 margin 確保它會推開底部的 footer */
   box-sizing: border-box;
 }
 
@@ -411,6 +429,7 @@ const saveEdit = async () => {
   border-radius: 12px;
   padding: 20px 20px 5px 20px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+  margin-bottom: 30px;
 }
 
 .row {
