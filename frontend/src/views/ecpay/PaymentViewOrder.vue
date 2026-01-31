@@ -47,8 +47,7 @@ const handleCheckout = async () => {
     // 4. 從容器中尋找表單
     const form = div.querySelector('form');
     if (form) {
-      // 找到表單後，設定在新分頁開啟並提交
-      form.target = '_blank';
+      
       div.style.display = 'none'; 
       document.body.appendChild(div);
       form.submit();

@@ -50,7 +50,8 @@ const goToSearchSpot = () => {
   router.push('/SearchSpot')
 }
 
-// [新增] 前往付款頁面的方法
+// [步驟二] 導向至 ECpay 付款頁面
+// Note: 這個方法應該在後端訂單資料更新後 (recStatus設為'未付款') 才被呼叫
 const goToPayment = () => {
   if (!isReadyToRent.value) return
 
@@ -96,6 +97,9 @@ const handleReport = () => {
   )
 }
 
+// [步驟一] 點擊付款後，先更新後端訂單資料
+// 將歸還站點(spotIdReturn)與費用(recPayment)寫入，並將狀態更新為'未付款'
+// 成功後才會導向至付款頁面
 const proceedWithRent = async () => {
   // 防呆檢查：確保會員 ID 存在
   if (!memberAuthStore.member?.memId) {
@@ -114,7 +118,6 @@ const proceedWithRent = async () => {
     recStatus: '未付款', // 標記狀態，等待金流更新為「已完成」
     spotIdReturn: selectedSpot.value?.spotId, // [修正] 使用 Optional Chaining 避免報錯
     recPayment: rentCalculation.value.totalFee,
-    recReturnDT2: new Date().toISOString(), // 紀錄使用者點擊歸還的時間
   }
 
   // [新增] 防呆檢查：如果沒有抓到站點 ID，禁止送出並報錯
@@ -285,7 +288,7 @@ onMounted(async () => {
     try {
       const res = await axios.get(`http://localhost:8080/rec-rent?memId=${memberId.value}`)
       // [修改] 找到該筆訂單並存入 activeRent
-      const foundRent = res.data.find((rent) => rent.recStatus === '租借中')
+      const foundRent = res.data.find((rent) => rent.recStatus === '租借中'||rent.recStatus === '未付款')
 
       if (!foundRent) {
         alert('您目前沒有租借中的訂單，無法進行歸還。\n將為您導向至租借紀錄頁面。')
@@ -365,12 +368,12 @@ onMounted(async () => {
           <h5>租借時間: {{ rentCalculation.rentTime }}</h5>
           <h5>歸還時間: {{ rentCalculation.returnTime }}</h5>
           <h5>使用時間: {{ rentCalculation.duration }} 分鐘</h5>
-          <h5>費率: 20 NTD (基本) + 30 NTD 每30分鐘</h5>
+          <h5>費率: 45 NTD (基本) + 30 NTD 每30分鐘</h5>
           <hr />
           <h3>費用總計: {{ rentCalculation.totalFee }} NTD</h3>
           <div class="d-flex justify-content-between align-items-center">
             <button
-              @click="goToPayment"
+              @click="proceedWithRent"
               class="btn btn-success btn-lg"
               :disabled="!isReadyToRent"
             >

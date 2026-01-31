@@ -68,6 +68,18 @@ const handleReport = (rent) => {
   )
 }
 
+// --- Helper Functions ---
+const getStatusClass = (status) => {
+  // 根據訂單狀態回傳對應的 BS class
+  if (status === '租借中') {
+    return 'bg-success'
+  }
+  if (status === '未付款') {
+    return 'bg-warning'
+  }
+  return 'bg-secondary'
+}
+
 // --- Lifecycle ---
 onMounted(() => {
   if (memberAuthStore.isLogin) {
@@ -100,13 +112,13 @@ onMounted(() => {
         v-for="rent in rents"
         :key="rent.recSeqId"
         class="list-group-item mb-3 shadow-sm"
-        :class="{ 'border-active': rent.recStatus === '租借中' }"
+        :class="{ 'border-active': rent.recStatus === '租借中'||rent.recStatus === '未付款' }"
       >
         <div class="d-flex w-100 justify-content-between align-items-center header-row">
           <h5 class="mb-1">
             <span
               class="badge"
-              :class="rent.recStatus === '租借中' ? 'bg-success' : 'bg-secondary'"
+              :class="getStatusClass(rent.recStatus)"
             >
               {{ rent.recStatus }}
             </span>
@@ -178,6 +190,10 @@ onMounted(() => {
 }
 .bg-secondary {
   background-color: #6c757d;
+}
+.bg-warning {
+  background-color: #ffc107;
+  color: #212529; /* 深色文字以確保可讀性 */
 }
 .text-primary {
   color: #007bff !important;
