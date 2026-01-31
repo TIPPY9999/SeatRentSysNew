@@ -2,16 +2,14 @@
 import { ref, computed } from 'vue'
 import { useMemberAuthStore } from '@/stores/memberAuth'
 import { useAdminAuthStore } from '@/stores/adminAuth'
-import { useRouter } from 'vue-router' // ✅ 已有
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
 // --- 版面狀態 ---
 const isSidebarCollapsed = ref(false)
 
-/**
- * 切換側邊欄的收合狀態
- */
+//切換側邊欄收合狀態
 const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
 }
@@ -42,7 +40,10 @@ const displayUID = computed(() => {
  * - 會員登入：導去 /profile
  */
 const handleUidClick = () => {
-  if (!displayUID.value) return
+  if (!displayUID.value) {
+    router.push('/login')
+    return
+  }
 
   if (adminAuthStore.isLogin) {
     router.push('/admin')
@@ -56,7 +57,7 @@ const handleUidClick = () => {
 /**
  * ✅ 產品化：讓游標跟可點性一致
  */
-const uidClickable = computed(() => !!displayUID.value)
+const uidClickable = computed(() => true)
 const uidCursor = computed(() => (uidClickable.value ? 'pointer' : 'default'))
 
 /**
@@ -82,9 +83,9 @@ const logout = () => {
 
 <template>
   <div class="page-wrapper" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
-    <!-- 左側邊欄 -->
+    <!-- 側邊欄 -->
     <aside class="sidebar">
-      <!-- 可收合的功能選單 -->
+      <!-- 收合功能選單 -->
       <ul class="menu-list">
         <li class="menu-item" @click="router.push('/')">
           <div class="member-info">
@@ -95,7 +96,7 @@ const logout = () => {
           </div>
         </li>
 
-        <!-- ✅ 產品化：未登入才顯示「會員登入」 -->
+        <!--未登入才顯示「會員登入」 -->
         <li class="menu-item" v-if="!memberAuthStore.isLogin && !adminAuthStore.isLogin">
           <router-link to="/login" class="member-info">
             <span class="icon-wrapper">
@@ -104,8 +105,6 @@ const logout = () => {
             <span class="menu-text">請先登入</span>
           </router-link>
         </li>
-
-        <!-- ✅ 合併版 + 產品化：UID 行為 -->
         <li class="menu-item">
           <div
             class="member-info"
@@ -189,7 +188,7 @@ const logout = () => {
           <span class="menu-text">登出</span>
         </li>
       </ul>
-      <!-- ✅ 管理員快捷入口：保留你原本邏輯 -->
+      <!--管理員快捷入口-->
       <div class="menu-admin" v-if="adminAuthStore.isLogin">
         <router-link to="/admin" class="member-info">
           <span class="icon-wrapper">
@@ -199,7 +198,7 @@ const logout = () => {
         </router-link>
       </div>
 
-      <!-- 收合按鈕 -->
+      <!--收合按鈕 -->
       <div class="sidebar-footer">
         <button
           @click="toggleSidebar"
@@ -214,7 +213,7 @@ const logout = () => {
       </div>
     </aside>
 
-    <!-- 右側主內容容器 -->
+    <!--右側主內容容器 -->
     <main class="main-content-area">
       <router-view />
     </main>
@@ -242,16 +241,14 @@ const logout = () => {
 .main-content-area {
   flex-grow: 1;
   width: 100%;
-  height: 91vh;
   position: relative;
-  overflow-y: auto; /* 如果內容超長，允許滾動 */
   display: flex;
   flex-direction: column;
 }
 /* --- 2. 主佈局 --- */
 .page-wrapper {
   display: flex;
-  /* height: 100vh; /*改為 100vh 佔滿整個視窗高度 */
+  height: 100vh; /* 恢復設定：佔滿整個視窗高度 */
   width: 100%;
   background-color: #f4f6f9;
 }
@@ -264,12 +261,14 @@ const logout = () => {
   transition: width 0.2s ease;
   flex-shrink: 0;
   display: flex;
+  overflow-y: auto;
   flex-direction: column;
   height: auto;
 }
 
 .page-wrapper.sidebar-collapsed .sidebar {
   width: var(--sidebar-width-collapsed);
+  overflow-y: auto;
 }
 
 /* 通用圖示容器樣式 */

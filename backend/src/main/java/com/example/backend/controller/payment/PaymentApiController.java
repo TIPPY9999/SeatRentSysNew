@@ -1,16 +1,22 @@
 package com.example.backend.controller.payment;
 
-import com.example.backend.model.merchantAndCoupon.SponsorshipRecord;
+import java.math.BigDecimal;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.backend.model.rec.RecRent;
 import com.example.backend.repository.rec.RecRentRepository;
 import com.example.backend.service.merchantAndCoupon.PaymentService;
 import com.example.backend.utils.EcpayUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payment")
@@ -32,42 +38,40 @@ public class PaymentApiController {
     /**
      * 1. 產生租借結帳表單 (維持原樣)==========================(翌帆註解2026-1-31整合發生衝突，故先保留此段)
      */
-//     @PostMapping(value = "/checkout", produces = "text/html;charset=UTF-8")
-// <<<<<<< HEAD
-//     public String checkout(@RequestParam("recId") String recId, @RequestParam("baseUrl") String baseUrl) {
-// =======
-//     @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") // 允許前端跨域請求
-//     public String checkout(@RequestParam("recId") String recId, @RequestParam("amount") String amount) {
-// >>>>>>> rec
-//         RecRent order = recRentRepository.findByRecId(recId);
-//         if (order == null)
-//             return "<h2>訂單不存在</h2>";
+    // @PostMapping(value = "/checkout", produces = "text/html;charset=UTF-8")
+    // <<<<<<< HEAD
+    // public String checkout(@RequestParam("recId") String recId,
+    // @RequestParam("baseUrl") String baseUrl) {
+    // =======
+    // @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") //
+    // 允許前端跨域請求
+    // public String checkout(@RequestParam("recId") String recId,
+    // @RequestParam("amount") String amount) {
+    // >>>>>>> rec
+    // RecRent order = recRentRepository.findByRecId(recId);
+    // if (order == null)
+    // return "<h2>訂單不存在</h2>";
 
-//         String itemName = "租借費用-" + order.getRecId();
-//         String tradeNo = order.getRecId() + "X" + System.currentTimeMillis() / 1000;
+    // String itemName = "租借費用-" + order.getRecId();
+    // String tradeNo = order.getRecId() + "X" + System.currentTimeMillis() / 1000;
 
-//         return ecpayUtils.genCheckOutForm(tradeNo, amount, itemName, baseUrl);
-//     }
-
-        @PostMapping(value = "/checkout", produces = "text/html;charset=UTF-8")
-        public String checkout(
-        @RequestParam("recId") String recId,
-        @RequestParam("baseUrl") String baseUrl
-    ) {
-    RecRent order = recRentRepository.findByRecId(recId);
-    if (order == null) {
-        return "<h2>訂單不存在</h2>";
-    }
-
-    // 金額由後端訂單資料決定（不可相信前端）
-        String amount = String.valueOf(order.getRecPayment());
-
+    // return ecpayUtils.genCheckOutForm(tradeNo, amount, itemName, baseUrl);
+    // }
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") //
+    @PostMapping(value = "/checkout", produces = "text/html;charset=UTF-8")
+    public String checkout(
+            @RequestParam("recId") String recId,
+            @RequestParam("amount") String amount,
+            @RequestParam("baseUrl") String baseUrl) {
+        RecRent order = recRentRepository.findByRecId(recId);
+        if (order == null) {
+            return "<h2>訂單不存在</h2>";
+        }
         String itemName = "租借費用-" + order.getRecId();
         String tradeNo = order.getRecId() + "X" + (System.currentTimeMillis() / 1000);
 
-    return ecpayUtils.genCheckOutForm(tradeNo, amount, itemName, baseUrl);
-}
-
+        return ecpayUtils.genCheckOutForm(tradeNo, amount, itemName, baseUrl);
+    }
 
     /**
      * 2. 產生贊助表單

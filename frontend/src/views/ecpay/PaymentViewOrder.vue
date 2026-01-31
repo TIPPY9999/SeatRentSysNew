@@ -25,14 +25,13 @@ const handleCheckout = async () => {
   isLoading.value = true;
   try {
     // 1. 準備要送到後端的資料 (Content-Type: application/x-www-form-urlencoded)
-
-
     const params = new URLSearchParams();
     params.append('recId', recId.value);
     params.append('amount', totalFee.value);
-
+    params.append('baseUrl', window.APP_CONFIG.API_URL);
     // 2. 呼叫後端 API
     const response = await axios.post('http://localhost:8080/api/payment/checkout', params);
+    //const response = await axios.post(`${window.APP_CONFIG.API_URL}/api/payment/checkout`, params);
     
     // 3. 處理後端回傳的 HTML 字串
     const payHtml = response.data;
