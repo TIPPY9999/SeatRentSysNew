@@ -193,13 +193,13 @@ const renderPieChart = () => {
     nameMap[name] = (nameMap[name] || 0) + 1
   })
 
-  // 轉換成陣列並排序，只取前 10 或前 15 名，其餘歸類為「其他」
+  // 轉換成陣列並排序，只取前 20 或前 15 名，其餘歸類為「其他」
   let data = Object.keys(nameMap).map(k => ({ name: k, value: nameMap[k] }))
     .sort((a, b) => b.value - a.value);
 
-  if (data.length > 15) { 
-    const others = data.slice(15).reduce((sum, item) => sum + item.value, 0);
-    data = data.slice(0, 15);
+  if (data.length > 20) { 
+    const others = data.slice(20).reduce((sum, item) => sum + item.value, 0);
+    data = data.slice(0, 20);
     data.push({ name: '其他', value: others });
   }
 

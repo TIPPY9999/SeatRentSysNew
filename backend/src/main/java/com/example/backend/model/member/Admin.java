@@ -51,6 +51,4 @@ public class Admin {
     @Column(name = "admStatus")
     private Integer admStatus = 1;
 
-    @Column(name = "adminImage")
-    private String adminImage;
 }
