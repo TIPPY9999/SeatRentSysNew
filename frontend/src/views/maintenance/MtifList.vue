@@ -13,6 +13,7 @@ const tickets = ref([])
 const filters = reactive({ keyword: '', priority: '', status: '' })
 const loading = ref(false)
 const pageVisible = ref(false)
+const allSpots = ref([])
 
 // ====== 資產健康度統計 ======
 const assetStatsTab = ref('SPOT')
@@ -44,6 +45,22 @@ const fetchAssetStats = async () => {
 watch(assetStatsTab, () => {
   fetchAssetStats()
 })
+
+// spotId -> spotName 對照表（讓椅子工單可顯示「機台真名」）
+const spotNameMap = computed(() => {
+  const map = new Map()
+  for (const s of allSpots.value || []) {
+    map.set(Number(s.spotId), s.spotName)
+  }
+  return map
+})
+
+// 取得顯示用的機台名稱：優先 row.rentalSpot，其次 allSpots，再 fallback 到「機台 #id」
+const getSpotDisplayName = (spotId, rentalSpot) => {
+  if (rentalSpot?.spotName) return rentalSpot.spotName
+  const name = spotNameMap.value.get(Number(spotId))
+  return name || `機台 #${spotId}`
+}
 
 // 格式化百分比
 const formatPercent = (value) => {
@@ -294,14 +311,26 @@ const openResolveDialog = (id) => {
 // 送出結案
 const submitResolve = async () => {
   try {
+    // ✅ [除錯用] 在瀏覽器 Console 印出傳送的資料，請按 F12 查看
+    console.log('📤 準備結案，傳送資料:', {
+      ticketId: resolveForm.ticketId,
+      resultType: resolveForm.resultType, // 必須是英文大寫 Key (FIXED, MAINTAINED, UNFIXABLE, OTHER)
+      resolveNote: resolveForm.resolveNote,
+    })
+
     await maintenanceApi.resolveTicket(
       resolveForm.ticketId,
-      resolveForm.resultType,
+      resolveForm.resultType, // ✅ 直接傳送英文 Key，由 resultConfig 保證正確性
       resolveForm.resolveNote,
     )
     showResolveDialog.value = false
 
-    const config = resultConfig[resolveForm.resultType]
+    const config = resultConfig[resolveForm.resultType] || {
+      text: '已結案',
+      icon: '🎉',
+      color: '#67c23a',
+    }
+
     await Swal.fire({
       icon: 'success',
       title: '結案成功！',
@@ -314,11 +343,39 @@ const submitResolve = async () => {
       timer: 1200,
       timerProgressBar: true,
       showConfirmButton: false,
+      position: 'center',
+      heightAuto: false,
       showClass: { popup: 'animate__animated animate__tada' },
     })
     fetchTickets()
-  } catch {
-    // 錯誤已由攔截器處理
+  } catch (error) {
+    console.error('❌ 結案失敗:', error)
+    console.error('❌ 後端回傳:', error.response?.data)
+    console.error('❌ HTTP 狀態:', error.response?.status)
+
+    // ✅ 顯示更詳細的錯誤給使用者
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      '後端不接受此結果類型 (Enum不匹配)'
+    await Swal.fire({
+      icon: 'error',
+      title: '結案失敗',
+      html: `
+        <div style="text-align: left; padding: 10px;">
+          <p><b>錯誤訊息：</b>${errorMsg}</p>
+          ${error.response?.status ? `<p><b>HTTP 狀態碼：</b>${error.response.status}</p>` : ''}
+          <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #909399; font-size: 13px;">
+            <i class="fas fa-info-circle"></i> 如果出現 IllegalArgumentException，表示後端不支援該結果類型。<br>
+            請確認後端已重啟並支援：FIXED, MAINTAINED, UNFIXABLE, OTHER
+          </p>
+        </div>
+      `,
+      confirmButtonColor: '#409eff',
+      position: 'center',
+      heightAuto: false,
+    })
   }
 }
 
@@ -404,58 +461,137 @@ const viewTicketDetail = (row) => {
 }
 
 // 地圖小視窗功能
-const showLocationMap = async (stationName, lat, lng) => {
-  if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-    await Swal.fire({
-      icon: 'warning',
-      title: '位置資訊不完整',
-      text: `站點「${stationName}」暫無準確的地理位置資訊`,
-      confirmButtonText: '了解',
-      confirmButtonColor: '#e6a23c',
-    })
-    return
+// ====== 修正後的開啟地圖函式 (修復椅子工單座標顯示) ======
+const showLocationMap = async (row) => {
+  let lat = null
+  let lng = null
+  let targetName = ''
+
+  console.log('🗺️ 開啟地圖，工單資料:', row)
+
+  // 1. 判斷是機台還是椅子，並取得座標
+  if (row.spotId) {
+    // 機台工單：優先從 row.rentalSpot 取座標（已經在工單資料裡）
+    targetName = row.rentalSpot?.spotName || `機台 #${row.spotId}`
+    lat = row.rentalSpot?.latitude
+    lng = row.rentalSpot?.longitude
+
+    console.log('📍 機台工單 - rentalSpot 座標:', { lat, lng, spotName: targetName })
+
+    // 如果 rentalSpot 沒有座標，再從 allSpots 找（備援方案）
+    if (!lat || !lng) {
+      const foundSpot = allSpots.value.find((s) => Number(s.spotId) === Number(row.spotId))
+      console.log('🔍 從 allSpots 找機台:', { foundSpot, allSpotsCount: allSpots.value.length })
+      if (foundSpot) {
+        //  修正原因：後端已修復座標傳輸，此處加入 Number 轉型與 null 檢查作為保險
+        const spotLat = Number(foundSpot.latitude)
+        const spotLng = Number(foundSpot.longitude)
+
+        if (!isNaN(spotLat) && !isNaN(spotLng) && spotLat !== 0 && spotLng !== 0) {
+          lat = spotLat
+          lng = spotLng
+          targetName = foundSpot.spotName || targetName
+        }
+      }
+    }
+  } else if (row.seatsId) {
+    // 椅子工單：取得所屬機台的座標
+    targetName = row.seat?.seatsName || `椅子 #${row.seatsId}`
+
+    if (row.seat && row.seat.spotId) {
+      console.log('🪑 椅子工單 - 所屬機台 ID:', row.seat.spotId)
+
+      // ✅ 直接從 allSpots 找椅子所屬的機台（因為 seat.rentalSpot 通常沒有座標）
+      const foundSpot = allSpots.value.find((s) => Number(s.spotId) === Number(row.seat.spotId))
+      console.log('🔍 從 allSpots 找椅子所屬機台:', {
+        foundSpot: foundSpot
+          ? {
+              spotId: foundSpot.spotId,
+              spotName: foundSpot.spotName,
+              lat: foundSpot.latitude,
+              lng: foundSpot.longitude,
+            }
+          : null,
+        searchSpotId: row.seat.spotId,
+      })
+
+      // ✅ 修正原因：後端已修復座標傳輸，此處加入 Number 轉型與 null 檢查作為保險
+      if (foundSpot) {
+        const spotLat = Number(foundSpot.latitude)
+        const spotLng = Number(foundSpot.longitude)
+
+        // ✅ 檢查座標是否為有效數字（不是 NaN、不是 0、不是 null）
+        if (!isNaN(spotLat) && !isNaN(spotLng) && spotLat !== 0 && spotLng !== 0) {
+          lat = spotLat
+          lng = spotLng
+          targetName = `${row.seat.seatsName || '椅子'} (位於 ${foundSpot.spotName || '機台'})`
+          console.log('✅ 成功取得椅子所屬機台座標:', { lat, lng, targetName })
+        } else {
+          console.warn('⚠️ 機台座標無效:', { spotLat, spotLng })
+          Swal.fire('無座標資訊', `椅子所屬的機台「${foundSpot.spotName}」未設定有效經緯度`, 'info')
+          return
+        }
+      } else {
+        console.warn('⚠️ 找不到椅子所屬機台')
+        Swal.fire('無座標資訊', `找不到椅子所屬的機台（ID: ${row.seat.spotId}）`, 'info')
+        return
+      }
+    } else {
+      Swal.fire('無法定位', '這張椅子工單找不到所屬的機台資訊', 'warning')
+      return
+    }
   }
 
-  const mapUrl = `http://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`
+  // 2. 檢查是否有座標
+  if (lat && lng) {
+    const stationName = targetName
 
-  await Swal.fire({
-    title: `<div style="display: flex; align-items: center; gap: 12px; justify-content: center;">
-      <i class="fas fa-map-marker-alt" style="color: #e6a23c; font-size: 24px;"></i>
-      <span>${stationName}</span>
-    </div>`,
-    html: `
-      <div style="text-align: center;">
-        <div style="margin-bottom: 16px; padding: 12px; background: #f0f9eb; border-radius: 8px; border-left: 4px solid #67c23a;">
-          <p style="margin: 0; color: #606266; font-size: 13px;">
-            <i class="fas fa-info-circle mr-1" style="color: #67c23a;"></i>
-            經度：${lng}° | 緯度：${lat}°
-          </p>
-        </div>
-        <iframe 
-          src="${mapUrl}"
-          width="100%" 
-          height="300" 
-          style="border: none; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);"
-          allowfullscreen=""
-          loading="lazy"
-          referrerpolicy="no-referrer-when-downgrade">
-        </iframe>
-        <p style="margin: 12px 0 0; color: #909399; font-size: 11px;">
-          <i class="fas fa-external-link-alt mr-1"></i>
-          點擊地圖可在新視窗中開啟 Google Maps
-        </p>
-      </div>
-    `,
-    width: '600px',
-    showConfirmButton: true,
-    confirmButtonText: '<i class="fas fa-times mr-1"></i>關閉',
-    confirmButtonColor: '#909399',
-    customClass: {
-      popup: 'custom-map-popup',
-    },
-    showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
-    hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' },
-  })
+    // Google Maps Embed URL
+    const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`
+
+    // 3. 彈出 Swal 視窗
+    await Swal.fire({
+      title: `<div style="display: flex; align-items: center; gap: 12px; justify-content: center;">
+          <i class="fas fa-map-marker-alt" style="color: #e6a23c; font-size: 24px;"></i>
+          <span>${stationName}</span>
+        </div>`,
+      html: `
+          <div style="text-align: center;">
+            <div style="margin-bottom: 16px; padding: 12px; background: #f0f9eb; border-radius: 8px; border-left: 4px solid #67c23a;">
+              <p style="margin: 0; color: #606266; font-size: 13px;">
+                <i class="fas fa-info-circle mr-1" style="color: #67c23a;"></i>
+                經度：${lng}° | 緯度：${lat}°
+              </p>
+            </div>
+            <iframe
+              src="${mapUrl}"
+              width="100%"
+              height="300"
+              style="border: none; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);"
+              allowfullscreen=""
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+            <p style="margin: 12px 0 0; color: #909399; font-size: 11px;">
+              <i class="fas fa-external-link-alt mr-1"></i>
+              點擊地圖可在新視窗中開啟 Google Maps
+            </p>
+          </div>
+        `,
+      width: '600px',
+      showConfirmButton: true,
+      confirmButtonText: '<i class="fas fa-times mr-1"></i>關閉',
+      confirmButtonColor: '#909399',
+      customClass: {
+        popup: 'custom-map-popup',
+      },
+      showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
+      hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' },
+    })
+  } else {
+    console.error('❌ 最終檢查：沒有座標資訊', { lat, lng, targetName })
+    Swal.fire('無座標資訊', `無法取得「${targetName}」的經緯度資訊`, 'info')
+  }
 }
 
 // 切換模式時重新抓資料
@@ -466,10 +602,31 @@ watch(
   },
 )
 
-onMounted(() => {
-  fetchTickets()
-  fetchAssetStats()
-  setTimeout(() => (pageVisible.value = true), 100)
+// ====== (載入資料) ======
+onMounted(async () => {
+  try {
+    loading.value = true
+
+    //  同時載入「資產統計」和「機台資料」，工單則透過 fetchTickets 根據模式載入
+    const [statsRes, spotsRes] = await Promise.all([
+      maintenanceApi.getAssetStats(assetStatsTab.value),
+      maintenanceApi.getAllSpots(), // 抓取機台資料供地圖使用
+    ])
+
+    // 存入變數
+    assetStats.value = statsRes.data || []
+    allSpots.value = spotsRes.data || []
+
+    // ✅ 根據 historyMode 載入對應的工單資料
+    await fetchTickets()
+  } catch (err) {
+    console.error('載入初始資料失敗:', err)
+    Swal.fire('錯誤', '無法載入資料', 'error')
+  } finally {
+    loading.value = false
+    // ✅ 【關鍵修復】設置頁面可見，否則 v-show="pageVisible" 會隱藏所有內容！
+    pageVisible.value = true
+  }
 })
 </script>
 
@@ -758,23 +915,14 @@ onMounted(() => {
                     <div v-if="row.seatsId" class="target-cell seat-target">
                       <div class="target-main">
                         <i class="fas fa-chair" style="color: #e6a23c"></i>
-                        <span>椅子 #{{ row.seatsId }}</span>
+                        <!--  改成椅子真名（優先 seatsName，沒有才 fallback #id） -->
+                        <span>{{ row.seat?.seatsName || `椅子 #${row.seatsId}` }}</span>
                       </div>
                       <div v-if="row.seat && row.seat.spotId" class="target-station">
-                        <span
-                          class="station-link"
-                          @click="
-                            showLocationMap(
-                              row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`,
-                              row.rentalSpot ? row.rentalSpot.latitude : null,
-                              row.rentalSpot ? row.rentalSpot.longitude : null,
-                            )
-                          "
-                        >
+                        <span class="station-link" @click="showLocationMap(row)">
                           <i class="fas fa-map-marker-alt mr-1"></i>
-                          {{
-                            row.rentalSpot ? row.rentalSpot.spotName : `機台 #${row.seat.spotId}`
-                          }}
+                          <!--  改成機台真名：優先 row.rentalSpot.spotName，否則用 allSpots 查 spotName -->
+                          {{ getSpotDisplayName(row.seat.spotId, row.rentalSpot) }}
                         </span>
                       </div>
                     </div>
@@ -784,16 +932,7 @@ onMounted(() => {
                         <span>機台 #{{ row.spotId }}</span>
                       </div>
                       <div v-if="row.rentalSpot" class="target-station">
-                        <span
-                          class="station-link"
-                          @click="
-                            showLocationMap(
-                              row.rentalSpot.spotName,
-                              row.rentalSpot.latitude,
-                              row.rentalSpot.longitude,
-                            )
-                          "
-                        >
+                        <span class="station-link" @click="showLocationMap(row)">
                           <i class="fas fa-map-marker-alt mr-1"></i>
                           {{ row.rentalSpot.spotName }}
                         </span>
@@ -1008,6 +1147,7 @@ onMounted(() => {
       center
       destroy-on-close
       align-center
+      append-to-body
       class="resolve-dialog"
     >
       <template #header>
@@ -1039,7 +1179,7 @@ onMounted(() => {
             v-model="resolveForm.resolveNote"
             type="textarea"
             :rows="4"
-            placeholder="請填寫維修過程說明、更換零件等資訊..."
+            placeholder="請填寫維修過程說明、更換零件、保養項目等資訊..."
             show-word-limit
             maxlength="500"
           />
@@ -1385,6 +1525,7 @@ onMounted(() => {
 /* 結案彈窗 */
 .resolve-dialog :deep(.el-dialog) {
   border-radius: 16px;
+  margin: auto !important; /* ✅ 強制置中，避免偏高問題 */
 }
 .dialog-header {
   display: flex;

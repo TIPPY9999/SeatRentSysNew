@@ -11,11 +11,86 @@ const searchText = ref('')
 const loading = ref(false)
 const pageVisible = ref(false)
 
+// 新增：日期格式化小工具
+const formatDate = (dateVal, row = {}) => {
+  // 優先順序：傳入的值 > updateTime > updated_at > createTime > createdAt
+  // 這裡假設如果沒有更新時間，可能要看建立時間 (例如這筆歷史資料的建立時間)
+  const targetDate =
+    dateVal || row.updatedAt || row.updateTime || row.updated_at || row.createTime || row.createdAt
+
+  if (!targetDate) return '-'
+
+  const date = new Date(targetDate)
+  // 檢查是否為有效日期
+  if (isNaN(date.getTime())) return '-'
+
+  return date.toLocaleDateString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+}
+
+// 專門從備註裡抓出 [停用日期：...] 的工具
+const extractDateFromNote = (noteStr) => {
+  if (!noteStr) return '-'
+
+  // 使用正則表達式抓取 [停用日期：xxxx/xx/xx]
+  const match = noteStr.match(/\[停用日期：(.*?)\]/)
+
+  if (match && match[1]) {
+    return match[1] // 回傳抓到的日期，例如 "2026/01/29"
+  }
+
+  return '-' // 沒抓到就顯示槓槓
+}
+
+// ✅ [新增] 解析備註中的歷史紀錄 (將備註字串轉為時間軸陣列)
+const parseHistoryFromNote = (note) => {
+  if (!note) return []
+
+  const history = []
+
+  // 使用正則表達式抓取所有中括號內的內容，例如 [停用日期：2026/01/29]
+  // flag 'g' 代表抓取全部，不只抓第一個
+  const regex = /\[(.*?)\]/g
+  let match
+
+  // 迴圈找出所有的標籤
+  while ((match = regex.exec(note)) !== null) {
+    const content = match[1] // 取得括號內的文字
+
+    // 預設樣式 (灰色)
+    let color = '#909399'
+    let iconColor = '#fff'
+    let borderColor = '#909399'
+
+    // 根據關鍵字決定顏色
+    if (content.includes('停用')) {
+      color = '#f56c6c' // 紅色文字
+      borderColor = '#f56c6c' // 紅色圓點
+    } else if (content.includes('復職')) {
+      color = '#67c23a' // 綠色文字
+      borderColor = '#67c23a' // 綠色圓點
+    }
+
+    history.push({
+      content: content,
+      color: color,
+      borderColor: borderColor,
+    })
+  }
+
+  // 如果希望最新的紀錄顯示在最上面，可以使用 history.reverse()
+  return history
+}
+
 // 取得已停用 (Inactive) 的資料
 const fetchHistory = async () => {
   try {
     loading.value = true
     const res = await maintenanceApi.getInactiveStaff()
+    console.log('API回傳的第一筆資料:', res.data[0])
     staffList.value = res.data
   } catch {
     // 錯誤已由 http.js 攔截器處理
@@ -51,31 +126,99 @@ watch(searchText, () => {
 })
 
 // 查看詳情彈窗
+// ✅ [修改] 查看詳情彈窗 (包含時間軸顯示)
 const viewDetail = (row) => {
+  // 1. 先抓出備註原始字串
+  const noteStr = row.staffNote || ''
+
+  // 2. 利用剛剛寫的工具，解析出歷史紀錄陣列
+  const historyList = parseHistoryFromNote(noteStr)
+
+  // 3. 準備原始備註 (移除掉所有 [xxx] 標籤，只留純文字備註)
+  // replace 語法會把所有中括號標籤都洗掉
+  const originalNote = noteStr.replace(/\[.*?\]/g, '').trim() || '無其他詳細備註'
+
+  // 4. 建構時間軸的 HTML (因為 Swal 只能吃 HTML 字串)
+  let timelineHtml = ''
+
+  if (historyList.length > 0) {
+    // 如果有紀錄，開始組裝 HTML
+    timelineHtml = '<div style="text-align: left; padding: 0 10px; margin-bottom: 20px;">'
+    timelineHtml +=
+      '<p style="font-size: 13px; color: #606266; font-weight: bold; margin-bottom: 12px;"><i class="fas fa-stream mr-1"></i> 異動歷程</p>'
+    timelineHtml +=
+      '<ul style="list-style: none; padding: 0; margin: 0; border-left: 2px solid #e4e7ed; margin-left: 8px;">'
+
+    historyList.forEach((item) => {
+      timelineHtml += `
+        <li style="margin-bottom: 20px; padding-left: 24px; position: relative;">
+          <div style="position: absolute; left: -7px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid ${item.borderColor};"></div>
+          <div style="font-size: 14px; color: #303133; font-weight: 500;">
+            <span style="color: ${item.color}">${item.content}</span>
+          </div>
+        </li>
+      `
+    })
+
+    timelineHtml += '</ul></div>'
+  } else {
+    // 如果沒有紀錄
+    timelineHtml = `
+      <div style="margin-bottom: 20px; padding: 12px; background: #f4f4f5; border-radius: 8px; color: #909399; font-size: 13px; border: 1px dashed #dcdfe6; text-align: center;">
+        <i class="fas fa-info-circle mr-1"></i> 尚無異動紀錄
+      </div>
+    `
+  }
+
+  // 5. 顯示彈窗
   Swal.fire({
-    title: `<i class="fas fa-user-circle text-secondary"></i> ${row.staffName}`,
+    // 標題區：姓名 + 公司
+    title: `<div style="display:flex; flex-direction:column; align-items:center; padding-bottom: 10px; border-bottom: 1px solid #ebeef5;">
+              <span style="font-size: 1.6rem; color: #303133;">${row.staffName}</span>
+              <span style="font-size: 0.9rem; color: #909399; font-weight: normal; margin-top: 6px;">
+                <i class="fas fa-building mr-1"></i>${row.staffCompany || '無公司資訊'}
+              </span>
+            </div>`,
     html: `
-      <div style="text-align: left; padding: 10px;">
-        <div style="margin-bottom: 12px; padding: 10px; background: #f5f7fa; border-radius: 8px;">
-          <p style="margin: 4px 0;"><strong><i class="fas fa-building mr-2 text-primary"></i>公司：</strong>${row.staffCompany || '無'}</p>
-          <p style="margin: 4px 0;"><strong><i class="fas fa-phone mr-2 text-success"></i>電話：</strong>${row.staffPhone || '無'}</p>
-          <p style="margin: 4px 0;"><strong><i class="fas fa-envelope mr-2 text-warning"></i>Email：</strong>${row.staffEmail || '無'}</p>
+      <div style="text-align: left; padding: 15px 5px 0;">
+        
+        ${timelineHtml}
+
+        <div style="margin-bottom: 16px;">
+           <p style="margin: 0 0 8px 0; color: #606266; font-size: 13px; font-weight: bold;">基本資料</p>
+           <div style="padding: 12px; background: #f5f7fa; border-radius: 8px;">
+            <p style="margin: 6px 0; font-size: 14px; color: #606266;">
+              <i class="fas fa-phone mr-2 text-success" style="width:20px; text-align:center;"></i>
+              ${row.staffPhone || '未填寫'}
+            </p>
+            <p style="margin: 6px 0; font-size: 14px; color: #606266;">
+              <i class="fas fa-envelope mr-2 text-warning" style="width:20px; text-align:center;"></i>
+              ${row.staffEmail || '未填寫'}
+            </p>
+          </div>
         </div>
-        <div style="padding: 10px; background: #fef0f0; border-radius: 8px; border-left: 3px solid #f56c6c;">
-          <p style="margin: 4px 0;"><strong><i class="fas fa-sticky-note mr-2"></i>備註：</strong></p>
-          <p style="margin: 4px 0; color: #909399;">${row.staffNote || '無備註'}</p>
+
+        <div>
+          <p style="margin: 0 0 8px 0; color: #606266; font-size: 13px; font-weight: bold;">
+            <i class="fas fa-sticky-note mr-1"></i> 其他備註
+          </p>
+          <div style="padding: 12px; background: #fff; border: 1px solid #dcdfe6; border-radius: 8px; color: #606266; font-size: 14px; line-height: 1.6; white-space: pre-line;">
+            ${originalNote}
+          </div>
         </div>
+
       </div>
     `,
     confirmButtonText: '關閉',
     confirmButtonColor: '#909399',
+    width: 480, // 稍微加寬一點讓時間軸好看
     showClass: { popup: 'animate__animated animate__fadeInDown animate__faster' },
     hideClass: { popup: 'animate__animated animate__fadeOutUp animate__faster' },
-    width: 450,
   })
 }
 
 // 恢復人員功能
+// 修改 handleRestore 函式
 const handleRestore = async (row) => {
   const result = await Swal.fire({
     title: '確認恢復人員？',
@@ -91,7 +234,24 @@ const handleRestore = async (row) => {
 
   if (result.isConfirmed) {
     try {
-      await maintenanceApi.updateStaff(row.staffId, { ...row, isActive: true })
+      // --- 修正開始：清洗備註 ---
+      let cleanNote = row.staffNote || ''
+      // 1. 移除 [停用原因：...] (使用正則表達式 global 替換)
+      cleanNote = cleanNote.replace(/\[停用原因：.*?\]/g, '')
+
+      // 2. 移除 [停用日期：...] (使用正則表達式 global 替換)
+      cleanNote = cleanNote.replace(/\[停用日期：.*?\]/g, '')
+
+      // 3. 移除多餘空白行與前後空白
+      cleanNote = cleanNote.trim()
+
+      // 傳送清洗過的備註 (cleanNote) 回後端
+      await maintenanceApi.updateStaff(row.staffId, {
+        ...row,
+        isActive: true,
+        staffNote: cleanNote,
+      })
+
       await Swal.fire({
         icon: 'success',
         title: '恢復成功！',
@@ -228,7 +388,7 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column prop="staffCompany" label="公司" width="160" sortable>
+                <el-table-column prop="staffCompany" label="公司" min-width="160" sortable>
                   <template #default="{ row }">
                     <span v-if="row.staffCompany">
                       <i class="fas fa-building mr-1 text-primary"></i>
@@ -238,7 +398,7 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column prop="staffPhone" label="電話" width="150">
+                <el-table-column prop="staffPhone" label="電話" min-width="150">
                   <template #default="{ row }">
                     <span v-if="row.staffPhone">
                       <i class="fas fa-phone mr-1 text-success"></i>
@@ -248,15 +408,28 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column prop="staffEmail" label="Email" min-width="200">
+                <el-table-column
+                  prop="staffEmail"
+                  label="Email"
+                  min-width="200"
+                  show-overflow-tooltip
+                >
                   <template #default="{ row }">
-                    <el-tooltip v-if="row.staffEmail" :content="row.staffEmail" placement="top">
-                      <span class="email-cell">
-                        <i class="fas fa-envelope mr-1 text-warning"></i>
-                        {{ row.staffEmail }}
+                    <span class="email-cell">
+                      <i class="fas fa-envelope mr-1 text-warning"></i>
+                      {{ row.staffEmail }}
+                    </span>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="停用日期" width="120" sortable prop="updatedAt">
+                  <template #default="{ row }">
+                    <div style="display: flex; flex-direction: column; align-items: flex-start">
+                      <span style="font-size: 13px; color: #606266">
+                        <i class="far fa-calendar-alt mr-1 text-muted"></i>
+                        {{ extractDateFromNote(row.staffNote) }}
                       </span>
-                    </el-tooltip>
-                    <span v-else class="text-muted">-</span>
+                    </div>
                   </template>
                 </el-table-column>
 
@@ -513,8 +686,9 @@ onMounted(() => {
 }
 
 .email-cell {
-  display: inline-block;
-  max-width: 180px;
+  display: flex;
+  align-items: center;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

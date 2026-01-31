@@ -35,11 +35,27 @@ public class SecurityConfig {
         @Bean
         public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
                 http
-                                // 1. CSRF 排除名單 (放行所有 API，避免組員 POST 被擋)
+                                /**
+                                 * - 綠界回呼 /api/payment/** 多為外部 POST，若不排除常見 403
+                                 * - /login/member：註解說是解 403 的關鍵，保留
+                                 * - /api/auth/**：前端跨域呼叫常見，保留
+                                 */
                                 .csrf(csrf -> csrf.ignoringRequestMatchers(
-                                                "/api/**",
-                                                "/login/**",
-                                                "/oauth2/**"))
+                                                /*
+                                                 * (翌帆)這邊我要說明一下 原本寫法是這樣
+                                                 * "/api/payment/**", // 綠界回呼的 POST 請求
+                                                 * "/login/member", // 放行前端登入請求
+                                                 * "/api/auth/**" // 放行所有認證相關請求
+                                                 * 但是會發生其他功能模組的 POST 請求也被擋下來的問題，還有後台管理員登入無法進入的問題。
+                                                 * 所以我先改成放行所有後端 API 的請求，跟管理員登入請求，未來再視情況調整。
+                                                 */
+                                                "/api/**", // 放行所有後端 API (工單、金流、座位、分析...)
+                                                "/rec-rent/**", // 解決前端歸還座位時，PUT請求被CSRF阻擋的問題
+                                                "/login/**", // 放行所有登入請求
+                                                "/oauth2/**", // 放行 OAuth2 相關 (通常不需要，但加著保險)
+                                                "/spot/**",
+                                                "/seats/**",
+                                                "/admins/**"))
 
                                 // 2. 載入自定義的 CORS 設定
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -54,7 +70,14 @@ public class SecurityConfig {
                                                                 "/images/**")
                                                 .permitAll()
                                                 .requestMatchers(
-                                                                "/api/**", "/login/**", "/oauth2/**", "/api/auth/**")
+                                                                "/api/**", // 其實下方API前綴都已經被包含了，只是寫了也不影響就不特別刪除。
+                                                                "/login/**",
+                                                                "/oauth2/**",
+                                                                "/api/auth/**",
+                                                                "/api/analyze/**",
+                                                                "/api/forgot-password/**",
+                                                                "/api/admin/forgot-password/**",
+                                                                "/api/payment/**")
                                                 .permitAll()
                                                 .anyRequest().permitAll() // 開發期間放行所有請求
                                 )
@@ -107,7 +130,8 @@ public class SecurityConfig {
                                 "https://*.ngrok-free.dev",
                                 "https://*.trycloudflare.com",
                                 "https://*.loca.lt"));
-                frontendConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                // 加入 PATCH 方法，支援 /toggle 狀態切換 API(翌帆工單系統有用到)
+                frontendConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                 frontendConfig.setAllowedHeaders(Arrays.asList("*"));
                 frontendConfig.setAllowCredentials(true);
 

@@ -45,6 +45,11 @@ public class LoginMemberController {
                     .body("帳號或密碼錯誤");
         }
 
+        // 帳號停權
+        if (member.getMemStatus() == 0) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("您的會員帳號已停權，請聯絡客服人員");
+        }
+
         // =========================修正登不進去的問題=========================
         // 我們先加上 .trim() 來去除前後空白字元，造成燈不進去的問題
         if (!password.trim().equals(member.getMemPassword().trim())) {

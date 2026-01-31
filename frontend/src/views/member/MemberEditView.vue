@@ -1,59 +1,122 @@
 <script setup>
-/**
- * MemberEditView.vue：編輯會員
- */
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
-import Swal from 'sweetalert2' // ✅ 加這行，才會有 SweetAlert
+import Swal from 'sweetalert2'
 
 const router = useRouter()
 const route = useRoute()
 
-const member = ref(null)
+// 修改這裡：給予初始結構，確保 v-model 一開始就能找到對象，回填會更順
+const member = ref({
+  memId: '',
+  memUsername: '',
+  memName: '',
+  memEmail: '',
+  memPhone: '',
+  memPoints: 0,
+  memInvoice: ''
+})
 const newPassword = ref('')
 const errorMsg = ref('')
 const isSubmitting = ref(false)
+const isLoading = ref(true) // 增加一個讀取狀態
 
 const fetchMember = async () => {
   const id = route.params.id
-  errorMsg.value = ''
-
+  isLoading.value = true
   try {
-    // ✅ 已是 /api/members/find（保留你的寫法）
     const res = await axios.get(`http://localhost:8080/api/members/find`, {
       params: { memId: id },
     })
-    member.value = res.data
+    
+    // 檢查點：如果後端回傳的 key 不是 memEmail 而是 email，這裡要做轉換
+    const data = res.data
+    member.value = {
+      ...data,
+      // 萬一後端給的是 email，自動轉給 memEmail 確保帶入
+      memEmail: data.memEmail || data.email || '', 
+      memPhone: data.memPhone || data.phone || ''
+    }
   } catch (err) {
-    const msg =
-      err?.response?.data?.message ||
-      (err?.response?.status === 404 ? '找不到該會員資料' : null) ||
-      (err?.message ? `載入失敗：${err.message}` : null) ||
-      '載入會員資料失敗'
-
-    errorMsg.value = msg
-
-    await Swal.fire({
-      icon: 'error',
-      title: '載入失敗',
-      text: msg,
-      confirmButtonText: '確定',
-      confirmButtonColor: '#f56c6c',
-    })
+    errorMsg.value = '載入會員資料失敗'
+    Swal.fire({ icon: 'error', title: '載入失敗', text: errorMsg.value })
+  } finally {
+    isLoading.value = false
   }
+}
+
+const validateEditForm = () => {
+  const m = member.value
+  // 1. 必填檢查
+  if (!m.memUsername || !m.memName || !m.memEmail || !m.memPhone) {
+    return '基本資料欄位皆為必填'
+  }
+
+  // 2. 密碼驗證 (有填才查)
+  if (newPassword.value) {
+    const pwdRegex = /^(?=.*[a-zA-Z]).{6,}$/
+    if (!pwdRegex.test(newPassword.value)) {
+      return '新密碼需至少 6 個字元，並包含至少一個英文字母'
+    }
+  }
+
+  // 3. 手機驗證
+  const phoneRegex = /^09\d{8}$/
+  if (!phoneRegex.test(m.memPhone)) {
+    return '手機格式錯誤，請輸入 09 開頭的 10 位數字'
+  }
+
+  // 4. 信箱驗證
+  const emailRegex = /^[^\s@]+@[^\s@]+\.com$/
+  if (!emailRegex.test(m.memEmail)) {
+    return '信箱格式錯誤，必須包含 @ 且結尾為 .com'
+  }
+
+  // 5. 發票載具驗證：/ 開頭 + 7 碼大寫英文或數字 (共 8 碼)
+  if (m.memInvoice) {
+    const invoiceRegex = /^\/[A-Z0-9]{7}$/
+    if (!invoiceRegex.test(m.memInvoice)) {
+      return '載具格式錯誤！請輸入 / 開頭加上 7 碼大寫英數組合'
+    }
+  }
+
+  return null
 }
 
 const submitEdit = async () => {
   if (!member.value) return
 
+  // 先進行格式校驗
+  const error = validateEditForm()
+  if (error) {
+    await Swal.fire({
+      icon: 'warning',
+      title: '格式錯誤',
+      text: error,
+      confirmButtonColor: '#e6a23c',
+    })
+    return
+  }
+
+  // --- 新增：二次確認視窗 ---
+  const confirmResult = await Swal.fire({
+    title: '確定要修改嗎？',
+    text: "修改後的資料將會立即生效！",
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#409eff',
+    cancelButtonColor: '#909399',
+    confirmButtonText: '修改',
+    cancelButtonText: '取消'
+  })
+
+  if (!confirmResult.isConfirmed) return // 使用者按取消就停止
+
   errorMsg.value = ''
   isSubmitting.value = true
 
   try {
-    // ⚠️ 你現在寫 memPassword: newPassword.value || ''
-    // 這會「把密碼清空」的風險很高（後端若照單全收）
-    // ✅ 正確做法：只有使用者有輸入新密碼才帶 memPassword
     const payload = {
       ...member.value,
       ...(newPassword.value ? { memPassword: newPassword.value } : {}),
@@ -65,31 +128,17 @@ const submitEdit = async () => {
       icon: 'success',
       title: '修改成功',
       text: '會員資料已更新',
-      confirmButtonText: '確定',
-      confirmButtonColor: '#409eff',
+      timer: 1500,
+      showConfirmButton: false
     })
 
     router.push('/admin/members')
   } catch (err) {
-    const status = err?.response?.status
-    const backendMsg = err?.response?.data?.message
-
-    const msg =
-      backendMsg ||
-      (status === 409 ? '帳號或信箱已存在，請更換後再試' : null) ||
-      (status === 400 ? '資料格式不正確，請檢查欄位' : null) ||
-      (status === 404 ? '找不到會員或更新目標不存在' : null) ||
-      (status === 500 ? '後端發生錯誤，請查看後端 log' : null) ||
-      (err?.message ? `修改失敗：${err.message}` : null) ||
-      '修改失敗'
-
-    errorMsg.value = msg
-
+    const msg = err?.response?.data?.message || '修改失敗'
     await Swal.fire({
       icon: 'error',
       title: '修改失敗',
       text: msg,
-      confirmButtonText: '確定',
       confirmButtonColor: '#f56c6c',
     })
   } finally {
@@ -97,52 +146,51 @@ const submitEdit = async () => {
   }
 }
 
-const goBack = () => {
-  router.push('/admin/members')
-}
+const goBack = () => router.push('/admin/members')
 
-onMounted(() => {
-  fetchMember()
-})
+onMounted(fetchMember)
 </script>
 
 <template>
   <div class="container">
     <h2>修改會員資料</h2>
-    <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
-    <div v-if="!member">資料載入中...</div>
+    <div v-if="isLoading" class="loading">資料載入中...</div>
+    
     <form v-else @submit.prevent="submitEdit">
       <input type="hidden" v-model="member.memId" />
+      
       <label>帳號</label>
-      <input type="text" v-model="member.memUsername" required />
-      <label>密碼</label>
+      <input type="text" v-model="member.memUsername" />
+      
+      <label>新密碼</label>
       <input type="password" v-model="newPassword" placeholder="不修改請留空" />
+      
       <label>姓名</label>
-      <input type="text" v-model="member.memName" required />
+      <input type="text" v-model="member.memName" />
+      
       <label>信箱</label>
-      <input type="text" v-model="member.memEmail" required />
+      <input type="text" v-model="member.memEmail" />
+      
       <label>電話</label>
-      <input type="text" v-model="member.memPhone" required />
-      <label>狀態 (1正常 / 0停權)</label>
-      <input type="number" v-model="member.memStatus" />
-      <label>總積分</label>
+      <input type="text" v-model="member.memPhone" maxlength="10" />
+
+      <label>點數</label>
       <input type="number" v-model="member.memPoints" />
-      <label>違規次數</label>
-      <input type="number" v-model="member.memViolation" />
-      <label>會員等級</label>
-      <input type="number" v-model="member.memLevel" />
+      
       <label>發票載具</label>
       <input type="text" v-model="member.memInvoice" placeholder="未提供" />
+      
       <button type="submit" class="primary-btn" :disabled="isSubmitting">
         {{ isSubmitting ? '修改中...' : '確認修改' }}
       </button>
+      
       <a class="back-link" @click.prevent="goBack">回會員列表</a>
     </form>
   </div>
 </template>
 
 <style scoped>
-/* ========== 主容器：Glassmorphism 風格 ========== */
+/* 樣式維持原有的 Glassmorphism 風格，增加 hover 效果 */
 .container {
   width: 420px;
   margin: 30px auto;
@@ -155,7 +203,6 @@ onMounted(() => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-/* ========== 標題 ========== */
 h2 {
   text-align: center;
   margin-bottom: 24px;
@@ -178,7 +225,6 @@ h2::after {
   border-radius: 2px;
 }
 
-/* ========== 表單元素 ========== */
 label {
   font-weight: 600;
   margin-top: 12px;
@@ -197,9 +243,7 @@ input {
   border-radius: 10px;
   font-size: 14px;
   background: #f8fafc;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 input:focus {
@@ -209,11 +253,6 @@ input:focus {
   background: #ffffff;
 }
 
-input::placeholder {
-  color: #94a3b8;
-}
-
-/* ========== 錯誤訊息 ========== */
 .error {
   color: #dc2626;
   text-align: center;
@@ -224,7 +263,12 @@ input::placeholder {
   font-weight: 500;
 }
 
-/* ========== 主要按鈕 ========== */
+.loading {
+  text-align: center;
+  color: #64748b;
+  padding: 20px;
+}
+
 .primary-btn {
   width: 100%;
   padding: 12px;
@@ -236,21 +280,20 @@ input::placeholder {
   font-weight: 600;
   cursor: pointer;
   margin-top: 16px;
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.15s ease;
+  transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-.primary-btn:hover {
+.primary-btn:hover:not(:disabled) {
   box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
 }
 
-.primary-btn:active {
-  transform: translateY(1px);
+.primary-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
-/* ========== 返回連結 ========== */
 .back-link {
   display: block;
   margin-top: 20px;

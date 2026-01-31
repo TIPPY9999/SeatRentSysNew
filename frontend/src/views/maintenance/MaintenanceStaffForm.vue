@@ -98,6 +98,19 @@ const submitForm = async () => {
   })
 }
 
+//一鍵帶入(Demo用)
+const handleDemoFill = () => {
+  form.staffName = '江小魚'
+  form.staffCompany = '小魚科技股份有限公司'
+  form.staffPhone = '0988-123-456'
+  form.staffEmail = 'swagsnail860701@gmail.com'
+  form.staffNote = '資深維護工程師，負責北區機台維修，週一至週五 09:00~18:00 可聯繫。'
+  form.isActive = true
+
+  // 提示一下使用者
+  ElMessage.success('已帶入測試資料！')
+}
+
 const handleCancel = async () => {
   // 如果有填寫內容，離開前確認
   if (form.staffName || form.staffCompany || form.staffPhone) {
@@ -153,6 +166,7 @@ const handleCancel = async () => {
                     新增模式
                   </el-tag>
                 </div>
+
                 <el-button class="cancel-btn" text type="info" @click="handleCancel">
                   <i class="fas fa-times mr-1"></i> 取消
                 </el-button>
@@ -290,19 +304,44 @@ const handleCancel = async () => {
               </el-divider>
 
               <el-form-item class="form-actions">
-                <el-button
-                  type="primary"
-                  @click="submitForm"
-                  :loading="submitting"
-                  size="large"
-                  class="submit-btn"
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    width: 100%;
+                    align-items: center;
+                  "
                 >
-                  <i class="fas fa-save mr-2" v-if="!submitting"></i>
-                  <span>{{ submitting ? '處理中...' : isEdit ? '更新資料' : '確認新增' }}</span>
-                </el-button>
-                <el-button @click="handleCancel" size="large" class="back-btn">
-                  <i class="fas fa-arrow-left mr-2"></i> 返回列表
-                </el-button>
+                  <div class="left-actions">
+                    <el-button
+                      type="primary"
+                      @click="submitForm"
+                      :loading="submitting"
+                      size="large"
+                      class="submit-btn"
+                    >
+                      <i class="fas fa-save mr-2" v-if="!submitting"></i>
+                      <span>{{ submitting ? '處理中...' : isEdit ? '更新資料' : '確認新增' }}</span>
+                    </el-button>
+
+                    <el-button @click="handleCancel" size="large" class="back-btn ml-3">
+                      <i class="fas fa-arrow-left mr-2"></i> 返回列表
+                    </el-button>
+                  </div>
+
+                  <div class="right-actions">
+                    <el-button
+                      type="warning"
+                      link
+                      @click="handleDemoFill"
+                      style="opacity: 0.6; transition: opacity 0.3s"
+                      onmouseover="this.style.opacity=1"
+                      onmouseout="this.style.opacity=0.6"
+                    >
+                      <i class="fas fa-magic mr-1"></i> 一鍵帶入
+                    </el-button>
+                  </div>
+                </div>
               </el-form-item>
             </el-form>
           </el-card>

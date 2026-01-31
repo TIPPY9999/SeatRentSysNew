@@ -34,15 +34,116 @@ const staffOptions = ref([])
 const spotOptions = ref([])
 const seatOptions = ref([]) // 新增：椅子選項
 
+const STAFF_UI_STATUS = Object.freeze({
+  IDLE: 'IDLE',
+  ASSIGNED: 'ASSIGNED',
+  MAINTENANCE: 'MAINTENANCE',
+  MAINTAINING: 'MAINTAINING',
+})
+
+const staffUiStatusMap = ref({}) // { [staffId]: STAFF_UI_STATUS.* }
+
+const getStaffUiTag = (staff) => {
+  const st = staffUiStatusMap.value?.[staff.staffId] || STAFF_UI_STATUS.IDLE
+  if (st === STAFF_UI_STATUS.MAINTAINING) return { type: 'danger', text: '保養中' }
+  if (st === STAFF_UI_STATUS.MAINTENANCE) return { type: 'warning', text: '維修中' }
+  if (st === STAFF_UI_STATUS.ASSIGNED) return { type: 'primary', text: '已指派' }
+  return { type: 'success', text: '空閒中' }
+}
+
+// 取得進行中工單：優先用 active 端點；若只有 all，就前端過濾
+const fetchActiveTicketsForStaffStatus = async () => {
+  const tryCalls = [
+    () => maintenanceApi.getActiveTickets?.(),
+    () => maintenanceApi.getTicketsActive?.(),
+    () => maintenanceApi.getAllTickets?.(),
+    () => maintenanceApi.getTicketsAll?.(),
+  ]
+
+  for (const call of tryCalls) {
+    try {
+      const res = await call()
+      if (Array.isArray(res?.data)) return res.data
+    } catch (e) {
+      // ignore
+    }
+  }
+  return []
+}
+
+const refreshStaffStatusTags = async () => {
+  if (!Array.isArray(staffOptions.value) || staffOptions.value.length === 0) return
+
+  const tickets = await fetchActiveTicketsForStaffStatus()
+
+  // 只看會影響人員狀態的「進行中」狀態
+  const active = (tickets || []).filter((t) => {
+    const s = String(t?.issueStatus || '')
+      .trim()
+      .toUpperCase()
+    return s === 'ASSIGNED' || s === 'UNDER_MAINTENANCE'
+  })
+
+  // 優先級：保養中 > 維修中 > 已指派 > 空閒中
+  const map = {}
+  const priority = {
+    [STAFF_UI_STATUS.IDLE]: 0,
+    [STAFF_UI_STATUS.ASSIGNED]: 1,
+    [STAFF_UI_STATUS.MAINTENANCE]: 2,
+    [STAFF_UI_STATUS.MAINTAINING]: 3,
+  }
+  const setIfHigher = (staffId, next) => {
+    if (!staffId) return
+    const cur = map[staffId] || STAFF_UI_STATUS.IDLE
+    if (priority[next] > priority[cur]) map[staffId] = next
+  }
+
+  // default：啟用人員先當空閒
+  for (const s of staffOptions.value) {
+    if (s?.staffId != null && s.isActive === true) map[s.staffId] = STAFF_UI_STATUS.IDLE
+  }
+
+  for (const t of active) {
+    const staffId = t.assignedStaffId
+    if (!staffId) continue
+
+    const issueStatus = String(t.issueStatus || '')
+      .trim()
+      .toUpperCase()
+    const issueType = String(t.issueType || '').trim()
+
+    if (issueType === '保養') {
+      // 保養中：只要是保養工單且已指派/進行中
+      setIfHigher(staffId, STAFF_UI_STATUS.MAINTAINING)
+    } else if (issueStatus === 'UNDER_MAINTENANCE') {
+      setIfHigher(staffId, STAFF_UI_STATUS.MAINTENANCE)
+    } else if (issueStatus === 'ASSIGNED') {
+      setIfHigher(staffId, STAFF_UI_STATUS.ASSIGNED)
+    }
+  }
+
+  staffUiStatusMap.value = map
+}
+// ========= [新增結束] =========
+
 // ★ Bug3 修復：記錄編輯時原始的 assignedStaffId，用於判斷是否有變更
 const originalAssignedStaffId = ref(null)
 
 // ★ Bug3 修復：定義可編輯的狀態
 const EDITABLE_STATUSES = ['REPORTED', 'ASSIGNED']
 
-// 使用共用 composable 的問題類型配置
+// 原來定義的 issueTypeOptions
+// const { issueTypeOptions: sharedIssueTypes } = useTicketConfig()
+// const issueTypeOptions = sharedIssueTypes
+
+//修改：使用 computed 過濾掉 "保養"
 const { issueTypeOptions: sharedIssueTypes } = useTicketConfig()
-const issueTypeOptions = sharedIssueTypes
+
+const issueTypeOptions = computed(() => {
+  // 假設 sharedIssueTypes 是一個 Ref 陣列
+  // 過濾條件：value 不等於 '保養' (或是看您的 config 裡是用 key 還是 value，通常是 value)
+  return (sharedIssueTypes.value || sharedIssueTypes).filter((t) => t.value !== '保養')
+})
 
 // 優先級配置（擴展版，含描述）
 const priorityConfig = {
@@ -136,11 +237,14 @@ onMounted(async () => {
 
       spotOptions.value = Array.isArray(spotRes.data) ? spotRes.data : []
       staffOptions.value = staffRes.data || []
+      await refreshStaffStatusTags()
       seatOptions.value = seatRes.data || []
 
       // ★ 如果原始人員已停用，要保留並顯示為 disabled
       if (ticketData.assignedStaffId) {
-        const assignedStaff = staffOptions.value.find(s => s.staffId === ticketData.assignedStaffId)
+        const assignedStaff = staffOptions.value.find(
+          (s) => s.staffId === ticketData.assignedStaffId,
+        )
         if (assignedStaff && !assignedStaff.isActive) {
           assignedStaff.staffName = assignedStaff.staffName + ' (已停用)'
           assignedStaff.disabled = true
@@ -166,6 +270,7 @@ onMounted(async () => {
 
       spotOptions.value = Array.isArray(spotRes.data) ? spotRes.data : []
       staffOptions.value = staffRes.data || []
+      await refreshStaffStatusTags()
       seatOptions.value = seatRes.data || []
 
       if (spotOptions.value.length > 0) form.spotId = spotOptions.value[0].spotId
@@ -242,9 +347,9 @@ const submit = async () => {
           issueType: form.issueType,
           issueDesc: form.issueDesc,
           issuePriority: form.issuePriority,
-          assignedStaffId: form.assignedStaffId
+          assignedStaffId: form.assignedStaffId,
         }
-        
+
         // 根據維修類型清除不需要的欄位
         if (targetType.value === 'spot') {
           submitData.seatsId = null
@@ -289,6 +394,56 @@ const submit = async () => {
         submitting.value = false
       }
     }
+  })
+}
+
+// ✅ DEMO 專用：一鍵帶入故障工單
+const handleDemoFill = () => {
+  // 1. 設定為機台模式
+  targetType.value = 'spot'
+
+  // 2. 2. 自動選取第一個 "營運中" 的機台 (修正邏輯：跳過維修中機台)
+  if (spotOptions.value && spotOptions.value.length > 0) {
+    // 取得第一個營運中機台
+    const availableSpot = spotOptions.value.find((s) => s.spotStatus === '營運中')
+
+    // 如果找到，帶入；否則顯示提示
+    if (availableSpot) {
+      form.spotId = availableSpot.spotId
+    } else {
+      // 如果全部都在維修中，顯示提示
+      Swal.fire({
+        icon: 'warning',
+        title: '無可選擇的機台',
+        text: '目前所有機台皆在維修中',
+        toast: true,
+        position: 'top-end',
+        timer: 900,
+      })
+      return // 終止
+    }
+  }
+
+  // 3. 填寫故障情境
+  form.issueType = '機台故障異常' // 確保這個文字跟按鈕上的 value 一樣
+  form.issueDesc = '機台運作時發出異音，且螢幕畫面閃爍，目前已先暫停使用，請盡快派人員來做檢查。'
+  form.issuePriority = 'HIGH' // 設定為高優先
+
+  // 4. (選填) 指派給第一個啟用的人員
+  const activeStaff = staffOptions.value.find((s) => s.isActive)
+  if (activeStaff) {
+    form.assignedStaffId = activeStaff.staffId
+  }
+
+  // 5. 提示
+  Swal.fire({
+    icon: 'success',
+    title: '新增資料成功',
+    text: '資料已帶入',
+    timer: 1500,
+    showConfirmButton: false,
+    toast: true,
+    position: 'top-end',
   })
 }
 
@@ -438,23 +593,34 @@ const handleCancel = async () => {
                   filterable
                   :disabled="isEdit"
                   size="large"
+                  popper-class="mt-spot-select-popper"
                 >
                   <template #prefix>
                     <i class="fas fa-search"></i>
                   </template>
+
                   <el-option
-                    v-for="s in spotOptions"
-                    :key="s.spotId"
-                    :label="`${s.spotCode || s.spotId} - ${s.spotName} (${s.spotStatus})`"
-                    :value="s.spotId"
-                    :disabled="s.spotStatus !== '營運中'"
+                    v-for="spot in spotOptions"
+                    :key="spot.spotId"
+                    :label="`${spot.spotCode || spot.spotId} - ${spot.spotName} (${spot.spotStatus || '未知'})`"
+                    :value="spot.spotId"
+                    :disabled="spot.spotStatus && spot.spotStatus !== '營運中'"
+                    style="height: auto; padding: 2px 8px"
                   >
-                    <div class="spot-option">
-                      <span class="spot-code">{{ s.spotCode || s.spotId }}</span>
-                      <span class="spot-name">{{ s.spotName }}</span>
-                      <span class="spot-status" :style="{ color: s.spotStatus === '營運中' ? '#67c23a' : '#909399' }">
-                        ({{ s.spotStatus }})
-                      </span>
+                    <div class="spot-option" style="padding: 2px 0">
+                      <span class="spot-code">{{ spot.spotCode || spot.spotId }}</span>
+                      <span class="spot-name">{{ spot.spotName }}</span>
+
+                      <el-tag
+                        :type="
+                          !spot.spotStatus || spot.spotStatus === '營運中' ? 'success' : 'danger'
+                        "
+                        size="small"
+                        effect="plain"
+                        style="margin-left: 8px"
+                      >
+                        {{ spot.spotStatus || '未知' }}
+                      </el-tag>
                     </div>
                   </el-option>
                 </el-select>
@@ -598,6 +764,7 @@ const handleCancel = async () => {
                   </span>
                 </template>
                 <el-select
+                  popper-class="mt-staff-select-popper"
                   v-model="form.assignedStaffId"
                   placeholder="暫不指派，稍後可編輯"
                   class="w-100"
@@ -607,20 +774,53 @@ const handleCancel = async () => {
                 >
                   <!-- ★ 問題2修復：過濾只顯示啟用人員，或當前工單已指派的人員（即使已停用） -->
                   <el-option
-                    v-for="s in staffOptions.filter(staff => staff.isActive === true || staff.staffId === originalAssignedStaffId)"
+                    v-for="s in staffOptions.filter(
+                      (staff) =>
+                        staff.isActive === true || staff.staffId === originalAssignedStaffId,
+                    )"
                     :key="s.staffId"
                     :label="`${s.staffName}${s.isActive === false ? ' (已停用)' : ''} (${s.staffCompany || '外部'})`"
                     :value="s.staffId"
                     :disabled="s.isActive === false && s.staffId !== form.assignedStaffId"
                   >
+                    <!-- ✅【修正#3】改成左右兩欄：左邊姓名公司、右邊顯示狀態 -->
                     <div class="staff-option">
-                      <div class="staff-avatar" :style="{ opacity: s.isActive === false ? 0.5 : 1 }">{{ s.staffName?.charAt(0) }}</div>
-                      <div class="staff-info">
-                        <span class="staff-name" :style="{ color: s.isActive === false ? '#909399' : '' }">
-                          {{ s.staffName }}
-                          <el-tag v-if="s.isActive === false" type="info" size="small" style="margin-left: 4px;">已停用</el-tag>
-                        </span>
-                        <span class="staff-company">{{ s.staffCompany || '外部人員' }}</span>
+                      <div class="staff-left">
+                        <div
+                          class="staff-avatar"
+                          :style="{ opacity: s.isActive === false ? 0.5 : 1 }"
+                        >
+                          {{ s.staffName?.charAt(0) }}
+                        </div>
+
+                        <div class="staff-info">
+                          <span
+                            class="staff-name"
+                            :style="{ color: s.isActive === false ? '#909399' : '' }"
+                          >
+                            {{ s.staffName }}
+                            <el-tag
+                              v-if="s.isActive === false"
+                              type="info"
+                              size="small"
+                              class="ml-1"
+                              >已停用</el-tag
+                            >
+                          </span>
+                          <span class="staff-company">{{ s.staffCompany || '外部人員' }}</span>
+                        </div>
+                      </div>
+
+                      <!-- 【修正#3】顯示：已指派 / 維修中 / 保養中 / 空閒中 -->
+                      <div class="staff-right">
+                        <el-tag
+                          :type="getStaffUiTag(s).type"
+                          size="small"
+                          effect="plain"
+                          :disable-transitions="true"
+                        >
+                          {{ getStaffUiTag(s).text }}
+                        </el-tag>
                       </div>
                     </div>
                   </el-option>
@@ -634,19 +834,44 @@ const handleCancel = async () => {
 
               <!-- 按鈕區 -->
               <el-form-item class="form-actions">
-                <el-button
-                  type="primary"
-                  @click="submit"
-                  :loading="submitting"
-                  size="large"
-                  class="submit-btn"
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    width: 100%;
+                    align-items: center;
+                  "
                 >
-                  <i class="fas fa-paper-plane mr-2" v-if="!submitting"></i>
-                  <span>{{ submitting ? '處理中...' : isEdit ? '更新工單' : '建立工單' }}</span>
-                </el-button>
-                <el-button @click="handleCancel" size="large" class="back-btn">
-                  <i class="fas fa-arrow-left mr-2"></i> 返回列表
-                </el-button>
+                  <div class="left-buttons">
+                    <el-button
+                      type="primary"
+                      @click="submit"
+                      :loading="submitting"
+                      size="large"
+                      class="submit-btn"
+                    >
+                      <i class="fas fa-paper-plane mr-2" v-if="!submitting"></i>
+                      <span>{{ submitting ? '處理中...' : isEdit ? '更新工單' : '建立工單' }}</span>
+                    </el-button>
+
+                    <el-button @click="handleCancel" size="large" class="back-btn ml-3">
+                      <i class="fas fa-arrow-left mr-2"></i> 返回列表
+                    </el-button>
+                  </div>
+
+                  <div class="right-buttons">
+                    <el-button
+                      type="warning"
+                      link
+                      @click="handleDemoFill"
+                      style="opacity: 0.5; font-weight: normal"
+                      onmouseover="this.style.opacity=1"
+                      onmouseout="this.style.opacity=0.5"
+                    >
+                      <i class="fas fa-magic mr-1"></i> 一鍵帶入
+                    </el-button>
+                  </div>
+                </div>
               </el-form-item>
             </el-form>
           </el-card>
@@ -1043,16 +1268,29 @@ const handleCancel = async () => {
 }
 
 /* 維修員選項 */
+/* 維修員選項：左右佈局 + 足夠高度，避免公司文字被蓋 */
 .staff-option {
   display: flex;
   align-items: center;
+  justify-content: space-between; /* 右側留給狀態 tag */
   gap: 12px;
-  padding: 4px 0;
+  padding: 8px 6px;
+  height: auto !important;
+  line-height: 1.4;
+}
+
+/* 左側群組（頭像 + 文字） */
+.staff-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0; /* ✅ 允許文字省略 */
+  flex: 1;
 }
 
 .staff-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, #67c23a 0%, #95d475 100%);
   border-radius: 8px;
   display: flex;
@@ -1062,21 +1300,41 @@ const handleCancel = async () => {
   font-weight: 600;
   font-size: 14px;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(103, 194, 58, 0.2);
 }
 
 .staff-info {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  min-width: 0; /*  允許省略 */
+  overflow: hidden;
 }
 
 .staff-name {
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 14px;
   color: #303133;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .staff-company {
   font-size: 12px;
   color: #909399;
+  line-height: 1.2;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 右側狀態 tag */
+.staff-right {
+  flex-shrink: 0;
+  margin-left: 10px;
 }
 
 /* 按鈕區 */
@@ -1166,5 +1424,21 @@ const handleCancel = async () => {
 
 .custom-textarea :deep(.el-textarea__inner) {
   border-radius: 10px;
+}
+
+/* 【修正#2】機台選單：縮小上下 padding，讓間隔不要太大 */
+:deep(.mt-spot-select-popper .el-select-dropdown__item) {
+  height: auto !important;
+  line-height: 1.2 !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+/* 【修正#3】維修員選單：保留較舒適的高度，避免兩行文字被蓋到 */
+:deep(.mt-staff-select-popper .el-select-dropdown__item) {
+  height: auto !important;
+  line-height: 1.4 !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
 }
 </style>

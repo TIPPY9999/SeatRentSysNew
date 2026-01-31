@@ -30,12 +30,27 @@ public class Admin {
     @Column(name = "admRole", nullable = false)
     private Integer admRole;
 
-    @Column(name = "createdAt", insertable = false, updatable = false)
+    @Column(name = "createdAt")
     private LocalDateTime createdAt;
 
-    @Column(name = "updatedAt", insertable = false, updatable = false)
+    @Column(name = "updatedAt")
     private LocalDateTime updatedAt;
+
+    // 在類別裡面補上這兩個自動設定，這樣你新增、修改就都不用手動 set 時間了
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 
     @Column(name = "admStatus")
     private Integer admStatus = 1;
+
+    @Column(name = "adminImage")
+    private String adminImage;
 }

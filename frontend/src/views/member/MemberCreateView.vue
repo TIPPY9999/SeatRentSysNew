@@ -1,6 +1,6 @@
 <script setup>
 /**
- * MemberCreateView.vue：新增會員
+ * MemberCreateView.vue：新增會員（含格式驗證）
  */
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
@@ -23,11 +23,51 @@ const member = reactive({
 const errorMsg = ref('')
 const successMsg = ref('')
 
+// --- 格式驗證邏輯 ---
+const validateForm = () => {
+  // 1. 必填檢查 (除了發票載具)
+  if (!member.memUsername || !member.memPassword || !member.memName || !member.memEmail || !member.memPhone) {
+    return '除了發票載具，其餘欄位皆為必填'
+  }
+
+  // 2. 密碼驗證：至少 6 個字且包含至少一個英文
+  // 正則表達式：(?=.*[a-zA-Z]) 表示至少一個英文，.{6,} 表示至少六位
+  const pwdRegex = /^(?=.*[a-zA-Z]).{6,}$/
+  if (!pwdRegex.test(member.memPassword)) {
+    return '密碼需至少 6 個字元，並包含至少一個英文字母'
+  }
+
+  // 3. 手機驗證：09 開頭且共 10 位數字
+  const phoneRegex = /^09\d{8}$/
+  if (!phoneRegex.test(member.memPhone)) {
+    return '手機格式錯誤，請輸入 09 開頭的 10 位數字'
+  }
+
+  // 4. 信箱驗證：...@....com
+  // 嚴格檢查結尾必須是 .com
+  const emailRegex = /^[^\s@]+@[^\s@]+\.com$/
+  if (!emailRegex.test(member.memEmail)) {
+    return '信箱格式錯誤，必須包含 @ 且結尾為 .com'
+  }
+
+  return null // 代表驗證通過
+}
+
 const submitCreate = async () => {
+  // 執行驗證
+  const error = validateForm()
+  if (error) {
+    await Swal.fire({
+      icon: 'warning',
+      title: '格式錯誤',
+      text: error,
+      confirmButtonColor: '#e6a23c',
+    })
+    return // 攔截，不執行 API
+  }
+
   try {
-    //  endpoint 統一 /api/members
     const res = await axios.post('http://localhost:8080/api/members', {
-      //  正確展開 member
       ...member,
       memStatus: 1,
       memLevel: 1,
@@ -62,30 +102,33 @@ const goBack = () => {
 <template>
   <div class="container">
     <h2>新增會員</h2>
-    <p v-if="errorMsg" style="color: red; font-weight: bold; text-align: center">{{ errorMsg }}</p>
-    <p v-if="successMsg" class="msg">{{ successMsg }}</p>
-
-    <form @submit.prevent="submitCreate" autocomplete="off">
+    <form @submit.prevent="submitCreate" autocomplete="off" novalidate>
       <label>帳號</label>
-      <input type="text" v-model="member.memUsername" autocomplete="new-username" required />
+      <input type="text" v-model="member.memUsername" placeholder="請輸入帳號" autocomplete="new-username" />
+      
       <label>密碼</label>
-      <input type="password" v-model="member.memPassword" autocomplete="new-password" required />
+      <input type="password" v-model="member.memPassword" placeholder="至少6字+1英文字母" autocomplete="new-password" />
+      
       <label>姓名</label>
-      <input type="text" v-model="member.memName" required />
+      <input type="text" v-model="member.memName" placeholder="請輸入真實姓名" />
+      
       <label>信箱</label>
-      <input type="text" v-model="member.memEmail" required />
+      <input type="email" v-model="member.memEmail" placeholder="example@mail.com" />
+      
       <label>手機</label>
-      <input type="text" v-model="member.memPhone" required />
+      <input type="text" v-model="member.memPhone" placeholder="09xxxxxxxx" maxlength="10" />
+      
       <label>發票載具</label>
-      <input type="text" v-model="member.memInvoice" />
-      <button type="submit">確認新增</button>
+      <input type="text" v-model="member.memInvoice" placeholder="例：/ABC1234 (選填)" />
+      
+      <button type="submit" class="btn-submit">確認新增</button>
     </form>
     <a class="home-btn" @click.prevent="goBack">回會員列表</a>
   </div>
 </template>
 
 <style scoped>
-/* ========== 主容器：Glassmorphism 風格 ========== */
+/* 樣式部分僅加入 hover 強化與細微調整 */
 .container {
   width: 420px;
   margin: 40px auto;
@@ -99,7 +142,6 @@ const goBack = () => {
   text-align: center;
 }
 
-/* ========== 標題 ========== */
 h2 {
   color: #1e3a5f;
   margin-bottom: 24px;
@@ -121,18 +163,6 @@ h2::after {
   border-radius: 2px;
 }
 
-/* ========== 訊息提示 ========== */
-.msg {
-  color: #059669;
-  font-weight: 600;
-  text-align: center;
-  margin-bottom: 16px;
-  padding: 10px;
-  background: rgba(5, 150, 105, 0.1);
-  border-radius: 8px;
-}
-
-/* ========== 表單元素 ========== */
 label {
   display: block;
   text-align: left;
@@ -152,9 +182,7 @@ input {
   margin-bottom: 16px;
   font-size: 14px;
   background: #f8fafc;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 input:focus {
@@ -164,12 +192,7 @@ input:focus {
   background: #ffffff;
 }
 
-input::placeholder {
-  color: #94a3b8;
-}
-
-/* ========== 提交按鈕 ========== */
-button {
+.btn-submit {
   width: 100%;
   padding: 12px;
   background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
@@ -180,21 +203,16 @@ button {
   font-weight: 600;
   cursor: pointer;
   margin-top: 8px;
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.15s ease;
+  transition: all 0.3s;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-button:hover {
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+.btn-submit:hover {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+  transform: translateY(-1px);
 }
 
-button:active {
-  transform: translateY(1px);
-}
-
-/* ========== 返回連結 ========== */
 .home-btn {
   display: inline-block;
   margin-top: 20px;
