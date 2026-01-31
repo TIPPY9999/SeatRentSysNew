@@ -325,10 +325,8 @@ const saveEdit = async () => {
 .profile-page {
   max-width: 720px;
   margin: 0 auto;
-  min-height: 100vh;      /* 至少佔滿整個視窗高度 */
   display: flex;          /* 使用 Flexbox 排版 */
   flex-direction: column; /* 內容垂直排列 */
-  justify-content: center;/* 垂直置中 */
   padding: 40px 0;        /* 增加上下邊距，避免在小螢幕時貼邊 */
   box-sizing: border-box;
 }
