@@ -2,4 +2,4 @@
 window.APP_CONFIG = { 
 // 👇 每次 Tunnel 重開，只要將後端Tunnel放進來這一行 
 // cloudflared tunnel --url http://localhost:8080
- API_URL: "https://shelf-river-rehab-inspection.trycloudflare.com",};
+ API_URL: "https://feet-cigarettes-believe-packs.trycloudflare.com",};

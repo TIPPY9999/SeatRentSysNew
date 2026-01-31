@@ -80,7 +80,7 @@ public class PaymentApiController {
 
         String rtnCode = formData.getOrDefault("RtnCode", "0");
         String tradeNo = formData.get("MerchantTradeNo");
-
+        System.out.println("formData: " + formData);
         if (tradeNo != null && tradeNo.startsWith("SPN")) {
             paymentService.processPaymentResult(formData);
         }

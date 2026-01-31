@@ -8,12 +8,13 @@ import Swal from 'sweetalert2';
 const route = useRoute();
 const isLoading = ref(false);
 const recId = ref('');
+const returnSpotId=ref('');
 const totalFee = ref(0); // [新增] 用於儲存總金額
 onMounted(() => {
   // [修改] 從 route.query 獲取訂單ID與金額
   recId.value = route.query.recId;
   totalFee.value = route.query.total;
-  
+  returnSpotId.value = route.query.returnSpotId;
   if (!recId.value) {
     Swal.fire('錯誤', '無效的訂單編號', 'error');
   }
@@ -28,11 +29,11 @@ const handleCheckout = async () => {
     const params = new URLSearchParams();
     params.append('recId', recId.value);
     params.append('amount', totalFee.value);
+    params.append('returnSpotId',returnSpotId);
     params.append('baseUrl', window.APP_CONFIG.API_URL);
     // 2. 呼叫後端 API
     const response = await axios.post('http://localhost:8080/api/payment/checkout', params);
     //const response = await axios.post(`${window.APP_CONFIG.API_URL}/api/payment/checkout`, params);
-    
     // 3. 處理後端回傳的 HTML 字串
     const payHtml = response.data;
     if (!payHtml || (typeof payHtml === 'string' && payHtml.includes('Error'))) {

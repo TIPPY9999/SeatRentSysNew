@@ -45,23 +45,6 @@ const loadSpotInfo = async (spotId) => {
   }
 }
 
-const loadSeats = async (spotId) => {
-  if (!spotId) return
-  isLoading.value.seats = true
-  seats.value = []
-  selectedSeat.value = null
-  try {
-    const response = await axios.get(`http://localhost:8080/seats/search?spotId=${spotId}`)
-    // 歸還邏輯可能不同，此處暫時沿用租借邏輯
-    seats.value = response.data.filter((seat) => seat.seatsStatus === '空閒')
-  } catch (error) {
-    console.error(`載入 ${spotId} 的座位失敗:`, error)
-    errorMessage.value = '無法載入該站點的座位資訊。'
-  } finally {
-    isLoading.value.seats = false
-  }
-}
-
 // --- 核心邏輯 ---
 const goToSearchSpot = () => {
   router.push('/SearchSpot')
@@ -80,6 +63,7 @@ const goToPayment = () => {
 
   router.push({
     name: 'payment-order',
+    returnSpotId:selectedSpot.value?.spotId,
     query: {
       recId: recId,
       total: rentCalculation.value.totalFee,
@@ -308,9 +292,10 @@ onMounted(async () => {
         router.push({ name: 'rec-rent-user', params: { action: 'record' } })
         return
       } else {
-        // --- 除錯 --- 印出找到的訂單物件，以確認 recSeqId 屬性是否存在及其值
-        console.log('找到進行中的訂單:', foundRent)
+        // --- DEBUG --- 印出找到的訂單物件，以確認 recSeqId 屬性是否存在及其值
         console.log('訂單Id 為:', foundRent?.recId)
+        console.log('seatsId 為:', foundRent?.seatsId)
+        console.log('spotReturnId 為:', memberAuthStore.selectedSpotId)
         activeRent.value = foundRent
       }
     } catch (error) {
