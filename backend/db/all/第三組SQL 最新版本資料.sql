@@ -11,6 +11,7 @@ DROP TABLE seats;
 DROP TABLE renting_Spot;
 DROP TABLE redemption_log;
 DROP TABLE discount;
+DROP TABLE SponsorshipRecord;
 DROP TABLE merchant;
 DROP TABLE member;
 DROP TABLE admin;
@@ -459,7 +460,7 @@ CREATE TABLE recRent
     -- 歸還日期時間 (未歸還時為 NULL)
     recUsageDT2 DECIMAL NULL,
     -- 使用時間 DATETIME2
-    recStatus NVARCHAR(15) NULL,
+    recStatus NVARCHAR(32) NULL,
     -- 訂單狀態
     recPrice INT NULL,
     -- 原始價格
@@ -467,7 +468,7 @@ CREATE TABLE recRent
     -- 請款金額
     recPayment INT NULL,
     -- 付款金額
-    recPayBy VARCHAR(16) NULL,
+    recPayBy VARCHAR(32) NULL,
     -- 付款方式
     recInvoice VARCHAR(16) NULL,
     -- 發票號碼

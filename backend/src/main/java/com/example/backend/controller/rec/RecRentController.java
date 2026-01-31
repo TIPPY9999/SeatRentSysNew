@@ -104,7 +104,15 @@ public class RecRentController {
 
     // 5. 依訂單業務ID (recId) 更新
     @PutMapping("/{recId}")
-    public ResponseEntity<RecRent> update(@PathVariable String recId, @RequestBody RecRent updatedRentData) {
+    public ResponseEntity<RecRent> update(
+            @PathVariable String recId,
+            @RequestBody RecRent updatedRentData,
+            @RequestParam(required = false) Integer spotIdReturn) { // [新增] 接收 URL 參數作為備案
+
+        // [新增] 除錯日誌：確認前端傳來的資料是否包含 spotIdReturn
+        System.out.println("收到訂單更新請求 RecId: " + recId);
+        System.out.println("前端傳入的歸還站點 (Body): " + updatedRentData.getSpotIdReturn() + ", (Param): " + spotIdReturn);
+
         // 使用 recId 從資料庫中找到對應的 RecRent 實體
         RecRent existingRent = rentRepos.findByRecId(recId);
 
@@ -122,8 +130,13 @@ public class RecRentController {
         // 移除此行可修復原始問題，租借時間不應修改
 
         // 說明: 更新還車場地，僅在前端提供時更新
-        if (updatedRentData.getSpotIdReturn() != null) {
-            existingRent.setSpotIdReturn(updatedRentData.getSpotIdReturn());
+        // [修正] 優先使用 Body 中的值，若為 null 則嘗試使用 URL Param 的值 (雙重保險)
+        Integer finalSpotIdReturn = updatedRentData.getSpotIdReturn();
+        if (finalSpotIdReturn == null) {
+            finalSpotIdReturn = spotIdReturn;
+        }
+        if (finalSpotIdReturn != null) {
+            existingRent.setSpotIdReturn(finalSpotIdReturn);
         }
 
         // 說明: 更新訂單狀態
@@ -173,7 +186,7 @@ public class RecRentController {
 
         // 說明: 如果訂單狀態被更新為「已歸還」(假設代碼為 "2")，則同步更新該座位的地點(spotId)為歸還時的地點。
         // 此操作同樣在 @Transactional 的保護下，確保與訂單更新的資料一致性。
-        Integer newSpotId = updatedRentData.getSpotIdReturn();
+        Integer newSpotId = finalSpotIdReturn; // [修正] 使用整合後的變數
         if ("已完成".equals(newStatus) && newSpotId != null) {
             Integer seatId = Integer.valueOf(savedRent.getSeatsId());
             if (seatId != null) {

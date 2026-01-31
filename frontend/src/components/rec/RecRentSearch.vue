@@ -64,7 +64,8 @@ const loadRents = async () => {
     const requestUrl = queryString ? `${API_URL}?${queryString}` : API_URL
 
     const res = await axios.get(requestUrl)
-    rentList.value = res.data
+    // 將搜尋結果依照 recId 由大到小排序 (最新到最舊)
+    rentList.value = res.data.sort((a, b) => new Date(b.recRentDT2) - new Date(a.recRentDT2))
   } catch (err) {
     console.error('載入失敗:', err)
     alert('無法載入資料，請確認後端伺服器是否已啟動.\n錯誤: ' + err.message)

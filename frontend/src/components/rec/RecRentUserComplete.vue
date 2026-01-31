@@ -124,30 +124,37 @@ const proceedWithRent = async () => {
     return
   }
 
-  // 這裡的 API endpoint 和 data 應該是歸還的邏輯
-  // 例如: axios.put(`/api/rec-rents/${rentId}/complete`, rentalData)
-  // 此處暫時保留原邏輯作為示意
+  // 準備更新資料：先將歸還資訊寫入，狀態設為「未付款」
+  // 這樣後端 PaymentApiController 在付款成功後，才能讀取到 spotIdReturn 並執行座位更新
   const rentalData = {
-    recSeqId: activeRent.value?.recSeqId, // [新增] 傳送訂單 ID 以便後端更新
-    memId: memberAuthStore.member.memId, // 從 Pinia Store 取得會員 ID
-    spotIdRent: selectedSpot.value.spotId,
-    // seatsId: selectedSeat.value.seatsId, // 歸還可能需要的是租借紀錄ID
-    recPayment: rentCalculation.value.totalFee, // [新增] 傳送計算後的費用
+    recStatus: '未付款', // 標記狀態，等待金流更新為「已完成」
+    spotIdReturn: selectedSpot.value?.spotId, // [修正] 使用 Optional Chaining 避免報錯
+    recPayment: rentCalculation.value.totalFee,
+    recReturnDT2: new Date().toISOString(), // 紀錄使用者點擊歸還的時間
   }
+
+  // [新增] 防呆檢查：如果沒有抓到站點 ID，禁止送出並報錯
+  console.log('準備送出歸還更新資料:', rentalData)
+  if (!rentalData.spotIdReturn) {
+    alert('系統錯誤：無法讀取歸還站點 ID (spotIdReturn)，請重新選擇站點或聯繫管理員。')
+    console.error('錯誤：selectedSpot 物件內容:', selectedSpot.value)
+    return
+  }
+
   isLoading.value.rent = true
   try {
-    // 假設這是歸還的 API
-    const response = await axios.post(`http://localhost:8080/api/rec-rents/complete`, rentalData)
+    // [修正] 使用 PUT 方法呼叫 /rec-rent/{recId} 進行更新
+    const recId = activeRent.value.recId
+    if (!recId) throw new Error('找不到訂單編號')
+
+    // [修正] 將 spotIdReturn 同時放在 URL Query String 中，確保後端一定能收到
+    const response = await axios.put(`http://localhost:8080/rec-rent/${recId}?spotIdReturn=${rentalData.spotIdReturn}`, rentalData)
+
     if (response.status === 200) {
-      // 歸還成功後，導向至付款頁面
-      // [修改] 增加訂單ID的回退(fallback)機制與防呆，避免產生 /payment/undefined 的路由錯誤
-      const recId = activeRent.value.recId || activeRent.value.recSeqId
-      if (!recId) {
-        errorMessage.value = '歸還成功，但無法找到訂單ID以進行付款，請聯繫客服。'
-        console.error('訂單物件缺少 recId 與 recSeqId:', activeRent.value)
-        return
-      }
-      router.push(`/payment/${recId}`)
+      // 資料更新成功後，呼叫 goToPayment 進入付款流程
+      // 注意：這裡不需要再 router.push，因為 goToPayment 會處理
+      activeRent.value = response.data // 更新本地資料
+      goToPayment()
     } else {
       errorMessage.value = '歸還失敗，請稍後再試。'
     }
