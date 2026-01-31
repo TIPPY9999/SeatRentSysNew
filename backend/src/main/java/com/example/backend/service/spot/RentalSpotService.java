@@ -1,7 +1,10 @@
 package com.example.backend.service.spot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +15,9 @@ import jakarta.persistence.criteria.Predicate;
 import com.example.backend.model.spot.RentalSpot;
 import com.example.backend.file.FileStorageService;
 import com.example.backend.repository.spot.RentalSpotRepository;
+// [注意] 請確認以下 Merchant 相關的 package 路徑是否正確
+import com.example.backend.repository.merchantAndCoupon.MerchantRepository;
+import com.example.backend.model.merchantAndCoupon.MerchantBean;
 
 @Service
 @Transactional
@@ -19,10 +25,13 @@ public class RentalSpotService implements IRentalSpotService {
 
     private final RentalSpotRepository rentalSpotRepository;
     private final FileStorageService fileStorageService;
+    private final MerchantRepository merchantRepository;
 
-    public RentalSpotService(RentalSpotRepository rentalSpotRepository, FileStorageService fileStorageService) {
+    public RentalSpotService(RentalSpotRepository rentalSpotRepository, FileStorageService fileStorageService,
+            MerchantRepository merchantRepository) {
         this.rentalSpotRepository = rentalSpotRepository;
         this.fileStorageService = fileStorageService;
+        this.merchantRepository = merchantRepository;
     }
 
     /**
@@ -125,5 +134,19 @@ public class RentalSpotService implements IRentalSpotService {
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         });
+    }
+
+    @Override
+    public List<Map<String, Object>> findAllMerchantsForSelect() {
+        // 取得所有商家
+        List<MerchantBean> merchants = merchantRepository.findAll();
+
+        // 轉換為簡單的 Map 列表 (只包含 ID 和 名稱)
+        return merchants.stream().map(m -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("merchantId", m.getMerchantId());
+            map.put("merchantName", m.getMerchantName());
+            return map;
+        }).collect(Collectors.toList());
     }
 }

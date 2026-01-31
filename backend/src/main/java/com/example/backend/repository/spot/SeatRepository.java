@@ -30,4 +30,7 @@ public interface SeatRepository extends JpaRepository<Seat, Integer>, JpaSpecifi
 
     // 根據據點 ID 查詢該據點下的座位數量
     long countBySpotId(Integer spotId);
+
+    // 查詢符合前綴的最後一筆座位資料 (用於自動產生序號，例如找 SN-2026 開頭的最大值)
+    Seat findTopBySerialNumberStartingWithOrderBySerialNumberDesc(String prefix);
 }

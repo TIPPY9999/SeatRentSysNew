@@ -61,6 +61,15 @@ public class RentalSpotController {
         return rentalSpotService.findByCondition(spotCode, spotName, spotStatus, merchantId);
     }
 
+    /**
+     * [新增] 取得商家下拉選單資料 (GET /spot/merchants)
+     * 供前端下拉選單使用，回傳商家 ID 與名稱
+     */
+    @GetMapping("/merchants")
+    public ResponseEntity<List<Map<String, Object>>> getMerchantOptions() {
+        return ResponseEntity.ok(rentalSpotService.findAllMerchantsForSelect());
+    }
+
     // endregion
 
     // region 編輯功能 (Create / Update / Delete)
