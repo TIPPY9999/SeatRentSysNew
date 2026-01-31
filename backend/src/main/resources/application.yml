@@ -24,6 +24,12 @@ spring:
               - email
               - profile
 
+  #  上傳圖片檔案大小限制（multipart）
+  servlet:
+    multipart:
+      max-file-size: 10MB # 單一檔案最大 10MB
+      max-request-size: 20MB # 同一次請求(多檔)總大小最大 20MB
+
   datasource:
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
   jpa:
@@ -51,3 +57,21 @@ spring:
           auth: true
           starttls:
             enable: true
+
+# Coze Web Chat SDK 配置
+# 用途：提供前端初始化 Coze AI 客服所需的資訊
+# 
+# 設定方式：
+# 1. 直接在此檔案設定（開發環境）
+# 2. 使用環境變數（正式環境建議）：
+#    export COZE_BOT_ID="你的Bot ID"
+#    export COZE_PAT="你的Personal Access Token"
+#    export COZE_CHAT_SDK_SRC="SDK來源URL"
+coze:
+  bot-id: ${COZE_BOT_ID:}
+  pat: ${COZE_PAT:}
+  chat-sdk-src: ${COZE_CHAT_SDK_SRC:}
+  # 注意：PAT (Personal Access Token) 特性
+  # - 只能在建立時看到一次，之後無法再查看
+  # - 有過期時間，過期後無法延長，需重新建立
+  # - 建議定期更換（例如：每 90 天）

@@ -167,7 +167,7 @@ const logout = () => {
           <span class="menu-text">分享討論</span>
         </li>
 
-        <li class="menu-item" @click="router.push('')">
+        <li class="menu-item" @click="router.push('/support')">
           <span class="icon-wrapper">
             <el-icon><Phone /></el-icon>
           </span>

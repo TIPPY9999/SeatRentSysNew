@@ -15,6 +15,33 @@ const loading = ref(false)
 const pageVisible = ref(false)
 const allSpots = ref([])
 
+// ====== 【新增】問題回報模式 ======
+const viewMode = ref('all') // 'all' | 'support'
+
+// 問題回報標記規則（可擴展）
+const SUPPORT_TAG_PREFIX = 'SUPPORT_'
+const SUPPORT_TAG_DESC = '[REPORT]'
+
+/**
+ * 【新增】判斷是否為問題回報工單
+ * 規則：issueType 以 SUPPORT_ 開頭 或 issueDesc 包含 [REPORT]
+ */
+const isSupportTicket = (ticket) => {
+  if (!ticket) return false
+  const typeMatch = ticket.issueType?.startsWith(SUPPORT_TAG_PREFIX)
+  const descMatch = ticket.issueDesc?.includes(SUPPORT_TAG_DESC)
+  return typeMatch || descMatch
+}
+
+/**
+ * 【新增】問題回報未處理數量（用於 Tab Badge）
+ */
+const supportPendingCount = computed(() => {
+  return tickets.value.filter(t => 
+    isSupportTicket(t) && t.issueStatus === 'REPORTED'
+  ).length
+})
+
 // ====== 資產健康度統計 ======
 const assetStatsTab = ref('SPOT')
 const assetStats = ref([])
@@ -185,7 +212,7 @@ const availableStatusOptions = computed(() => {
 // --- 業務邏輯 & 排序邏輯 ---
 const filteredTickets = computed(() => {
   // 1. 先進行篩選
-  const list = tickets.value.filter((t) => {
+  let list = tickets.value.filter((t) => {
     const k = filters.keyword.toLowerCase()
     const textMatch =
       !k ||
@@ -197,7 +224,12 @@ const filteredTickets = computed(() => {
     return textMatch && pMatch && sMatch
   })
 
-  // 2. 進行排序：緊急工單 (URGENT) 置頂
+  // 【新增】2. 根據 viewMode 過濾問題回報
+  if (viewMode.value === 'support') {
+    list = list.filter(t => isSupportTicket(t))
+  }
+
+  // 3. 進行排序：緊急工單 (URGENT) 置頂
   return list.sort((a, b) => {
     // 如果 a 是緊急，b 不是，a 排前面 (-1)
     if (a.issuePriority === 'URGENT' && b.issuePriority !== 'URGENT') return -1
@@ -666,6 +698,32 @@ onMounted(async () => {
             </div>
           </div>
         </transition>
+
+        <!-- 【新增】檢視模式切換（僅在現有工單模式顯示） -->
+        <transition name="fade" appear v-if="!historyMode">
+          <div class="view-mode-switch mb-3">
+            <el-segmented v-model="viewMode" size="large" block>
+              <el-segmented-item value="all">
+                <span class="segmented-label">
+                  <i class="fas fa-list mr-2"></i>
+                  全部工單
+                </span>
+              </el-segmented-item>
+              <el-segmented-item value="support">
+                <span class="segmented-label">
+                  <i class="fas fa-life-ring mr-2"></i>
+                  問題回報
+                  <el-badge 
+                    v-if="supportPendingCount > 0" 
+                    :value="supportPendingCount" 
+                    type="danger" 
+                    class="ml-2"
+                  />
+                </span>
+              </el-segmented-item>
+            </el-segmented>
+          </div>
+        </transition>
       </div>
     </section>
 
@@ -941,11 +999,22 @@ onMounted(async () => {
                   </template>
                 </el-table-column>
 
-                <el-table-column prop="issueType" label="問題類型" width="140">
+                <el-table-column prop="issueType" label="問題類型" width="160">
                   <template #default="{ row }">
                     <div class="type-cell" @click="viewTicketDetail(row)">
                       <i class="fas fa-exclamation-circle type-icon"></i>
                       <span>{{ row.issueType }}</span>
+                      <!-- 【新增】問題回報標記 -->
+                      <el-tag 
+                        v-if="isSupportTicket(row)" 
+                        type="warning" 
+                        size="small" 
+                        effect="plain"
+                        style="margin-left: 4px;"
+                      >
+                        <i class="fas fa-life-ring" style="margin-right: 2px;"></i>
+                        回報
+                      </el-tag>
                     </div>
                   </template>
                 </el-table-column>
@@ -1273,6 +1342,50 @@ onMounted(async () => {
 .add-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(103, 194, 58, 0.4);
+}
+
+/* 【新增】檢視模式切換樣式 */
+.view-mode-switch {
+  padding: 0 24px;
+}
+
+.segmented-label {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+:deep(.el-segmented) {
+  border-radius: 12px;
+  padding: 4px;
+  background: white;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+:deep(.el-segmented-item) {
+  border-radius: 10px;
+  padding: 12px 24px;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-segmented-item--selected) {
+  background: linear-gradient(135deg, #409eff 0%, #79bbff 100%) !important;
+  color: white !important;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+}
+
+:deep(.el-badge__content) {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* 統計卡片 */

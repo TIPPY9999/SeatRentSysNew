@@ -120,12 +120,26 @@ const routes = [
         name: 'payment-success',
         component: () => import('@/views/ecpay/PaymentSuccessView.vue'),
       },
-     
+
       // 訂單確認與付款頁
       {
         path: '/payment-checkout/:recId',
         name: 'payment-checkout',
         component: () => import('@/views/ecpay/PaymentView.vue'),
+      },
+
+      // ==========================================
+      // (翌帆2026-1-31)【新增】客服支援模組 (Support)
+      // ==========================================
+      {
+        path: '/support',
+        name: 'support-center',
+        component: () => import('@/views/support/SupportCenterView.vue'),
+      },
+      {
+        path: '/support/report',
+        name: 'support-report',
+        component: () => import('@/views/support/SupportReportView.vue'),
       },
     ],
   },

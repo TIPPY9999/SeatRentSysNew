@@ -1,5 +1,6 @@
 package com.example.backend.controller.maintenance;
 
+import com.example.backend.dto.maintenance.AttachmentResponseDto;
 import com.example.backend.dto.maintenance.SpotOptionDto;
 import com.example.backend.dto.maintenance.MaintenanceLogResponseDto;
 import com.example.backend.dto.maintenance.MaintenanceStaffResponseDto;
@@ -7,6 +8,7 @@ import com.example.backend.model.maintenance.MaintenanceInformation;
 import com.example.backend.model.maintenance.MaintenanceStaff;
 import com.example.backend.model.member.Admin;
 import com.example.backend.model.spot.Seat;
+import com.example.backend.service.maintenance.AttachmentService;
 import com.example.backend.service.maintenance.MaintenanceInformationService;
 import com.example.backend.service.maintenance.MaintenanceStaffService;
 import com.example.backend.service.member.AdminService; // 引用 AdminService
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -33,6 +36,9 @@ public class MaintenanceController {
 
     @Autowired
     private AdminService adminService; // ★ 確保這裡有注入
+
+    @Autowired
+    private AttachmentService attachmentService; // ★ 新增：附件服務
 
     @Autowired
     private HttpServletRequest request; // ★ 注入 HttpServletRequest 用於讀取 Session
@@ -254,5 +260,48 @@ public class MaintenanceController {
     @GetMapping("/staff/{staffId}/tickets")
     public List<MaintenanceInformation> getTicketsByStaff(@PathVariable Integer staffId, @RequestParam(required = false) List<String> statuses) {
         return mtifService.getTicketsByStaff(staffId, statuses);
+    }
+
+    // ================== 工單附件 API ==================
+
+    /**
+     * 上傳附件（多檔）
+     * POST /api/maintenance/tickets/{ticketId}/attachments
+     * 
+     * @param ticketId 工單 ID
+     * @param files 檔案陣列（必填）
+     * @param note 備註（可選，套用到所有附件）
+     * @return 附件清單
+     */
+    @PostMapping("/tickets/{ticketId}/attachments")
+    public List<AttachmentResponseDto> uploadAttachments(
+            @PathVariable Integer ticketId,
+            @RequestParam("files") MultipartFile[] files,
+            @RequestParam(value = "note", required = false) String note) {
+        return attachmentService.uploadAttachments(ticketId, files, note);
+    }
+
+    /**
+     * 查詢工單的所有附件
+     * GET /api/maintenance/tickets/{ticketId}/attachments
+     * 
+     * @param ticketId 工單 ID
+     * @return 附件清單（僅回傳啟用中的）
+     */
+    @GetMapping("/tickets/{ticketId}/attachments")
+    public List<AttachmentResponseDto> getAttachments(@PathVariable Integer ticketId) {
+        return attachmentService.getAttachments(ticketId);
+    }
+
+    /**
+     * 刪除附件（軟刪除）
+     * DELETE /api/maintenance/attachments/{attachmentId}
+     * 
+     * @param attachmentId 附件 ID
+     * @return 刪除後的附件資訊
+     */
+    @DeleteMapping("/attachments/{attachmentId}")
+    public AttachmentResponseDto deleteAttachment(@PathVariable Integer attachmentId) {
+        return attachmentService.deleteAttachment(attachmentId);
     }
 }

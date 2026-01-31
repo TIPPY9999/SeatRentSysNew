@@ -5,6 +5,7 @@ import maintenanceApi from '@/api/modules/maintenance'
 import Swal from 'sweetalert2'
 import { useTicketConfig } from '@/composables/maintenance/useTicketConfig'
 import TicketTimeline from '@/components/maintenance/TicketTimeline.vue'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -17,6 +18,19 @@ const loading = ref(false)
 const submitting = ref(false)
 const formVisible = ref(false)
 const activeStep = ref(0)
+
+// ============ 圖片附件相關 ============
+const uploadRef = ref(null) // el-upload ref
+const attachments = ref([]) // 已上傳的附件清單
+const fileList = ref([]) // 待上傳的檔案清單（新增模式暫存）
+const attachmentNote = ref('') // 附件備註
+const uploadingAttachments = ref(false) // 上傳中狀態
+const showAttachmentSection = ref(false) // 是否顯示附件區塊（編輯模式立即顯示，新增模式在建單後顯示）
+
+// 允許的圖片類型
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_FILE_COUNT = 5
 
 // 維修目標類型：'spot' (機台) 或 'seat' (椅子)
 const targetType = ref('spot')
@@ -260,6 +274,10 @@ onMounted(async () => {
         targetType.value = 'spot'
       }
       activeStep.value = 3
+
+      // === [編輯模式] 載入附件清單 ===
+      showAttachmentSection.value = true
+      await loadAttachments(ticketId.value)
     } else {
       // ★ Bug2 修復：建立時只載入啟用人員
       const [spotRes, staffRes, seatRes] = await Promise.all([
@@ -286,6 +304,148 @@ onMounted(async () => {
 
 const selectIssueType = (type) => {
   form.issueType = type.value
+}
+
+// ============ 圖片附件功能 ============
+
+/**
+ * 載入工單附件清單
+ */
+const loadAttachments = async (ticketIdValue) => {
+  try {
+    const res = await maintenanceApi.getTicketAttachments(ticketIdValue)
+    attachments.value = res.data || []
+  } catch (error) {
+    console.error('載入附件失敗:', error)
+  }
+}
+
+/**
+ * 檔案上傳前檢查
+ */
+const beforeUpload = (file) => {
+  // 檢查檔案類型
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    ElMessage.error(`不支援的檔案格式：${file.name}（僅允許 JPG, PNG, WEBP）`)
+    return false
+  }
+
+  // 檢查檔案大小
+  if (file.size > MAX_FILE_SIZE) {
+    ElMessage.error(`檔案過大：${file.name}（最大 5MB）`)
+    return false
+  }
+
+  // 檢查數量限制
+  const currentCount = isEdit.value ? attachments.value.length : fileList.value.length
+  if (currentCount >= MAX_FILE_COUNT) {
+    ElMessage.error(`最多只能上傳 ${MAX_FILE_COUNT} 張圖片`)
+    return false
+  }
+
+  return true
+}
+
+/**
+ * 檔案選擇變更（新增模式：暫存到 fileList）
+ */
+const handleFileChange = (file, uploadFileList) => {
+  if (isEdit.value) {
+    // 編輯模式：直接上傳
+    uploadAttachmentsToServer([file.raw])
+  } else {
+    // 新增模式：暫存到 fileList
+    fileList.value = uploadFileList
+  }
+}
+
+/**
+ * 移除檔案（新增模式：從 fileList 移除）
+ */
+const handleRemoveFile = (file) => {
+  const index = fileList.value.findIndex(f => f.uid === file.uid)
+  if (index > -1) {
+    fileList.value.splice(index, 1)
+  }
+}
+
+/**
+ * 上傳附件到伺服器
+ */
+const uploadAttachmentsToServer = async (files) => {
+  if (!files || files.length === 0) return
+
+  uploadingAttachments.value = true
+  try {
+    const res = await maintenanceApi.uploadTicketAttachments(
+      ticketId.value,
+      files,
+      attachmentNote.value || null
+    )
+
+    ElMessage.success(`成功上傳 ${res.data.length} 張圖片`)
+    
+    // 重新載入附件清單
+    await loadAttachments(ticketId.value)
+    
+    // 清空備註與 fileList
+    attachmentNote.value = ''
+    fileList.value = []
+    
+    // 清空 el-upload 的 fileList
+    if (uploadRef.value) {
+      uploadRef.value.clearFiles()
+    }
+  } catch (error) {
+    console.error('上傳附件失敗:', error)
+    const errorMsg = error?.response?.data?.message || '上傳失敗，請稍後再試'
+    ElMessage.error(errorMsg)
+  } finally {
+    uploadingAttachments.value = false
+  }
+}
+
+/**
+ * 刪除附件
+ */
+const deleteAttachment = async (attachment) => {
+  const result = await Swal.fire({
+    title: '確認刪除圖片？',
+    text: `將刪除圖片：${attachment.originalName}`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#f56c6c',
+    cancelButtonColor: '#909399',
+    confirmButtonText: '<i class="fas fa-trash-alt mr-1"></i> 確認刪除',
+    cancelButtonText: '取消',
+  })
+
+  if (!result.isConfirmed) return
+
+  try {
+    await maintenanceApi.deleteTicketAttachment(attachment.attachmentId)
+    ElMessage.success('圖片已刪除')
+    
+    // 重新載入附件清單
+    await loadAttachments(ticketId.value)
+  } catch (error) {
+    console.error('刪除附件失敗:', error)
+    const errorMsg = error?.response?.data?.message || '刪除失敗，請稍後再試'
+    Swal.fire('錯誤', errorMsg, 'error')
+  }
+}
+
+/**
+ * 預覽圖片
+ */
+const previewImage = (attachment) => {
+  Swal.fire({
+    imageUrl: `http://localhost:8080${attachment.publicUrl}`,
+    imageAlt: attachment.originalName,
+    showCloseButton: true,
+    showConfirmButton: false,
+    width: 'auto',
+  })
 }
 
 const submit = async () => {
@@ -370,9 +530,12 @@ const submit = async () => {
             timer: 1200,
             showConfirmButton: false,
           })
+
+          // 編輯模式不跳轉，留在當前頁面（可繼續管理附件）
         } else {
           // === [新增模式] ===
-          await maintenanceApi.createTicket(submitData)
+          const createRes = await maintenanceApi.createTicket(submitData)
+          const newTicketId = createRes.data?.ticketId
 
           await Swal.fire({
             icon: 'success',
@@ -381,10 +544,26 @@ const submit = async () => {
             timer: 1500,
             showConfirmButton: false,
           })
-        }
 
-        // ★ 關鍵修正 2：無論新增或修改，統一跳回列表頁
-        router.push({ name: 'mtif-list' })
+          // 如果有選擇檔案，上傳附件
+          if (fileList.value.length > 0 && newTicketId) {
+            try {
+              const files = fileList.value.map(f => f.raw)
+              await maintenanceApi.uploadTicketAttachments(
+                newTicketId,
+                files,
+                attachmentNote.value || null
+              )
+              ElMessage.success(`成功上傳 ${files.length} 張圖片`)
+            } catch (error) {
+              console.error('上傳附件失敗:', error)
+              ElMessage.warning('工單已建立，但附件上傳失敗')
+            }
+          }
+
+          // 跳轉回列表頁
+          router.push({ name: 'mtif-list' })
+        }
       } catch (error) {
         console.error('Submit failed:', error)
         // ★ Bug3 修復：顯示後端回傳的錯誤訊息
@@ -827,6 +1006,188 @@ const handleCancel = async () => {
                 </el-select>
               </el-form-item>
 
+              <!-- ============ 圖片附件區塊 ============ -->
+              <el-form-item 
+                v-if="isEdit" 
+                label="圖片附件" 
+                class="form-item-animated"
+              >
+                <template #label>
+                  <span class="custom-label">
+                    <i class="fas fa-images label-icon"></i> 圖片附件
+                    <el-tag type="info" size="small" class="ml-2">選填</el-tag>
+                  </span>
+                </template>
+
+                <!-- 上傳區 -->
+                <div class="attachment-upload-area">
+                  <el-upload
+                    ref="uploadRef"
+                    :auto-upload="false"
+                    :on-change="handleFileChange"
+                    :on-remove="handleRemoveFile"
+                    :before-upload="beforeUpload"
+                    :file-list="fileList"
+                    accept="image/jpeg,image/png,image/webp"
+                    list-type="picture-card"
+                    :limit="MAX_FILE_COUNT"
+                    :disabled="uploadingAttachments"
+                  >
+                    <template #default>
+                      <div class="upload-trigger">
+                        <i class="fas fa-plus"></i>
+                        <div class="upload-text">選擇圖片</div>
+                      </div>
+                    </template>
+                    <template #tip>
+                      <div class="el-upload__tip">
+                        <i class="fas fa-info-circle"></i>
+                        支援 JPG、PNG、WEBP 格式，單張最大 5MB，最多 {{ MAX_FILE_COUNT }} 張
+                      </div>
+                    </template>
+                  </el-upload>
+
+                  <!-- 備註輸入 -->
+                  <el-input
+                    v-if="fileList.length > 0"
+                    v-model="attachmentNote"
+                    placeholder="選填：為這批圖片加上備註..."
+                    class="mt-2"
+                    clearable
+                    maxlength="200"
+                    show-word-limit
+                  />
+
+                  <!-- 立即上傳按鈕（編輯模式） -->
+                  <el-button
+                    v-if="isEdit && fileList.length > 0"
+                    type="primary"
+                    :loading="uploadingAttachments"
+                    @click="uploadAttachmentsToServer(fileList.map(f => f.raw))"
+                    class="mt-2"
+                  >
+                    <i class="fas fa-upload mr-1"></i>
+                    {{ uploadingAttachments ? '上傳中...' : '立即上傳' }}
+                  </el-button>
+                </div>
+
+                <!-- 已上傳的附件清單 -->
+                <div v-if="attachments.length > 0" class="attachments-list mt-3">
+                  <el-divider content-position="left">
+                    <span style="color: #909399; font-size: 13px;">
+                      <i class="fas fa-paperclip mr-1"></i>
+                      已上傳附件 ({{ attachments.length }})
+                    </span>
+                  </el-divider>
+
+                  <div class="attachments-grid">
+                    <div 
+                      v-for="att in attachments" 
+                      :key="att.attachmentId" 
+                      class="attachment-item"
+                    >
+                      <!-- 圖片預覽 -->
+                      <div class="attachment-preview" @click="previewImage(att)">
+                        <img 
+                          :src="`http://localhost:8080${att.publicUrl}`" 
+                          :alt="att.originalName"
+                          @error="$event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1zaXplPSIxNCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iIGZpbGw9IiM5OTkiPu+/ve+/ve+/vTwvdGV4dD48L3N2Zz4='"
+                        />
+                        <div class="preview-overlay">
+                          <i class="fas fa-search-plus"></i>
+                        </div>
+                      </div>
+
+                      <!-- 附件資訊 -->
+                      <div class="attachment-info">
+                        <div class="attachment-name" :title="att.originalName">
+                          {{ att.originalName }}
+                        </div>
+                        <div class="attachment-meta">
+                          <span class="meta-item">
+                            <i class="fas fa-clock"></i>
+                            {{ att.createdAt }}
+                          </span>
+                          <span class="meta-item">
+                            <i class="fas fa-hdd"></i>
+                            {{ (att.fileSize / 1024).toFixed(1) }} KB
+                          </span>
+                        </div>
+                        <div v-if="att.note" class="attachment-note">
+                          <i class="fas fa-comment-dots"></i>
+                          {{ att.note }}
+                        </div>
+                      </div>
+
+                      <!-- 刪除按鈕 -->
+                      <el-button
+                        type="danger"
+                        size="small"
+                        circle
+                        class="delete-btn"
+                        @click="deleteAttachment(att)"
+                        :title="`刪除 ${att.originalName}`"
+                      >
+                        <i class="fas fa-trash-alt"></i>
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+              </el-form-item>
+
+              <!-- 新增模式：提示可在建立後上傳附件 -->
+              <el-form-item 
+                v-else 
+                label="圖片附件" 
+                class="form-item-animated"
+              >
+                <template #label>
+                  <span class="custom-label">
+                    <i class="fas fa-images label-icon"></i> 圖片附件
+                    <el-tag type="info" size="small" class="ml-2">選填</el-tag>
+                  </span>
+                </template>
+
+                <!-- 新增模式的上傳區 -->
+                <div class="attachment-upload-area">
+                  <el-upload
+                    ref="uploadRef"
+                    :auto-upload="false"
+                    :on-change="handleFileChange"
+                    :on-remove="handleRemoveFile"
+                    :before-upload="beforeUpload"
+                    :file-list="fileList"
+                    accept="image/jpeg,image/png,image/webp"
+                    list-type="picture-card"
+                    :limit="MAX_FILE_COUNT"
+                  >
+                    <template #default>
+                      <div class="upload-trigger">
+                        <i class="fas fa-plus"></i>
+                        <div class="upload-text">選擇圖片</div>
+                      </div>
+                    </template>
+                    <template #tip>
+                      <div class="el-upload__tip">
+                        <i class="fas fa-info-circle"></i>
+                        建立工單後將自動上傳所選圖片（支援 JPG、PNG、WEBP，單張最大 5MB）
+                      </div>
+                    </template>
+                  </el-upload>
+
+                  <!-- 備註輸入 -->
+                  <el-input
+                    v-if="fileList.length > 0"
+                    v-model="attachmentNote"
+                    placeholder="選填：為這批圖片加上備註..."
+                    class="mt-2"
+                    clearable
+                    maxlength="200"
+                    show-word-limit
+                  />
+                </div>
+              </el-form-item>
+
               <!-- 分隔線 -->
               <el-divider>
                 <i class="fas fa-paper-plane"></i>
@@ -897,6 +1258,162 @@ const handleCancel = async () => {
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
   padding-bottom: 40px;
+}
+
+/* ============ 圖片附件樣式 ============ */
+.attachment-upload-area {
+  width: 100%;
+}
+
+.upload-trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #8c939d;
+  font-size: 14px;
+}
+
+.upload-trigger i {
+  font-size: 28px;
+}
+
+.upload-text {
+  font-size: 12px;
+}
+
+:deep(.el-upload__tip) {
+  color: #909399;
+  font-size: 12px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.attachments-list {
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+}
+
+.attachments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.attachment-item {
+  position: relative;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e4e7ed;
+  transition: all 0.3s ease;
+}
+
+.attachment-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.attachment-preview {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  cursor: pointer;
+  overflow: hidden;
+  background: #f5f7fa;
+}
+
+.attachment-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.attachment-item:hover .attachment-preview img {
+  transform: scale(1.05);
+}
+
+.preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.attachment-preview:hover .preview-overlay {
+  opacity: 1;
+}
+
+.preview-overlay i {
+  font-size: 32px;
+  color: white;
+}
+
+.attachment-info {
+  padding: 12px;
+}
+
+.attachment-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachment-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 6px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.attachment-note {
+  font-size: 12px;
+  color: #606266;
+  background: #f0f9ff;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border-left: 3px solid #409eff;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.attachment-note i {
+  color: #409eff;
+  margin-right: 4px;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.attachment-item:hover .delete-btn {
+  opacity: 1;
 }
 
 .content-header {

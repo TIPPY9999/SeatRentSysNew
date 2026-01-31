@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -51,6 +52,29 @@ public class GlobalExceptionHandler {
         errorResponse.put("timestamp", LocalDateTime.now().toString());
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /**
+     * 處理靜態資源找不到錯誤（Spring Boot 3.x 新增）
+     * HTTP 404 Not Found
+     * 
+     * 常見情境：
+     * - 前端請求不存在的 API endpoint
+     * - 請求不存在的靜態資源（圖片、CSS、JS 等）
+     * 
+     * 注意：此錯誤不應被視為系統錯誤（500），而是正常的 404 回應
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResourceFoundException(NoResourceFoundException ex) {
+        log.warn("NoResourceFoundException: {} - {}", ex.getResourcePath(), ex.getMessage());
+
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("message", "Not Found");
+        errorResponse.put("path", ex.getResourcePath());
+        errorResponse.put("status", 404);
+        errorResponse.put("timestamp", LocalDateTime.now().toString());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
     /**

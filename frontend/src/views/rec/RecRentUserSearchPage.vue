@@ -263,6 +263,20 @@ const handleNavigation = (action) => {
   }
 }
 
+// --- (翌帆2026-1-31新增 客服回報用)【新增】處理問題回報：導向 /support/report 並帶入 query 參數 ---
+const handleReportIssue = () => {
+  const spotId = infoWindow.value.spot?.id
+  const seatId = null // 地圖頁目前沒有特定 seatId，可依需求擴充
+  const recId = null // 地圖頁目前沒有 recId
+
+  const query = {}
+  if (spotId) query.spotId = spotId
+  if (seatId) query.seatId = seatId
+  if (recId) query.recId = recId
+
+  router.push({ path: '/support/report', query })
+}
+
 // Vue 組件掛載時執行的初始化
 onMounted(() => {
   initializeMapCenter()
@@ -369,7 +383,7 @@ onMounted(() => {
                 >
                   歸還
                 </button>
-                <button @click="" class="btn btn-issue">
+                <button @click="handleReportIssue" class="btn btn-issue">
                   回報 <br />
                   問題
                 </button>

@@ -2,9 +2,13 @@
 import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 import { useMemberAuthStore } from '@/stores/memberAuth'
+import { useRouter } from 'vue-router' // 【新增】引入 router
 
 // --- Pinia Store ---
 const memberAuthStore = useMemberAuthStore()
+
+// --- Router ---
+const router = useRouter() // 【新增】初始化 router
 
 // --- 狀態定義 ---
 const rents = ref([])
@@ -54,18 +58,14 @@ const loadUserRents = async () => {
   }
 }
 
-// --- 問題回報處理 ---
+// --- 【修改】問題回報處理：導向 /support/report 並帶入 query 參數 ---
 const handleReport = (rent) => {
-  // 準備攜帶至回報頁面的資料
-  const reportData = {
-    orderId: rent.recSeqId, // 訂單 ID
-    memberId: memberAuthStore.member?.memId, // 使用者 ID
-    spotId: rent.spotIdRent, // 站點 ID
-  }
-  // TODO: REPORT - 暫時以 Alert 代替實際路由跳轉
-  alert(
-    `TODO: REPORT\n準備前往問題回報頁面\n訂單ID: ${reportData.orderId}\n會員ID: ${reportData.memberId}\n站點ID: ${reportData.spotId}`,
-  )
+  const query = {}
+  if (rent.recSeqId) query.recId = rent.recSeqId // 訂單 ID
+  if (rent.spotIdRent) query.spotId = rent.spotIdRent // 站點 ID
+  if (rent.seatsId) query.seatId = rent.seatsId // 座位 ID
+
+  router.push({ path: '/support/report', query })
 }
 
 // --- Lifecycle ---

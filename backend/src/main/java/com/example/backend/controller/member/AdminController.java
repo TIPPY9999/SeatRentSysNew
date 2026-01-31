@@ -62,7 +62,7 @@ public class AdminController {
         old.setAdmName(admin.getAdmName());
         old.setAdmEmail(admin.getAdmEmail());
         old.setAdmRole(admin.getAdmRole());
-        old.setAdminImage(admin.getAdminImage());
+        //old.setAdminImage(admin.getAdminImage());
         old.setUpdatedAt(java.time.LocalDateTime.now());
 
         // 密碼：有傳才更新

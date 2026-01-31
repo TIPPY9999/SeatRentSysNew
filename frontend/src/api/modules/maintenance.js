@@ -267,6 +267,50 @@ export const getAssetStats = (assetType) => {
   return http.get('/maintenance/stats/assets', { params: { assetType } })
 }
 
+// ============ 工單附件 (Attachment) API ============
+
+/**
+ * 上傳工單附件（圖片）
+ * @param {number} ticketId - 工單 ID
+ * @param {File[]} files - 圖片檔案陣列
+ * @param {string} note - 備註（可選）
+ */
+export const uploadTicketAttachments = (ticketId, files, note = null) => {
+  const formData = new FormData()
+  
+  // 加入多個檔案
+  files.forEach(file => {
+    formData.append('files', file)
+  })
+  
+  // 加入備註（可選）
+  if (note) {
+    formData.append('note', note)
+  }
+  
+  return http.post(`/maintenance/tickets/${ticketId}/attachments`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+/**
+ * 取得工單的所有附件
+ * @param {number} ticketId - 工單 ID
+ */
+export const getTicketAttachments = (ticketId) => {
+  return http.get(`/maintenance/tickets/${ticketId}/attachments`)
+}
+
+/**
+ * 刪除附件（軟刪除）
+ * @param {number} attachmentId - 附件 ID
+ */
+export const deleteTicketAttachment = (attachmentId) => {
+  return http.delete(`/maintenance/attachments/${attachmentId}`)
+}
+
 // 匯出所有 API 作為預設物件 (方便一次 import)
 export default {
   // Staff
@@ -307,6 +351,10 @@ export default {
   toggleSchedule,
   // Stats
   getAssetStats,
+  // Attachments (圖片附件)
+  uploadTicketAttachments,
+  getTicketAttachments,
+  deleteTicketAttachment,
   // Task 2: 歷史工單查詢支援
   getTicketsByStaff: (staffId, statuses = null) => {
     const params = statuses ? { statuses: statuses.join(',') } : {}

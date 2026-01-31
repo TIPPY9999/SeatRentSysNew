@@ -3,6 +3,7 @@
 --===========CLEAR=================
 USE SeatRentSys
 DROP TABLE recRent;
+DROP TABLE maintenanceTicketAttachment;
 DROP TABLE maintenanceLog;
 DROP TABLE maintenanceInformation;
 DROP TABLE maintenanceSchedule;
@@ -51,8 +52,10 @@ CREATE TABLE member
 );
 
 --===========新增會員照片欄位 ==============
+
 ALTER TABLE member 
 ADD memImage VARCHAR(255) CONSTRAINT DF_member_memImage DEFAULT 'default.png';
+
 
 UPDATE member SET memImage = '01.jpg' WHERE memId = 1;
 UPDATE member SET memImage = '02.jpg' WHERE memId = 2;
@@ -220,6 +223,51 @@ CREATE TABLE [dbo].[maintenanceInformation]
     CONSTRAINT [FK_maintenanceInformation_seats] FOREIGN KEY ([seatsId]) REFERENCES [dbo].[seats] ([seatsId]),
     CONSTRAINT [fkMaintAssignedStaffId] FOREIGN KEY ([assignedStaffId]) REFERENCES [dbo].[maintenanceStaff] ([staffId])
 );
+--=================================
+--=========2026-1-31(翌帆新建)============
+
+--========克服回報專用=================
+USE [SeatRentSys];
+GO
+
+CREATE TABLE [dbo].[maintenanceTicketAttachment]
+(
+    [attachmentId] INT IDENTITY (1, 1) NOT NULL,
+    [ticketId] INT NOT NULL,
+
+    [originalName] NVARCHAR (255) NOT NULL,
+    [storedName] NVARCHAR (255) NOT NULL,
+    [contentType] NVARCHAR (100) NOT NULL,
+    [fileSize] BIGINT NOT NULL,
+
+    [publicUrl] NVARCHAR (400) NOT NULL,
+
+    [sortOrder] INT DEFAULT ((0)) NOT NULL,
+    [note] NVARCHAR (200) NULL,
+
+    [createdAt] DATETIME2 (7) DEFAULT (sysdatetime()) NOT NULL,
+    [isActive] BIT CONSTRAINT [DF_mta_isActive] DEFAULT ((1)) NOT NULL,
+
+    CONSTRAINT [PK_maintenanceTicketAttachment] PRIMARY KEY CLUSTERED ([attachmentId] ASC),
+
+    CONSTRAINT [FK_mta_ticket]
+        FOREIGN KEY ([ticketId])
+        REFERENCES [dbo].[maintenanceInformation] ([ticketId])
+        ON DELETE CASCADE
+);
+GO
+
+-- 常用查詢：用 ticketId 撈附件、按 createdAt 或 sortOrder 排序
+CREATE NONCLUSTERED INDEX [IX_mta_ticket_createdAt]
+ON [dbo].[maintenanceTicketAttachment] ([ticketId] ASC, [createdAt] DESC)
+INCLUDE ([publicUrl], [isActive], [sortOrder]);
+GO
+
+-- 防止同一張工單重複插入同名 storedName（可選但很保險）
+CREATE UNIQUE NONCLUSTERED INDEX [UX_mta_ticket_storedName]
+ON [dbo].[maintenanceTicketAttachment] ([ticketId] ASC, [storedName] ASC);
+GO
+
 --=================================
 USE [SeatRentSys];
 GO
@@ -673,8 +721,8 @@ VALUES
     (N'蘇郁婷', N'連線通科技', '0916-222-888', 'yuting.su@connect-tech.com', N'路由器與交換器硬體設定', 1);
 --=============================== 翌帆 DATA END======================================
 --==============子桓 DATAver.20260121===============
-INSERT INTO recRent 
-    (memId, couponId, seatsId, spotIdRent, spotIdReturn, recRentDT2, recReturnDT2, recUsageDT2, recStatus, 
+INSERT INTO recRent
+    (memId, couponId, seatsId, spotIdRent, spotIdReturn, recRentDT2, recReturnDT2, recUsageDT2, recStatus,
     recPrice, recRequestPay, recPayment, recPayBy, recInvoice, recCarrier, recViolatInt, recNote)
 VALUES
     -- 1~5: 已完成的訂單 (同點歸還)
