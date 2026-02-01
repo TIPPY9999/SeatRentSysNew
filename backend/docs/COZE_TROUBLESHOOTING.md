@@ -352,20 +352,113 @@ curl http://localhost:8080/api/support/coze/bootstrap
 
 ---
 
+## � chatapp 502/TLB 錯誤專章
+
+### 問題描述
+
+點擊 Coze 聊天泡泡後，SDK 呼叫 `https://api.coze.com/open-platform/sdk/chatapp` 
+回傳 `502 Bad Gateway`，Response Header 顯示 `server: TLB`。
+
+**症狀**：
+- 泡泡可以顯示，點擊可以開啟
+- Console 顯示初始化成功
+- 但對話框空白或顯示載入中
+- Network Tab 看到 chatapp 請求 502
+
+### 可能原因
+
+| 原因 | 機率 | 排查方式 |
+|------|------|---------|
+| Coze 服務端閘道問題 | 高 | 等待 5-10 分鐘重試 |
+| 本地網路被擋（公司 VPN/防火牆）| 中 | 切換手機熱點測試 |
+| DNS 污染/解析失敗 | 中 | 執行 `nslookup api.coze.com` |
+| Token 無效或過期 | 低 | 檢查後端 bootstrap 回應 |
+| Bot ID 錯誤 | 低 | 確認 Coze 平台設定 |
+
+### 診斷步驟
+
+#### Step 1：記錄診斷資訊
+在 Chrome DevTools → Network Tab 找到 `chatapp` 請求：
+
+```
+1. 點擊失敗的請求
+2. 記錄 Response Headers:
+   - x-akamai-request-id: <記下這個值>
+   - server: TLB
+   - date: <記下時間>
+3. 截圖保存
+```
+
+#### Step 2：網路切換測試
+```powershell
+# 測試 1：使用當前網路
+curl -I https://api.coze.com
+
+# 測試 2：切換手機熱點
+# 重新執行上述命令，比較結果
+
+# 測試 3：DNS 解析
+nslookup api.coze.com
+```
+
+**預期結果**：
+- 正常：HTTP 200 或 301/302
+- 異常：502、連線逾時、NXDOMAIN
+
+#### Step 3：確認前端降級機制
+```javascript
+// 在 Console 執行
+window.__cozeClient  // 應該有值
+window.__coze_inited // 應該是 true
+
+// 嘗試手動開啟
+window.__cozeClient.open()
+```
+
+### 解決方案
+
+#### 方案 A：等待重試（服務端問題）
+如果是 Coze 服務端閘道問題，通常 5-10 分鐘後會恢復。
+前端已實作自動重試機制（300ms → 800ms → 1500ms）。
+
+#### 方案 B：切換網路（本地網路問題）
+1. 關閉 VPN
+2. 使用手機熱點
+3. 重新載入頁面
+
+#### 方案 C：使用降級 UI
+若問題持續，引導使用者至人工客服：
+1. 頁面會顯示「Coze 服務暫時不可用」
+2. 「人工客服協助」卡片會顯示「推薦」標籤
+3. 點擊前往問題回報頁面
+
+### 監控與回報
+
+若需向 Coze 官方回報，請提供：
+1. `x-akamai-request-id`
+2. 發生時間（UTC）
+3. Bot ID（不含 Token）
+4. 錯誤截圖
+
+---
+
 ## 📝 維護建議
 
 ### 定期檢查
 - [ ] 每 90 天更換 Coze PAT Token
 - [ ] 檢查 Coze SDK 版本是否有更新
 - [ ] 監控後端 log，確認 bootstrap API 無異常呼叫
+- [ ] 確認 useCozeChat.js 重試/降級機制正常運作
 
 ### 監控指標
 - Bootstrap API 呼叫次數
 - Token 刷新頻率
 - 初始化失敗率
+- 502/TLB 錯誤發生頻率
+- 降級 UI 顯示次數
 - 使用者滿意度（Chat 使用率）
 
 ---
 
-**最後更新**：2026-01-31  
+**最後更新**：2026-02-01  
 **維護者**：Take@Seat 開發團隊

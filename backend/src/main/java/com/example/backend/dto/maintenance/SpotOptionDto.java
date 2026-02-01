@@ -7,14 +7,14 @@ public class SpotOptionDto {
     private String spotAddress;
     private String spotStatus;
 
-    // ✅ [新增] 經緯度欄位（前端地圖用）
+    //  經緯度欄位（前端地圖用）
     // 建議用 Double（JSON 友善、前端也好處理）
     private Double latitude;
     private Double longitude;
 
     public SpotOptionDto() {}
 
-    // ✅ [保留] 舊建構子：不影響既有程式（例如下拉選單只需要基本欄位）
+    //  舊建構子：不影響既有程式（例如下拉選單只需要基本欄位）
     public SpotOptionDto(Integer spotId, String spotCode, String spotName, String spotAddress, String spotStatus) {
         this.spotId = spotId;
         this.spotCode = spotCode;
@@ -23,7 +23,7 @@ public class SpotOptionDto {
         this.spotStatus = spotStatus;
     }
 
-    // ✅ [新增] 新建構子：給「需要地圖座標」的情境使用
+    //  新建構子：給「需要地圖座標」的情境使用
     public SpotOptionDto(
             Integer spotId,
             String spotCode,

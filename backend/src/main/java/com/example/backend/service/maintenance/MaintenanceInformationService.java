@@ -38,10 +38,10 @@ public class MaintenanceInformationService {
     public static final String PRIORITY_URGENT = "URGENT";
 
     public static final String RESULT_FIXED = "FIXED";
-    public static final String RESULT_MAINTAINED = "MAINTAINED"; // ✅ 新增：已保養
+    public static final String RESULT_MAINTAINED = "MAINTAINED"; //  新增：已保養
     public static final String RESULT_NOT_FIXED = "NOT_FIXED";
     public static final String RESULT_NO_ISSUE = "NO_ISSUE";
-    public static final String RESULT_UNFIXABLE = "UNFIXABLE"; // ✅ 統一為 UNFIXABLE
+    public static final String RESULT_UNFIXABLE = "UNFIXABLE"; //  統一為 UNFIXABLE
     public static final String RESULT_OTHER = "OTHER";
 
     public static final String SPOT_STATUS_OPERATIONAL = "營運中";
@@ -79,7 +79,7 @@ public class MaintenanceInformationService {
     public List<SpotOptionDto> getSpotOptions(){
         return rentalSpotRepo.findAll().stream()
                 .map(spot -> {
-                    // ✅ 修正原因：前端地圖功能需要座標資料，將 RentalSpot 的 BigDecimal 轉為 Double 傳給前端
+                    //  修正原因：前端地圖功能需要座標資料，將 RentalSpot 的 BigDecimal 轉為 Double 傳給前端
                     // 使用新建構子傳入 latitude/longitude，若為 null 則保持 null（前端會判斷）
                     Double lat = (spot.getLatitude() != null) ? spot.getLatitude().doubleValue() : null;
                     Double lng = (spot.getLongitude() != null) ? spot.getLongitude().doubleValue() : null;
@@ -90,8 +90,8 @@ public class MaintenanceInformationService {
                         spot.getSpotName(), 
                         spot.getSpotAddress(), 
                         spot.getSpotStatus(),
-                        lat,  // ✅ 新增：經度（前端地圖用）
-                        lng   // ✅ 新增：緯度（前端地圖用）
+                        lat,  //  新增：經度（前端地圖用）
+                        lng   //  新增：緯度（前端地圖用）
                     );
                 })
                 .sorted(Comparator.comparingInt(SpotOptionDto::getSpotId)).toList();

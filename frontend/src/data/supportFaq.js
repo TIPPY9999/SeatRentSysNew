@@ -256,7 +256,7 @@ export const faqData = [
         a: `
           <p>我們提供多種聯繫方式：</p>
           <ul style="line-height: 1.8; padding-left: 20px;">
-            <li><i class="fas fa-headset" style="color: #409eff;"></i> 客服專線：0800-123-456（24 小時）</li>
+            <li><i class="fas fa-headset" style="color: #409eff;"></i> 客服專線：0968-179-091（24 小時）</li>
             <li><i class="fas fa-envelope" style="color: #67c23a;"></i> Email：support@seatrentsys.com</li>
             <li><i class="fas fa-comment-dots" style="color: #e6a23c;"></i> LINE 官方帳號：@seatrent</li>
             <li><i class="fas fa-exclamation-circle" style="color: #f56c6c;"></i> 緊急回報：點擊下方「我要回報問題」</li>

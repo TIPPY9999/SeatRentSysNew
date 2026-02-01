@@ -1,12 +1,82 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { faqData } from '@/data/supportFaq'
-import { useMemberAuthStore } from '@/stores/memberAuth'
-import supportApi from '@/api/modules/support'
+import { useCozeChat } from '@/composables/maintenance/useCozeChat'
 
 const router = useRouter()
-const memberAuthStore = useMemberAuthStore()
+
+// ==================== BEGIN: Coze OpenAPI 整合（移除 WebSDK） ====================
+const {
+  loading: cozeLoading,
+  initialized: cozeInitialized,
+  error: cozeError,
+  degraded: cozeDegraded,
+  status: cozeStatus,
+  statusText: cozeStatusText,
+  retryCount,
+  messages,       // 對話訊息列表
+  sending,        // 正在發送訊息
+  initCozeChat,
+  sendMessage,
+  manualRetry,
+  clearMessages,
+} = useCozeChat()
+
+// 聊天視窗狀態
+const chatOpen = ref(false)
+const chatInput = ref('')
+const messagesContainer = ref(null)
+
+// 開啟聊天視窗
+const openChatWindow = () => {
+  chatOpen.value = true
+  nextTick(() => scrollToBottom())
+}
+
+// 關閉聊天視窗
+const closeChatWindow = () => {
+  chatOpen.value = false
+}
+
+// 發送訊息
+const handleSendMessage = async () => {
+  if (!chatInput.value.trim() || sending.value) return
+  
+  const message = chatInput.value.trim()
+  chatInput.value = ''
+  
+  await sendMessage(message)
+  nextTick(() => scrollToBottom())
+}
+
+// Enter 送出
+const handleKeydown = (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    handleSendMessage()
+  }
+}
+
+// 捲動到最新訊息
+const scrollToBottom = () => {
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
+}
+
+// 清除對話
+const handleClearChat = () => {
+  clearMessages()
+}
+
+// 格式化時間
+const formatTime = (date) => {
+  if (!date) return ''
+  const d = new Date(date)
+  return d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+}
+// ==================== END: Coze OpenAPI 整合 ====================
 
 // ==================== FAQ 相關狀態 ====================
 const searchKeyword = ref('')
@@ -18,22 +88,24 @@ const activeFaqItems = ref([])
  */
 const filteredFaqData = computed(() => {
   const keyword = searchKeyword.value.toLowerCase().trim()
-  
+
   if (!keyword) {
-    const currentCategory = faqData.find(cat => cat.category === activeCategory.value)
+    const currentCategory = faqData.find((cat) => cat.category === activeCategory.value)
     return currentCategory ? [currentCategory] : []
   }
 
-  return faqData.map(category => ({
-    ...category,
-    items: category.items.filter(item => {
-      const qMatch = item.q.toLowerCase().includes(keyword)
-      const aMatch = item.a.toLowerCase().includes(keyword)
-      const tagMatch = item.tags?.some(tag => tag.toLowerCase().includes(keyword))
-      const keywordMatch = item.keywords?.some(kw => kw.toLowerCase().includes(keyword))
-      return qMatch || aMatch || tagMatch || keywordMatch
-    })
-  })).filter(cat => cat.items.length > 0)
+  return faqData
+    .map((category) => ({
+      ...category,
+      items: category.items.filter((item) => {
+        const qMatch = item.q.toLowerCase().includes(keyword)
+        const aMatch = item.a.toLowerCase().includes(keyword)
+        const tagMatch = item.tags?.some((tag) => tag.toLowerCase().includes(keyword))
+        const keywordMatch = item.keywords?.some((kw) => kw.toLowerCase().includes(keyword))
+        return qMatch || aMatch || tagMatch || keywordMatch
+      }),
+    }))
+    .filter((cat) => cat.items.length > 0)
 })
 
 /**
@@ -59,191 +131,46 @@ const totalFaqCount = computed(() => {
   return faqData.reduce((sum, cat) => sum + cat.items.length, 0)
 })
 
-// ==================== Coze Web Chat SDK 初始化 ====================
-const cozeLoading = ref(false)
-const cozeInitialized = ref(false)
+// ==================== BEGIN: Coze 狀態標籤配置 ====================
+const cozeTagConfig = computed(() => {
+  const configs = {
+    loading: { type: 'warning', icon: 'fa-spinner fa-spin', text: '初始化中' },
+    ready: { type: 'success', icon: 'fa-check-circle', text: '已就緒' },
+    degraded: { type: 'danger', icon: 'fa-exclamation-triangle', text: '服務暫時不可用' },
+    error: { type: 'danger', icon: 'fa-times-circle', text: '初始化失敗' },
+    idle: { type: 'info', icon: 'fa-clock', text: '未啟動' },
+  }
+  return configs[cozeStatus.value] || configs.idle
+})
+// ==================== END: Coze 狀態標籤配置 ====================
 
-/**
- * 【核心】動態載入 Coze SDK Script
- * 確保不重複插入 <script> 標籤
- */
-const loadCozeSDK = (sdkSrc) => {
-  return new Promise((resolve, reject) => {
-    // ✅ 防止重複插入：檢查是否已存在
-    const existingScript = document.querySelector(`script[src="${sdkSrc}"]`)
-    if (existingScript) {
-      console.log('[Coze] SDK script 已存在，跳過重複載入')
-      // 若已載入且 window.CozeWebSDK 已存在，直接 resolve
-      if (window.CozeWebSDK) {
-        resolve()
-      } else {
-        // 否則監聽既有 script 的 load 事件
-        existingScript.addEventListener('load', resolve)
-        existingScript.addEventListener('error', reject)
-      }
-      return
-    }
-
-    // ✅ 建立新的 <script> 標籤
-    const script = document.createElement('script')
-    script.src = sdkSrc
-    script.async = true
-    script.onload = () => {
-      console.log('[Coze] SDK 載入成功')
-      resolve()
-    }
-    script.onerror = () => {
-      console.error('[Coze] SDK 載入失敗')
-      reject(new Error('Coze SDK 載入失敗'))
-    }
-    document.body.appendChild(script)
-  })
+// ==================== BEGIN: 降級模式按鈕處理 ====================
+const handleRetryCoze = async () => {
+  await manualRetry()
 }
 
-/**
- * 【核心】初始化 Coze Chat SDK
- * 1. 檢查是否已初始化（避免重複）
- * 2. 呼叫後端 bootstrap API
- * 3. 決定 SDK src（後端優先，否則環境變數）
- * 4. 動態載入 SDK
- * 5. 建立 WebChatClient 實例
- */
-const initCozeChat = async () => {
-  // ✅ 防止重複初始化：檢查全域旗標
-  if (window.__coze_inited) {
-    console.log('[Coze] 已初始化，跳過重複執行')
-    cozeInitialized.value = true
+const handleOpenChat = () => {
+  if (cozeDegraded.value) {
+    // 降級模式下，不執行開啟（UI 會引導到人工客服）
     return
   }
-
-  cozeLoading.value = true
-
-  try {
-    // ==================== Step 1：取得 Bootstrap 配置 ====================
-    console.log('[Coze] 開始載入 Bootstrap 配置...')
-    const response = await supportApi.getCozeBootstrap()
-    const { botId, token, sdkSrc, expiresIn } = response.data
-
-    // ✅ 驗證必要欄位
-    if (!botId || !token) {
-      console.warn('[Coze] Bootstrap 配置不完整（缺少 botId 或 token），取消初始化')
-      return
-    }
-
-    console.log('[Coze] Bootstrap 配置載入成功', { botId, sdkSrc, expiresIn })
-
-    // ==================== Step 2：決定 SDK 來源 ====================
-    // 優先使用後端回傳的 sdkSrc，若為空則 fallback 到環境變數
-    const finalSdkSrc = sdkSrc || import.meta.env.VITE_COZE_CHAT_SDK_SRC
-
-    if (!finalSdkSrc) {
-      console.warn('[Coze] 無法取得 SDK 來源（後端與環境變數皆為空），取消初始化')
-      return
-    }
-
-    console.log('[Coze] 使用 SDK 來源:', finalSdkSrc)
-
-    // ==================== Step 3：載入 SDK Script ====================
-    await loadCozeSDK(finalSdkSrc)
-
-    // ✅ 驗證 SDK 是否成功載入
-    if (!window.CozeWebSDK) {
-      console.error('[Coze] SDK 載入後 window.CozeWebSDK 不存在')
-      return
-    }
-
-    // ==================== Step 4：建立使用者 ID（降低聊天串台） ====================
-    const getUserId = () => {
-      // 優先使用已登入會員資訊
-      if (memberAuthStore.isLogin && memberAuthStore.member?.memId) {
-        return `member_${memberAuthStore.member.memId}`
-      }
-
-      // 未登入：使用 localStorage 保存的 UUID
-      const storageKey = 'support_user_id'
-      let userId = localStorage.getItem(storageKey)
-      
-      if (!userId) {
-        // 使用 crypto.randomUUID() 產生唯一 ID（現代瀏覽器支援）
-        userId = crypto.randomUUID ? crypto.randomUUID() : `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        localStorage.setItem(storageKey, userId)
-      }
-
-      return userId
-    }
-
-    const userId = getUserId()
-    console.log('[Coze] 使用者 ID:', userId.startsWith('member_') ? userId : '[匿名訪客]')
-
-    // ==================== Step 5：建立 WebChatClient 實例 ====================
-    window.__cozeClient = new window.CozeWebSDK.WebChatClient({
-      config: {
-        bot_id: botId
-      },
-      componentProps: {
-        title: 'Take@Seat 智能客服'
-      },
-      auth: {
-        type: 'token',
-        token: token,
-        // ✅ Token 過期時自動刷新（重新呼叫 bootstrap API）
-        onRefreshToken: async () => {
-          console.log('[Coze] Token 即將過期，自動刷新...')
-          try {
-            const refreshResponse = await supportApi.getCozeBootstrap()
-            const newToken = refreshResponse.data.token
-            console.log('[Coze] Token 刷新成功')
-            return newToken
-          } catch (error) {
-            console.error('[Coze] Token 刷新失敗:', error.message)
-            throw error
-          }
-        }
-      }
-    })
-
-    // ✅ 若 SDK 支援設定使用者資訊（依實際 SDK 版本調整）
-    if (typeof window.__cozeClient.setUser === 'function') {
-      window.__cozeClient.setUser({ id: userId })
-    }
-
-    // ✅ 設定全域旗標，防止重複初始化
-    window.__coze_inited = true
-    cozeInitialized.value = true
-
-    console.log('[Coze] 初始化完成 ✅')
-
-  } catch (error) {
-    // ✅ 錯誤處理：僅印出不含 token 的錯誤訊息
-    if (error.response?.status === 500 || error.response?.status === 400) {
-      console.warn('[Coze] Bootstrap API 回傳錯誤（可能缺少環境變數），泡泡功能不可用')
-    } else {
-      console.error('[Coze] 初始化失敗:', error.message)
-    }
-  } finally {
-    cozeLoading.value = false
-  }
+  openChatWindow()
 }
+// ==================== END: 降級模式按鈕處理 ====================
 
-/**
- * 【生命週期】組件掛載後自動初始化 Coze
- */
+// ==================== BEGIN: 生命週期 ====================
 onMounted(() => {
-  // ✅ 延遲 1 秒後初始化，避免阻塞頁面渲染
+  // 延遲 500ms 後初始化，避免阻塞頁面渲染
   setTimeout(() => {
     initCozeChat()
-  }, 1000)
+  }, 500)
 })
 
-/**
- * 【生命週期】組件卸載時清理（可選）
- * 注意：Coze SDK 泡泡掛在 body 上，不強制銷毀
- * 透過 window.__coze_inited 旗標確保下次進入不重複初始化
- */
 onUnmounted(() => {
-  // 可選：若需要完全清理，可呼叫 window.__cozeClient?.destroy()
-  // 但通常保留泡泡讓使用者在其他頁面也能使用
+  // 關閉聊天視窗
+  chatOpen.value = false
 })
+// ==================== END: 生命週期 ====================
 </script>
 
 <template>
@@ -372,43 +299,102 @@ onUnmounted(() => {
         <!-- CTA 按鈕區 -->
         <div class="cta-section">
           <!-- AI 客服卡片 -->
-          <div class="cta-card cta-card-ai">
+          <div class="cta-card cta-card-ai" :class="{ 'cta-card-degraded': cozeDegraded }">
             <div class="cta-icon">
               <i class="fas fa-robot"></i>
             </div>
             <div class="cta-content">
               <h3>
                 試試 AI 智能客服
-                <el-tag v-if="cozeInitialized" type="success" size="small" effect="dark">
-                  <i class="fas fa-check-circle"></i> 已就緒
-                </el-tag>
-                <el-tag v-else-if="cozeLoading" type="warning" size="small" effect="dark">
-                  <i class="fas fa-spinner fa-spin"></i> 初始化中
+                <el-tag :type="cozeTagConfig.type" size="small" effect="dark">
+                  <i :class="['fas', cozeTagConfig.icon]"></i> {{ cozeTagConfig.text }}
                 </el-tag>
               </h3>
-              <p>即時解答您的疑問，24/7 全天候服務，請點擊右下角聊天圖示開始對話</p>
+
+              <!-- 正常狀態提示 -->
+              <p v-if="!cozeDegraded && !cozeError">
+                即時解答您的疑問，24/7 全天候服務，請點擊右下角聊天圖示開始對話
+              </p>
+
+              <!-- 降級狀態提示 -->
+              <div v-if="cozeDegraded" class="degraded-notice">
+                <p class="degraded-text">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  Coze 服務暫時不可用（可能是網路問題或服務端維護）
+                </p>
+                <p class="degraded-hint">您可以嘗試重新連線，或使用下方人工客服管道</p>
+                <div class="degraded-actions">
+                  <el-button
+                    type="warning"
+                    size="small"
+                    :loading="cozeLoading"
+                    @click="handleRetryCoze"
+                  >
+                    <i class="fas fa-redo mr-1" v-if="!cozeLoading"></i>
+                    {{ cozeLoading ? '重試中...' : '重新連線' }}
+                    <span v-if="retryCount > 0" class="retry-count">({{ retryCount }}/3)</span>
+                  </el-button>
+                </div>
+              </div>
+
+              <!-- 錯誤狀態提示 -->
+              <div v-else-if="cozeError" class="error-notice">
+                <p class="error-text">
+                  <i class="fas fa-times-circle"></i>
+                  初始化失敗：{{ cozeError }}
+                </p>
+                <el-button
+                  type="primary"
+                  size="small"
+                  :loading="cozeLoading"
+                  @click="handleRetryCoze"
+                >
+                  <i class="fas fa-redo mr-1" v-if="!cozeLoading"></i>
+                  重試
+                </el-button>
+              </div>
             </div>
+
+            <!-- 正常按鈕 -->
             <el-button
+              v-if="!cozeDegraded && !cozeError"
               type="success"
               size="large"
               :disabled="!cozeInitialized"
               :loading="cozeLoading"
+              @click="handleOpenChat"
             >
-              <i class="fas fa-comments mr-2"></i>
-              {{ cozeInitialized ? '泡泡已就緒' : cozeLoading ? '載入中...' : '初始化失敗' }}
+              <i class="fas fa-comments mr-2" v-if="!cozeLoading"></i>
+              {{ cozeInitialized ? '開始對話' : cozeLoading ? '載入中...' : '初始化中' }}
             </el-button>
           </div>
 
-          <!-- 問題回報卡片 -->
+          <!-- 問題回報卡片（人工客服入口） -->
           <div class="cta-card cta-card-report">
             <div class="cta-icon">
               <i class="fas fa-headset"></i>
             </div>
             <div class="cta-content">
-              <h3>人工客服協助</h3>
-              <p>若以上內容無法解決您的問題，請填寫問題回報表單，我們會盡快為您處理</p>
+              <h3>
+                人工客服協助
+                <!-- 降級時強調此入口 -->
+                <el-tag v-if="cozeDegraded" type="success" size="small" effect="dark">
+                  <i class="fas fa-star"></i> 推薦
+                </el-tag>
+              </h3>
+              <p>
+                {{
+                  cozeDegraded
+                    ? 'AI 客服暫時不可用，請透過此管道聯繫我們，我們會盡快為您處理'
+                    : '若以上內容無法解決您的問題，請填寫問題回報表單，我們會盡快為您處理'
+                }}
+              </p>
             </div>
-            <el-button type="primary" size="large" @click="goToReport">
+            <el-button
+              :type="cozeDegraded ? 'success' : 'primary'"
+              size="large"
+              @click="goToReport"
+            >
               <i class="fas fa-paper-plane mr-2"></i> 我要回報問題
             </el-button>
           </div>
@@ -431,6 +417,124 @@ onUnmounted(() => {
         </div>
       </div>
     </section>
+
+    <!-- ==================== BEGIN: 自製聊天泡泡 UI（OpenAPI 模式） ==================== -->
+    <!-- 右下角浮動聊天按鈕 -->
+    <div 
+      v-if="cozeInitialized && !cozeDegraded && !chatOpen" 
+      class="chat-fab"
+      @click="openChatWindow"
+    >
+      <i class="fas fa-comments"></i>
+      <span class="fab-tooltip">AI 智能客服</span>
+    </div>
+
+    <!-- 聊天視窗 -->
+    <transition name="chat-slide">
+      <div v-if="chatOpen" class="chat-window">
+        <!-- 聊天視窗標題列 -->
+        <div class="chat-header">
+          <div class="chat-header-info">
+            <i class="fas fa-robot"></i>
+            <span>Take@Seat 智能客服</span>
+            <el-tag size="small" type="success" effect="plain">
+              <i class="fas fa-circle" style="font-size: 6px; margin-right: 4px;"></i>
+              線上
+            </el-tag>
+          </div>
+          <div class="chat-header-actions">
+            <el-button text circle size="small" @click="handleClearChat" title="清除對話">
+              <i class="fas fa-trash-alt"></i>
+            </el-button>
+            <el-button text circle size="small" @click="closeChatWindow" title="關閉">
+              <i class="fas fa-times"></i>
+            </el-button>
+          </div>
+        </div>
+
+        <!-- 聊天訊息區 -->
+        <div class="chat-messages" ref="messagesContainer">
+          <!-- 歡迎訊息 -->
+          <div v-if="messages.length === 0" class="chat-welcome">
+            <div class="welcome-icon">
+              <i class="fas fa-hand-sparkles"></i>
+            </div>
+            <h4>您好！我是 AI 智能客服</h4>
+            <p>有任何關於座位租賃的問題，歡迎詢問我！</p>
+            <div class="quick-questions">
+              <el-button size="small" @click="chatInput = '如何預約座位？'; handleSendMessage()">
+                如何預約座位？
+              </el-button>
+              <el-button size="small" @click="chatInput = '付款方式有哪些？'; handleSendMessage()">
+                付款方式有哪些？
+              </el-button>
+              <el-button size="small" @click="chatInput = '如何取消預約？'; handleSendMessage()">
+                如何取消預約？
+              </el-button>
+            </div>
+          </div>
+
+          <!-- 訊息列表 -->
+          <div 
+            v-for="(msg, index) in messages" 
+            :key="index"
+            class="chat-message"
+            :class="{ 
+              'message-user': msg.role === 'user',
+              'message-assistant': msg.role === 'assistant',
+              'message-error': msg.isError
+            }"
+          >
+            <div class="message-avatar">
+              <i :class="msg.role === 'user' ? 'fas fa-user' : 'fas fa-robot'"></i>
+            </div>
+            <div class="message-content">
+              <div class="message-bubble">{{ msg.content }}</div>
+              <div class="message-time">{{ formatTime(msg.timestamp) }}</div>
+            </div>
+          </div>
+
+          <!-- 正在輸入指示器 -->
+          <div v-if="sending" class="chat-message message-assistant">
+            <div class="message-avatar">
+              <i class="fas fa-robot"></i>
+            </div>
+            <div class="message-content">
+              <div class="message-bubble typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 聊天輸入區 -->
+        <div class="chat-input-area">
+          <el-input
+            v-model="chatInput"
+            placeholder="輸入訊息..."
+            :disabled="sending"
+            @keydown="handleKeydown"
+            clearable
+          >
+            <template #append>
+              <el-button 
+                type="primary" 
+                :loading="sending"
+                :disabled="!chatInput.trim()"
+                @click="handleSendMessage"
+              >
+                <i class="fas fa-paper-plane" v-if="!sending"></i>
+              </el-button>
+            </template>
+          </el-input>
+          <div class="chat-input-hint">
+            按 Enter 送出 · 
+            <a href="#" @click.prevent="goToReport">轉人工客服</a>
+          </div>
+        </div>
+      </div>
+    </transition>
+    <!-- ==================== END: 自製聊天泡泡 UI ==================== -->
   </div>
 </template>
 
@@ -695,6 +799,11 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #67c23a 0%, #409eff 100%);
 }
 
+/* 降級模式樣式 */
+.cta-card-degraded {
+  background: linear-gradient(135deg, #909399 0%, #606266 100%);
+}
+
 .cta-card-report {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
@@ -734,6 +843,10 @@ onUnmounted(() => {
   color: #67c23a;
 }
 
+.cta-card-degraded .el-button {
+  color: #606266;
+}
+
 .cta-card-report .el-button {
   color: #667eea;
 }
@@ -741,6 +854,43 @@ onUnmounted(() => {
 .cta-card .el-button:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* 降級提示樣式 */
+.degraded-notice,
+.error-notice {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.degraded-text,
+.error-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.degraded-hint {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  margin: 0 0 15px;
+}
+
+.degraded-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+.retry-count {
+  margin-left: 5px;
+  font-size: 0.8em;
+  opacity: 0.8;
 }
 
 /* ========== 聯繫方式 ========== */
@@ -801,4 +951,329 @@ onUnmounted(() => {
 .mr-2 {
   margin-right: 8px;
 }
+
+/* ==================== BEGIN: 聊天泡泡 UI 樣式（OpenAPI 模式） ==================== */
+
+/* 右下角浮動按鈕 */
+.chat-fab {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #67c23a 0%, #409eff 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(64, 158, 255, 0.4);
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.chat-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgba(64, 158, 255, 0.5);
+}
+
+.chat-fab i {
+  font-size: 24px;
+  color: white;
+}
+
+.chat-fab .fab-tooltip {
+  position: absolute;
+  right: 70px;
+  background: #303133;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.chat-fab:hover .fab-tooltip {
+  opacity: 1;
+}
+
+/* 聊天視窗 */
+.chat-window {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 380px;
+  height: 550px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1001;
+}
+
+/* 聊天視窗動畫 */
+.chat-slide-enter-active,
+.chat-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.chat-slide-enter-from,
+.chat-slide-leave-to {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+}
+
+/* 聊天標題列 */
+.chat-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-header-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.chat-header-info i {
+  font-size: 20px;
+}
+
+.chat-header-actions .el-button {
+  color: white;
+}
+
+.chat-header-actions .el-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 聊天訊息區 */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: #f5f7fa;
+}
+
+/* 歡迎訊息 */
+.chat-welcome {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.chat-welcome .welcome-icon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 15px;
+}
+
+.chat-welcome .welcome-icon i {
+  font-size: 28px;
+  color: white;
+}
+
+.chat-welcome h4 {
+  margin: 0 0 8px;
+  color: #303133;
+}
+
+.chat-welcome p {
+  margin: 0 0 20px;
+  color: #909399;
+  font-size: 14px;
+}
+
+.chat-welcome .quick-questions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.chat-welcome .quick-questions .el-button {
+  font-size: 12px;
+}
+
+/* 訊息氣泡 */
+.chat-message {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.chat-message.message-user {
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.message-user .message-avatar {
+  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+  color: white;
+}
+
+.message-assistant .message-avatar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.message-content {
+  max-width: 70%;
+}
+
+.message-bubble {
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.message-user .message-bubble {
+  background: #409eff;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message-assistant .message-bubble {
+  background: white;
+  color: #303133;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.message-error .message-bubble {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #909399;
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.message-user .message-time {
+  text-align: right;
+}
+
+/* 正在輸入指示器 */
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background: #c0c4cc;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-8px);
+  }
+}
+
+/* 聊天輸入區 */
+.chat-input-area {
+  padding: 12px 16px;
+  background: white;
+  border-top: 1px solid #ebeef5;
+}
+
+.chat-input-area .el-input {
+  border-radius: 24px;
+}
+
+.chat-input-area .el-input :deep(.el-input__wrapper) {
+  border-radius: 24px 0 0 24px;
+}
+
+.chat-input-area .el-input :deep(.el-input-group__append) {
+  border-radius: 0 24px 24px 0;
+  padding: 0;
+}
+
+.chat-input-area .el-input :deep(.el-input-group__append .el-button) {
+  border-radius: 0 24px 24px 0;
+  margin: 0;
+  height: 100%;
+}
+
+.chat-input-hint {
+  font-size: 11px;
+  color: #909399;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.chat-input-hint a {
+  color: #409eff;
+  text-decoration: none;
+}
+
+.chat-input-hint a:hover {
+  text-decoration: underline;
+}
+
+/* 響應式 - 手機版 */
+@media (max-width: 480px) {
+  .chat-window {
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .chat-fab {
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+/* ==================== END: 聊天泡泡 UI 樣式 ==================== */
 </style>

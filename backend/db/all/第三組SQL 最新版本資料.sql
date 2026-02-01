@@ -52,6 +52,7 @@ CREATE TABLE member
 );
 
 --===========新增會員照片欄位 ==============
+USE SeatRentSys;
 
 ALTER TABLE member 
 ADD memImage VARCHAR(255) CONSTRAINT DF_member_memImage DEFAULT 'default.png';
