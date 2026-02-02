@@ -6,27 +6,30 @@ import { useCozeChat } from '@/composables/maintenance/useCozeChat'
 
 const router = useRouter()
 
-// ==================== BEGIN: Coze OpenAPI 整合（移除 WebSDK） ====================
+// ==================== BEGIN: Coze OpenAPI  ====================
 const {
-  loading: cozeLoading,
-  initialized: cozeInitialized,
-  error: cozeError,
-  degraded: cozeDegraded,
-  status: cozeStatus,
-  statusText: cozeStatusText,
-  retryCount,
-  messages,       // 對話訊息列表
-  sending,        // 正在發送訊息
-  initCozeChat,
-  sendMessage,
-  manualRetry,
-  clearMessages,
+  loading: cozeLoading, // 是否正在載入
+  initialized: cozeInitialized, // 是否已初始化完成
+  error: cozeError, // 初始化錯誤訊息
+  degraded: cozeDegraded, // 是否處於降級模式
+  status: cozeStatus, // 目前狀態
+  statusText: cozeStatusText, // 目前狀態說明
+  retryCount, // 重試次數
+  messages, // 對話訊息列表
+  sending, // 正在發送訊息
+  initCozeChat, // 初始化函式
+  sendMessage, // 發送訊息
+  manualRetry, // 手動重試
+  clearMessages, // 清除訊息
 } = useCozeChat()
 
 // 聊天視窗狀態
 const chatOpen = ref(false)
 const chatInput = ref('')
 const messagesContainer = ref(null)
+
+//導頁使用
+const pendingIntent = ref(null)
 
 // 開啟聊天視窗
 const openChatWindow = () => {
@@ -42,10 +45,10 @@ const closeChatWindow = () => {
 // 發送訊息
 const handleSendMessage = async () => {
   if (!chatInput.value.trim() || sending.value) return
-  
+
   const message = chatInput.value.trim()
   chatInput.value = ''
-  
+
   await sendMessage(message)
   nextTick(() => scrollToBottom())
 }
@@ -75,6 +78,13 @@ const formatTime = (date) => {
   if (!date) return ''
   const d = new Date(date)
   return d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+}
+
+// Quick Questions 統一走這個方法（避免 template 多行語句爆炸）
+const sendQuickQuestion = async (text) => {
+  if (sending.value) return
+  chatInput.value = text
+  await handleSendMessage()
 }
 // ==================== END: Coze OpenAPI 整合 ====================
 
@@ -159,17 +169,46 @@ const handleOpenChat = () => {
 // ==================== END: 降級模式按鈕處理 ====================
 
 // ==================== BEGIN: 生命週期 ====================
+
+let navigateHandler = null
+
 onMounted(() => {
   // 延遲 500ms 後初始化，避免阻塞頁面渲染
   setTimeout(() => {
     initCozeChat()
   }, 500)
+
+  // 2) 接收 useCozeChat dispatch 的「導頁事件」（C 方案）
+  navigateHandler = (e) => {
+    const intent = e?.detail || null
+    pendingIntent.value = intent
+
+    // 把 intent 存起來，讓 /support/report 頁面拿來預填
+    try {
+      sessionStorage.setItem('support_report_intent', JSON.stringify(intent))
+    } catch (err) {
+      // 失敗也不影響導頁
+      console.warn('store intent failed', err)
+    }
+
+    //導頁
+    router.push('/support/report')
+  }
+
+  window.addEventListener('support:navigate-report', navigateHandler)
 })
 
 onUnmounted(() => {
   // 關閉聊天視窗
   chatOpen.value = false
+
+  // 移除事件監聽（避免記憶體洩漏 / 重複導頁）
+  if (navigateHandler) {
+    window.removeEventListener('support:navigate-report', navigateHandler)
+    navigateHandler = null
+  }
 })
+
 // ==================== END: 生命週期 ====================
 </script>
 
@@ -420,8 +459,8 @@ onUnmounted(() => {
 
     <!-- ==================== BEGIN: 自製聊天泡泡 UI（OpenAPI 模式） ==================== -->
     <!-- 右下角浮動聊天按鈕 -->
-    <div 
-      v-if="cozeInitialized && !cozeDegraded && !chatOpen" 
+    <div
+      v-if="cozeInitialized && !cozeDegraded && !chatOpen"
       class="chat-fab"
       @click="openChatWindow"
     >
@@ -438,7 +477,7 @@ onUnmounted(() => {
             <i class="fas fa-robot"></i>
             <span>Take@Seat 智能客服</span>
             <el-tag size="small" type="success" effect="plain">
-              <i class="fas fa-circle" style="font-size: 6px; margin-right: 4px;"></i>
+              <i class="fas fa-circle" style="font-size: 6px; margin-right: 4px"></i>
               線上
             </el-tag>
           </div>
@@ -462,27 +501,29 @@ onUnmounted(() => {
             <h4>您好！我是 AI 智能客服</h4>
             <p>有任何關於座位租賃的問題，歡迎詢問我！</p>
             <div class="quick-questions">
-              <el-button size="small" @click="chatInput = '如何預約座位？'; handleSendMessage()">
-                如何預約座位？
-              </el-button>
-              <el-button size="small" @click="chatInput = '付款方式有哪些？'; handleSendMessage()">
+              <el-button size="small" @click="sendQuickQuestion('付款方式有哪些？')">
                 付款方式有哪些？
               </el-button>
-              <el-button size="small" @click="chatInput = '如何取消預約？'; handleSendMessage()">
-                如何取消預約？
+
+              <el-button size="small" @click="sendQuickQuestion('如何使用租借功能？')">
+                如何使用租借功能？
+              </el-button>
+
+              <el-button size="small" @click="sendQuickQuestion('如何換取點數？')">
+                如何換取點數？
               </el-button>
             </div>
           </div>
 
           <!-- 訊息列表 -->
-          <div 
-            v-for="(msg, index) in messages" 
+          <div
+            v-for="(msg, index) in messages"
             :key="index"
             class="chat-message"
-            :class="{ 
+            :class="{
               'message-user': msg.role === 'user',
               'message-assistant': msg.role === 'assistant',
-              'message-error': msg.isError
+              'message-error': msg.isError,
             }"
           >
             <div class="message-avatar">
@@ -517,8 +558,8 @@ onUnmounted(() => {
             clearable
           >
             <template #append>
-              <el-button 
-                type="primary" 
+              <el-button
+                type="primary"
                 :loading="sending"
                 :disabled="!chatInput.trim()"
                 @click="handleSendMessage"
@@ -528,7 +569,7 @@ onUnmounted(() => {
             </template>
           </el-input>
           <div class="chat-input-hint">
-            按 Enter 送出 · 
+            按 Enter 送出 ·
             <a href="#" @click.prevent="goToReport">轉人工客服</a>
           </div>
         </div>
@@ -543,11 +584,19 @@ onUnmounted(() => {
 .support-center-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+
+  /*藍色漸層系列（更淡）*/
+  --support-brand-1: #d4e3ee;
+  --support-brand-2: #c8d9e6;
+
+  /*常用的藍色點綴*/
+  --support-accent-1: #60a5fa;
+  --support-accent-2: #3b82f6;
 }
 
 /* ========== Hero 區域 ========== */
 .hero-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--support-brand-1) 0%, var(--support-brand-2) 100%);
   padding: 80px 20px 60px;
   color: white;
   position: relative;
@@ -591,14 +640,19 @@ onUnmounted(() => {
 
 .hero-title {
   font-size: 2.5rem;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0 0 10px;
+  color: #2c3e50;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(255, 255, 255, 0.5);
 }
 
 .hero-subtitle {
   font-size: 1.1rem;
-  opacity: 0.9;
+  font-weight: 600;
+  opacity: 1;
   margin-bottom: 30px;
+  color: #34495e;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 .search-wrapper {
@@ -622,7 +676,10 @@ onUnmounted(() => {
   justify-content: center;
   gap: 30px;
   font-size: 0.9rem;
-  opacity: 0.9;
+  font-weight: 600;
+  opacity: 1;
+  color: #34495e;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 .hero-stats span {
@@ -640,9 +697,12 @@ onUnmounted(() => {
 .category-tabs {
   display: flex;
   gap: 15px;
-  margin-bottom: 30px;
+  justify-content: center;
+  max-width: 900px;
+  margin: 0 auto 30px;
   overflow-x: auto;
-  padding-bottom: 10px;
+  padding: 0 8px 10px;
+  -webkit-overflow-scrollong: touch;
 }
 
 .category-tab {
@@ -656,6 +716,7 @@ onUnmounted(() => {
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   white-space: nowrap;
+  font-weight: 600;
 }
 
 .category-tab:hover {
@@ -664,13 +725,16 @@ onUnmounted(() => {
 }
 
 .category-tab.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, rgba(212, 227, 238, 0.3) 0%, rgba(200, 217, 230, 0.3) 100%);
+  color: #2c5282;
+  border: 2px solid var(--support-brand-2);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
 }
 
 .category-tab.active i {
-  color: white !important;
+  color: #2c5282 !important;
 }
 
 /* ========== 搜尋結果提示 ========== */
@@ -744,7 +808,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   color: #303133;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .faq-question i {
@@ -796,7 +860,22 @@ onUnmounted(() => {
 }
 
 .cta-card-ai {
-  background: linear-gradient(135deg, #67c23a 0%, #409eff 100%);
+  background: linear-gradient(135deg, #a8dba8 0%, #7ec8e3 100%);
+}
+
+.cta-card-ai .cta-content h3 {
+  color: #1a4d2e;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(255, 255, 255, 0.3);
+}
+
+.cta-card-ai .cta-content p {
+  color: #2d5f4f;
+  font-weight: 600;
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(255, 255, 255, 0.2);
 }
 
 /* 降級模式樣式 */
@@ -805,7 +884,22 @@ onUnmounted(() => {
 }
 
 .cta-card-report {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--support-brand-1) 0%, var(--support-brand-2) 100%);
+}
+
+.cta-card-report .cta-content h3 {
+  color: #1a3a52;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(255, 255, 255, 0.3);
+}
+
+.cta-card-report .cta-content p {
+  color: #2c5282;
+  font-weight: 600;
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(255, 255, 255, 0.2);
 }
 
 .cta-icon {
@@ -815,25 +909,29 @@ onUnmounted(() => {
 
 .cta-content h3 {
   font-size: 1.5rem;
+  font-weight: 700;
   margin: 0 0 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .cta-content p {
-  opacity: 0.9;
+  font-weight: 500;
+  opacity: 0.95;
   margin-bottom: 25px;
   font-size: 0.95rem;
   line-height: 1.6;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .cta-card .el-button {
   background: white;
   border: none;
-  font-weight: 600;
+  font-weight: 700;
   padding: 15px 40px;
   border-radius: 50px;
   transition: all 0.3s ease;
@@ -848,7 +946,9 @@ onUnmounted(() => {
 }
 
 .cta-card-report .el-button {
-  color: #667eea;
+  color: #2c5282;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .cta-card .el-button:hover:not(:disabled) {
@@ -927,7 +1027,7 @@ onUnmounted(() => {
   }
 
   .category-tabs {
-    flex-direction: column;
+    justify-content: flex-start;
   }
 
   .cta-section {
@@ -1030,19 +1130,21 @@ onUnmounted(() => {
 
 /* 聊天標題列 */
 .chat-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--support-brand-1) 0%, var(--support-brand-2) 100%);
   color: white;
-  padding: 16px;
+  padding: 16px 20px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
 .chat-header-info {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 600;
+  font-weight: 700;
+  color: #2c3e50;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 .chat-header-info i {
@@ -1074,7 +1176,7 @@ onUnmounted(() => {
 .chat-welcome .welcome-icon {
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--support-brand-1) 0%, var(--support-brand-2) 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1089,13 +1191,17 @@ onUnmounted(() => {
 
 .chat-welcome h4 {
   margin: 0 0 8px;
-  color: #303133;
+  color: #2c3e50;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .chat-welcome p {
   margin: 0 0 20px;
-  color: #909399;
+  color: #606266;
   font-size: 14px;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .chat-welcome .quick-questions {
@@ -1136,7 +1242,7 @@ onUnmounted(() => {
 }
 
 .message-assistant .message-avatar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--support-brand-1) 0%, var(--support-brand-2) 100%);
   color: white;
 }
 
@@ -1209,7 +1315,9 @@ onUnmounted(() => {
 }
 
 @keyframes typing {
-  0%, 60%, 100% {
+  0%,
+  60%,
+  100% {
     transform: translateY(0);
   }
   30% {

@@ -4,12 +4,12 @@ import { useMemberAuthStore } from '@/stores/memberAuth'
 
 /**
  * Coze OpenAPI 聊天 Composable
- * 
+ *
  * 【重構說明】2026-02-01
  * - 完全移除 WebSDK / chatapp 整合（已確認 502 TLB 問題）
  * - 改用 Coze OpenAPI（透過後端 Proxy）
  * - 前端自製聊天 UI，不依賴 SDK
- * 
+ *
  * 【功能】
  * 1. 透過後端 Proxy 與 Coze OpenAPI 通訊
  * 2. 管理對話歷史（本地）
@@ -48,7 +48,7 @@ export function useCozeChat() {
       degraded: '服務暫時不可用',
       ready: '已就緒',
       error: '初始化失敗',
-      idle: '未啟動'
+      idle: '未啟動',
     }
     return statusMap[status.value] || '未知狀態'
   })
@@ -60,7 +60,7 @@ export function useCozeChat() {
     return delays[Math.min(attempt, delays.length - 1)]
   }
 
-  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
   const getUserId = () => {
     if (memberAuthStore.isLogin && memberAuthStore.member?.memId) {
@@ -69,8 +69,8 @@ export function useCozeChat() {
     const storageKey = 'support_user_id'
     let userId = localStorage.getItem(storageKey)
     if (!userId) {
-      userId = crypto.randomUUID 
-        ? crypto.randomUUID() 
+      userId = crypto.randomUUID
+        ? crypto.randomUUID()
         : `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       localStorage.setItem(storageKey, userId)
     }
@@ -91,6 +91,39 @@ export function useCozeChat() {
       console.log(`[Coze OpenAPI] ${message}`, safeData)
     }
   }
+
+  /**
+   * 從 AI 回覆中擷取結構化 intent（JSON）
+   * - 找 ```json ... ``` 區塊
+   * - parse JSON
+   * - 回傳：{ cleanText, intent }
+   */
+
+  const extractIntentFromReply = (rawText) => {
+    if (!rawText) {
+      return { cleanText: rawText, intent: null }
+    }
+
+    const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/i
+    const match = rawText.match(jsonBlockRegex)
+
+    if (!match) {
+      return { cleanText: rawText, intent: null }
+    }
+
+    let intent = null
+    try {
+      intent = JSON.parse(match[1])
+    } catch (e) {
+      logDiagnostic('warn', 'JSON intent 解析失敗，已忽略', { error: e.message })
+    }
+
+    // 把 JSON 區塊從顯示文字中移除
+    const cleanText = rawText.replace(jsonBlockRegex, '').trim()
+
+    return { cleanText, intent }
+  }
+
   // ==================== END: 工具函數 ====================
 
   // ==================== BEGIN: 初始化（檢查 API 狀態） ====================
@@ -106,7 +139,7 @@ export function useCozeChat() {
 
     try {
       logDiagnostic('info', '檢查 Coze OpenAPI 狀態...')
-      
+
       const response = await supportApi.checkCozeStatus()
       const statusData = response.data
 
@@ -118,19 +151,17 @@ export function useCozeChat() {
         // API 不可用，進入降級模式
         degraded.value = true
         error.value = statusData.message || 'API 不可用'
-        logDiagnostic('warn', '⚠️ OpenAPI 不可用，進入降級模式', { 
+        logDiagnostic('warn', '⚠️ OpenAPI 不可用，進入降級模式', {
           status: statusData.status,
-          message: statusData.message 
+          message: statusData.message,
         })
         return { success: false, degraded: true, error: statusData.message }
       }
-
     } catch (err) {
       error.value = err.message || '無法連線至伺服器'
       degraded.value = true
       logDiagnostic('error', '❌ 初始化失敗', { error: err.message })
       return { success: false, error: err.message, degraded: true }
-
     } finally {
       loading.value = false
     }
@@ -154,7 +185,7 @@ export function useCozeChat() {
     const userMessage = {
       role: 'user',
       content: messageText.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
     }
     messages.value.push(userMessage)
 
@@ -164,7 +195,7 @@ export function useCozeChat() {
       const response = await supportApi.sendChatMessage({
         message: messageText.trim(),
         userId: userId,
-        conversationId: conversationId.value
+        conversationId: conversationId.value,
       })
 
       const result = response.data
@@ -176,21 +207,24 @@ export function useCozeChat() {
         }
 
         // 加入 AI 回覆
-        const assistantMessage = {
-          role: 'assistant',
-          content: result.replyText || '（無回覆）',
-          timestamp: new Date()
-        }
-        messages.value.push(assistantMessage)
 
-        logDiagnostic('info', '✅ 收到回覆', { 
+        //解析intent
+        const { cleanText, intent } = extractIntentFromReply(result.replyText)
+
+        //加入乾淨AI回覆(讓使用者看不到JSON)
+        messages.value.push({
+          role: 'assistant',
+          content: cleanText || '（無回覆）',
+          timestamp: new Date(),
+        })
+
+        logDiagnostic('info', '✅ 收到回覆', {
           conversationId: result.conversationId,
-          replyLength: result.replyText?.length 
+          replyLength: result.replyText?.length,
         })
 
         retryCount.value = 0 // 成功後重置重試計數
         return { success: true, reply: result.replyText }
-
       } else {
         // API 回傳錯誤
         const errorMsg = result.error || '發送失敗'
@@ -201,34 +235,32 @@ export function useCozeChat() {
           role: 'assistant',
           content: `⚠️ ${errorMsg}`,
           timestamp: new Date(),
-          isError: true
+          isError: true,
         })
 
         return { success: false, error: errorMsg }
       }
-
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.message || '網路錯誤'
       const isBusinessError = err.response?.data?.isBusinessError === true
       const status = err.response?.status
-      
+
       logDiagnostic('error', '❌ 發送失敗', { error: errorMsg, status, isBusinessError })
 
       // ==================== BEGIN: 修正重試邏輯 ====================
       // 只有 502/503/504/408 才重試，400/409 業務錯誤不重試
       const shouldRetryStatus = [502, 503, 504, 408]
-      const canRetry = !isBusinessError && 
-                       shouldRetryStatus.includes(status) && 
-                       retryCount.value < maxRetries
-      
+      const canRetry =
+        !isBusinessError && shouldRetryStatus.includes(status) && retryCount.value < maxRetries
+
       if (canRetry) {
         retryCount.value++
         const delay = getRetryDelay(retryCount.value - 1)
         logDiagnostic('info', `重試 ${retryCount.value}/${maxRetries}，延遲 ${delay}ms`)
-        
+
         // 移除剛加入的使用者訊息（重試時會重新加入）
         messages.value.pop()
-        
+
         await sleep(delay)
         return await sendMessage(messageText)
       }
@@ -239,7 +271,7 @@ export function useCozeChat() {
         role: 'assistant',
         content: `⚠️ ${errorMsg}`,
         timestamp: new Date(),
-        isError: true
+        isError: true,
       })
 
       // 只有連線錯誤才進入降級模式，業務錯誤不進入
@@ -249,7 +281,6 @@ export function useCozeChat() {
       }
 
       return { success: false, error: errorMsg }
-
     } finally {
       sending.value = false
     }
@@ -262,7 +293,7 @@ export function useCozeChat() {
     degraded.value = false
     error.value = null
     initialized.value = false
-    
+
     return await initCozeChat()
   }
   // ==================== END: 手動重試 ====================
@@ -298,12 +329,12 @@ export function useCozeChat() {
     messages,
     conversationId,
     sending,
-    
+
     // 方法
     initCozeChat,
     sendMessage,
     manualRetry,
     clearMessages,
-    destroy
+    destroy,
   }
 }

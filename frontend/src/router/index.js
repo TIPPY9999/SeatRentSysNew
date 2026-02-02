@@ -138,8 +138,18 @@ const routes = [
       },
       {
         path: '/support/report',
-        name: 'support-report',
-        component: () => import('@/views/support/SupportReportView.vue'),
+        name: 'support-report-entry',
+        component: () => import('@/views/support/ReportEntryView.vue'),
+      },
+      {
+        path: '/support/report/damage',
+        name: 'support-report-damage',
+        component: () => import('@/views/support/ReportDamageView.vue'),
+      },
+      {
+        path: '/support/report/manual',
+        name: 'support-report-manual',
+        component: () => import('@/views/support/ReportManualView.vue'),
       },
     ],
   },

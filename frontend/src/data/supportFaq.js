@@ -61,11 +61,10 @@ export const faqData = [
           <p>若目前據點無可用座位，您可以：</p>
           <ul style="line-height: 1.8; padding-left: 20px;">
             <li>點擊「附近據點」查看其他地點</li>
-            <li>使用「預約功能」（即將推出）</li>
             <li>聯繫客服詢問座位釋出時間</li>
           </ul>
         `,
-        tags: ['座位', '滿位', '預約'],
+        tags: ['座位', '滿位'],
         keywords: ['沒有座位', '滿了', '額滿'],
       },
     ],

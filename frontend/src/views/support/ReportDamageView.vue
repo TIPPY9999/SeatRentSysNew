@@ -283,7 +283,7 @@ const submit = async () => {
  * 返回上一頁
  */
 const handleCancel = () => {
-  router.back()
+  router.push('/support/report')
 }
 </script>
 
@@ -297,7 +297,7 @@ const handleCancel = () => {
             <i class="fas fa-exclamation-circle"></i>
           </div>
           <div class="header-text">
-            <h1>問題回報</h1>
+            <h1>機台/椅子毀損問題</h1>
             <p>請詳細描述您遇到的問題，我們會盡快為您處理</p>
           </div>
         </div>
@@ -509,7 +509,7 @@ const handleCancel = () => {
                   {{ submitting ? '送出中...' : '送出回報' }}
                 </el-button>
                 <el-button size="large" @click="handleCancel">
-                  <i class="fas fa-arrow-left mr-2"></i> 返回
+                  <i class="fas fa-arrow-left mr-2"></i> 返回上一頁
                 </el-button>
               </div>
             </el-form-item>
@@ -542,7 +542,7 @@ const handleCancel = () => {
 
 /* ========== 頁面標題 ========== */
 .page-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #d4e3ee 0%, #c8d9e6 100%);
   padding: 40px 20px;
   color: white;
 }
@@ -569,13 +569,17 @@ const handleCancel = () => {
 .header-text h1 {
   margin: 0 0 5px;
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 800;
+  color: #2c3e50;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(255, 255, 255, 0.5);
 }
 
 .header-text p {
   margin: 0;
-  opacity: 0.9;
   font-size: 0.95rem;
+  font-weight: 600;
+  color: #34495e;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 /* ========== 內容區域 ========== */
@@ -599,7 +603,7 @@ const handleCancel = () => {
 .card-header .header-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #d4e3ee 0%, #c8d9e6 100%);
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -647,9 +651,9 @@ const handleCancel = () => {
 }
 
 .target-type-option.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-color: #667eea;
+  background: linear-gradient(135deg, #d4e3ee 0%, #c8d9e6 100%);
+  color: #2c3e50;
+  border-color: #409eff;
   transform: scale(1.05);
 }
 
