@@ -17,12 +17,19 @@ const API_URL = 'http://localhost:8080/rec-rent'
 // 新增或更新 (Create / Update)
 const handleSaveRent = async (formData) => {
   try {
-    const id = formData.recId
-    const method = id ? 'put' : 'post'
-    const url = id ? `${API_URL}/${id}` : API_URL
+    // [修正] 依據當前視圖模式決定 HTTP 方法與 URL
+    // 避免因為新增時填寫了 recId 而誤判為 PUT 請求
+    let method = 'post'
+    let url = `${API_URL}/new` // 對應 Controller 的 @PostMapping("/new")
+
+    if (activeView.value === 'edit') {
+      method = 'put'
+      url = `${API_URL}/${formData.recId}`
+    }
+
     const res = await axios[method](url, formData)
     if (res.status === 200 || res.status === 201) {
-      alert(id ? '更新成功！' : '新增成功！')
+      alert(activeView.value === 'edit' ? '更新成功！' : '新增成功！')
       activeView.value = 'list'
       // Use the ref to call the child's method
       if (searchComponent.value) {

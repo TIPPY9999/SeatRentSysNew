@@ -82,8 +82,10 @@ public class RecRentController {
         // recSeqId 會由資料庫自動產生
         // recId 會由資料庫自動計算
 
-        // 說明: 設定租借開始時間為當前伺服器時間，以確保資料的準確性並防止null值。
-        recRent.setRecRentDT2(LocalDateTime.now());
+        // 說明: 若前端未提供租借時間，則設定為當前伺服器時間；若有提供則使用前端值
+        if (recRent.getRecRentDT2() == null) {
+            recRent.setRecRentDT2(LocalDateTime.now());
+        }
 
         RecRent savedRent = rentRepos.save(recRent);
 
