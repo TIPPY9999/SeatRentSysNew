@@ -159,9 +159,9 @@ onMounted(() => {
               </span>
               <span class="ms-2 title-text">訂單編號: {{ rent.recId || rent.recSeqId }}</span>
             </h5>
-            <span></span><span></span><span></span>
-            <span class="ms-2 title-text">座椅編號: SN-20250{{ rent.seatsId }}</span>
-            <span></span><span></span>
+            <span style="margin: 0 60px"> </span>
+            <span class="ms-2 title-text">座椅編號: SN-25-{{ rent.seatsId }}</span>
+            <span></span> <span style="margin: 0 40px"> </span>
             <h5 class="mb-0 text-primary fw-bold">
               <button class="btn btn-sm btn-outline-warning" @click="handleReport(rent)">
                 <i class="fas fa-exclamation-circle"></i> 問題回報
@@ -216,7 +216,7 @@ onMounted(() => {
 <style scoped>
 .record-container {
   padding: 10px;
-  max-width: 800px;
+  max-width: max-content;
   margin: 0 auto;
 }
 .section-title {

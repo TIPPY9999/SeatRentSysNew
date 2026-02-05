@@ -119,7 +119,7 @@ const logout = () => {
               <span class="icon-wrapper" style="font-size: 130%; font-weight: 400">您好 </span>
               <span class="menu-text">
                 <span v-if="displayUID">{{ displayUID }}</span>
-                <span v-else> 按此登入 </span>
+                <span v-else> 歡迎使用 </span>
               </span>
             </div>
           </li>

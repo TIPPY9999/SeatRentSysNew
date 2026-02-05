@@ -71,6 +71,7 @@ const routes = [
       },
       {
         path: 'SearchSpot',
+        name: 'SearchSpot',
         component: () => import('@/views/rec/RecRentUserSearchPage.vue'),
       },
 

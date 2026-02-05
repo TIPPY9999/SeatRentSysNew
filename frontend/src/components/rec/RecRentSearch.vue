@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import axios from 'axios'
+import Swal from 'sweetalert2'
 
 const API_URL = 'http://localhost:8080/rec-rent'
 
@@ -16,6 +17,7 @@ const searchCriteria = reactive({
   returnDate: '',
   rentDate: '',
   recPayment: '',
+  recNote: '',
 })
 
 // 分頁相關狀態
@@ -58,7 +60,9 @@ const loadRents = async () => {
     if (searchCriteria.spotName) params.append('spotName', searchCriteria.spotName)
     if (searchCriteria.returnDate) params.append('returnDate', searchCriteria.returnDate)
     if (searchCriteria.rentDate) params.append('rentDate', searchCriteria.rentDate)
+    if (searchCriteria.recVio) params.append('recPayment', searchCriteria.recPayment)
     if (searchCriteria.recPayment) params.append('recPayment', searchCriteria.recPayment)
+    if (searchCriteria.recNote) params.append('recNote', searchCriteria.recNote)
 
     const queryString = params.toString()
     const requestUrl = queryString ? `${API_URL}?${queryString}` : API_URL
@@ -133,6 +137,8 @@ const exportToCsv = () => {
       `"${rent.recRentDT2 ? rent.recRentDT2.replace('T', ' ') : ''}"`,
       `"${rent.recReturnDT2 ? rent.recReturnDT2.replace('T', ' ') : ''}"`,
       `"${rent.recPayment || ''}"`,
+      `"${rent.recVio || ''}"`,
+      `"${rent.recNote || ''}"`,
     ].join(','),
   )
 
@@ -173,6 +179,17 @@ const exportToJson = () => {
 defineExpose({
   loadRents,
 })
+
+// [新增] 顯示完整備註的彈窗函式
+const showFullNote = (note) => {
+  Swal.fire({
+    title: '備註',
+    text: note,
+    confirmButtonText: '點擊任意處或點此關閉',
+    confirmButtonColor: '#409eff',
+    allowOutsideClick: true, // 允許點擊遮罩層(外部)關閉
+  })
+}
 </script>
 
 <template>
@@ -243,13 +260,14 @@ defineExpose({
           <th>會員編號</th>
           <th>會員姓名</th>
           <th>座椅編號</th>
-          <th>租借點編號</th>
           <th>租借點名稱</th>
-          <th>歸還點編號</th>
+          <th>-編號</th>
           <th>歸還點名稱</th>
+          <th>-編號</th>
           <th>租借時間</th>
           <th>歸還時間</th>
           <th>費用</th>
+          <th>備註</th>
           <th width="150">操作</th>
         </tr>
       </thead>
@@ -262,14 +280,21 @@ defineExpose({
           </td>
           <td>{{ rent.memId }}</td>
           <td>{{ rent.memName }}</td>
-          <td>{{ rent.seatsId }}</td>
-          <td>{{ rent.spotIdRent }}</td>
+          <td>SN-{{ rent.seatsId ? String(rent.seatsId).padStart(4, '0') : '' }}</td>
           <td>{{ rent.rentSpotName }}</td>
-          <td>{{ rent.spotIdReturn }}</td>
+          <td>{{ rent.spotIdRent }}</td>
           <td>{{ rent.returnSpotName }}</td>
+          <td>{{ rent.spotIdReturn }}</td>
           <td>{{ rent.recRentDT2 ? rent.recRentDT2.replace('T', ' ') : '' }}</td>
           <td>{{ rent.recReturnDT2 ? rent.recReturnDT2.replace('T', ' ') : '' }}</td>
           <td>{{ rent.recPayment }}</td>
+          <td>
+            <!-- [修改] 判斷備註長度，若超過 5 字元則截斷並顯示可點擊的 ... -->
+            <span v-if="rent.recNote && rent.recNote.length > 5">
+              {{ rent.recNote.substring(0, 5) }}<span class="note-more" @click="showFullNote(rent.recNote)" title="點擊查看完整內容">...</span>
+            </span>
+            <span v-else>{{ rent.recNote }}</span>
+          </td>
           <td>
             <button class="btn-warning" @click="editRent(rent)">編輯</button><span> / </span>
             <button class="btn-danger ml-1" @click="deleteRent(rent.recId)">刪除</button>
@@ -614,5 +639,16 @@ h2 button {
   opacity: 0.6;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* [新增] 點擊查看更多的樣式 */
+.note-more {
+  color: #409eff;
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 2px;
+}
+.note-more:hover {
+  text-decoration: underline;
 }
 </style>

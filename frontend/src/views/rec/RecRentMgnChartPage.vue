@@ -3,9 +3,9 @@
 import { ref, onMounted, shallowRef } from 'vue'
 import * as echarts from 'echarts'
 import {
-  getOrderStatusStats,
   getDailyOrderStats,
   getHourlyOrderStats,
+  getOrderStatusStats,
   getRentalDurationStats,
 } from '@/api/modules/rec'
 import { ElMessage } from 'element-plus'

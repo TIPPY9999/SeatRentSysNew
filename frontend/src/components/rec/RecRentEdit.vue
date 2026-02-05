@@ -1,10 +1,6 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 
-onMounted(() => {
-  console.log('RecRentEdit component has been mounted.')
-})
-
 // 1. 定義 props
 const props = defineProps({
   initialData: {
@@ -25,18 +21,14 @@ const formatDateTimeForInput = (dateTimeString) => {
   if (!dateTimeString) {
     return null // v-model 會將 null 處理為空值
   }
-  // <input type="datetime-local"> 需要 'YYYY-MM-DDTHH:mm' 格式
-  // 假設後端傳來的是 'YYYY-MM-DD HH:mm:ss' 或類似格式
-  // 我們直接替換空格為 'T'，並取前 16 位
-  return dateTimeString.replace(' ', 'T').substring(0, 16)
+  
+  return dateTimeString.replace(' ', 'T').substring(0, 19)
 }
 
 // 4. 使用 watch 監聽 props.initialData 的變化
 watch(
   () => props.initialData,
   (newData) => {
-    console.log('在編輯表單中，watch 監聽到傳入的資料:', newData)
-
     // 只要 newData 是個有內容的物件，就進行更新
     if (newData && Object.keys(newData).length > 0) {
       formTitle.value = newData.recSeqId ? `修改訂單 (SeqID: ${newData.recSeqId})` : '修改訂單'
@@ -57,8 +49,8 @@ watch(
 const saveRent = () => {
   const dataToSend = {
     ...form.value,
-    recRentDT2: form.value.recRentDT2 ? form.value.recRentDT2.replace('T', ' ') : null,
-    recReturnDT2: form.value.recReturnDT2 ? form.value.recReturnDT2.replace('T', ' ') : null,
+    recRentDT2: form.value.recRentDT2 ? form.value.recRentDT2 : null,
+    recReturnDT2: form.value.recReturnDT2 ? form.value.recReturnDT2 : null,
   }
   emit('save-rent', dataToSend)
 }
@@ -74,25 +66,25 @@ const backToList = () => {
     <h2 v-text="formTitle"></h2>
 
     <div class="form-group">
-      <label>訂單編號(recId):</label>
+      <label>訂單編號:</label>
       <!-- 設定為 disabled -->
       <input v-model="form.recId" type="text" placeholder="訂單編號" disabled />
     </div>
     <div class="form-group">
-      <label>會員編號(memId):</label>
+      <label>會員編號:</label>
       <!-- 設定為 disabled -->
       <input v-model="form.memId" type="number" placeholder="會員編號" disabled />
     </div>
     <div class="form-group">
-      <label>會員 姓名 (memName):</label>
-      <input v-model="form.memName" type="text" placeholder="例如: 王大明" />
+      <label>姓名:</label>
+      <input v-model="form.memName" type="text" placeholder="例如: 王大明" disabled />
     </div>
     <div class="form-group">
-      <label>座椅編號 (seatsId):</label>
-      <input v-model="form.seatsId" type="text" placeholder="例如: S001" required />
+      <label>座椅編號:</label>
+      <input v-model="form.seatsId" type="text" placeholder="例如: S001" disabled />
     </div>
     <div class="form-group">
-      <label>訂單狀態 (recStatus):</label>
+      <label>訂單狀態:</label>
       <select v-model="form.recStatus">
         <option value="租借中">租借中</option>
         <option value="已完成">已完成</option>
@@ -101,24 +93,32 @@ const backToList = () => {
       </select>
     </div>
     <div class="form-group">
-      <label>租借站點編號 (spotIdRent):</label>
+      <label>租借站點:</label>
       <input v-model="form.spotIdRent" type="number" placeholder="例如: 1" required />
     </div>
     <div class="form-group">
-      <label>歸還站點編號 (spotIdReturn):</label>
+      <label>歸還站點:</label>
       <input v-model="form.spotIdReturn" type="number" placeholder="例如: 2" />
     </div>
     <div class="form-group">
-      <label>租借時間 (recRentDT):</label>
+      <label>租借時間:</label>
       <input v-model="form.recRentDT2" type="datetime-local" step="1" required />
     </div>
     <div class="form-group">
-      <label>歸還時間 (recReturnDT):</label>
+      <label>歸還時間:</label>
       <input v-model="form.recReturnDT2" type="datetime-local" step="1" />
     </div>
     <div class="form-group">
-      <label>違規記點 (recViolatInt):</label>
+      <label>費用:</label>
+      <input v-model="form.recPayment" type="number" />
+    </div>
+    <div class="form-group">
+      <label>違規累計:</label>
       <input v-model="form.recViolatInt" type="number" required />
+    </div>
+    <div class="form-group">
+      <label>備註:</label>
+      <input v-model="form.recNote" type="text" />
     </div>
 
     <div style="text-align: right">

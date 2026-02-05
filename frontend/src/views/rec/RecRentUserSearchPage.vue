@@ -11,7 +11,8 @@ import { useAdminAuthStore } from '@/stores/adminAuth'
 const props = defineProps({
   spotId: {
     type: String,
-    required: true,
+    required: false,
+    default: '',
   },
 })
 
@@ -318,7 +319,6 @@ onMounted(() => {
       <GMapMarker v-if="searchResultMarker" :key="'search-result'" :position="searchResultMarker" />
 
       <GMapInfoWindow
-        :header-disabled
         :opened="infoWindow.opened"
         :position="infoWindow.position"
         :options="{ pixelOffset: { width: 0, height: -35 }, headerDisabled: true }"

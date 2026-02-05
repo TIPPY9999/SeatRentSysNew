@@ -323,7 +323,7 @@ const saveEdit = async () => {
 <style scoped>
 /* 整體 */
 .profile-page {
-  max-width: 720px;
+  max-width: 920px;
   margin: 0 auto;
   display: flex;          /* 使用 Flexbox 排版 */
   flex-direction: column; /* 內容垂直排列 */
@@ -407,6 +407,8 @@ const saveEdit = async () => {
 .profile-card {
   background: #fff;
   border-radius: 12px;
+  width:auto;
+  margin: 0 20px 0 20px;
   padding: 20px 20px 5px 20px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
 }

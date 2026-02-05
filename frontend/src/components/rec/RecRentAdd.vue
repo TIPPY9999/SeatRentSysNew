@@ -36,8 +36,8 @@ const resetForm = () => {
 const saveRent = () => {
   const dataToSend = {
     ...form.value,
-    recRentDT2: form.value.recRentDT2 ? form.value.recRentDT2.replace('T', ' ') : null,
-    recReturnDT2: form.value.recReturnDT2 ? form.value.recReturnDT2.replace('T', ' ') : null,
+    recRentDT2: form.value.recRentDT2 || null, // 保持 ISO 格式 (含 'T')，後端才能正確解析
+    recReturnDT2: form.value.recReturnDT2 || null, // 保持 ISO 格式 (含 'T')
   }
   emit('save-rent', dataToSend)
   // 成功提交後通常會切換視圖，但如果需要留在原頁面，可以取消註解下一行
