@@ -183,7 +183,7 @@ defineExpose({
 // [新增] 顯示完整備註的彈窗函式
 const showFullNote = (note) => {
   Swal.fire({
-    title: '備註',
+    title: '備註-詳細內容',
     text: note,
     confirmButtonText: '點擊任意處或點此關閉',
     confirmButtonColor: '#409eff',
@@ -198,15 +198,30 @@ const showFullNote = (note) => {
     <div class="search-form">
       <div class="form-group-search">
         <label>訂單編號:</label>
-        <input v-model="searchCriteria.recId" type="text" placeholder="依訂單編號" @keyup.enter="loadRents" />
+        <input
+          v-model="searchCriteria.recId"
+          type="text"
+          placeholder="依訂單編號"
+          @keyup.enter="loadRents"
+        />
       </div>
       <div class="form-group-search">
         <label>會員編號:</label>
-        <input v-model="searchCriteria.memId" type="text" placeholder="依會員編號" @keyup.enter="loadRents" />
+        <input
+          v-model="searchCriteria.memId"
+          type="text"
+          placeholder="依會員編號"
+          @keyup.enter="loadRents"
+        />
       </div>
       <div class="form-group-search">
         <label>會員姓名:</label>
-        <input v-model="searchCriteria.memName" type="text" placeholder="依會員姓名(模糊)" @keyup.enter="loadRents" />
+        <input
+          v-model="searchCriteria.memName"
+          type="text"
+          placeholder="依會員姓名(模糊)"
+          @keyup.enter="loadRents"
+        />
       </div>
       <div class="form-group-search">
         <label>訂單狀態:</label>
@@ -220,11 +235,21 @@ const showFullNote = (note) => {
       </div>
       <div class="form-group-search">
         <label>站點編號:</label>
-        <input v-model="searchCriteria.spotId" type="text" placeholder="依站點編號" @keyup.enter="loadRents" />
+        <input
+          v-model="searchCriteria.spotId"
+          type="text"
+          placeholder="依站點編號"
+          @keyup.enter="loadRents"
+        />
       </div>
       <div class="form-group-search">
         <label>站點名稱:</label>
-        <input v-model="searchCriteria.spotName" type="text" placeholder="依站點名稱(模糊)" @keyup.enter="loadRents" />
+        <input
+          v-model="searchCriteria.spotName"
+          type="text"
+          placeholder="依站點名稱(模糊)"
+          @keyup.enter="loadRents"
+        />
       </div>
       <div class="form-group-search">
         <label>租借日期:</label>
@@ -238,7 +263,7 @@ const showFullNote = (note) => {
   </div>
   <div class="view-section active">
     <div class="search-actions">
-      <button class="btn-primary" @click="loadRents">搜尋</button>
+      <button class="btn-primary" @click="loadRents" style="min-width: 135px; margin:0 0 0 10px ">搜尋</button>
       <button class="btn-secondary" @click="clearSearch">清除</button>
       <button class="btn-success" @click="loadRents">更新</button>
       <select v-model="pageSize" class="page-size-select">
@@ -291,12 +316,15 @@ const showFullNote = (note) => {
           <td>
             <!-- [修改] 判斷備註長度，若超過 5 字元則截斷並顯示可點擊的 ... -->
             <span v-if="rent.recNote && rent.recNote.length > 5">
-              {{ rent.recNote.substring(0, 5) }}<span class="note-more" @click="showFullNote(rent.recNote)" title="點擊查看完整內容">...</span>
+              {{ rent.recNote.substring(0, 5)
+              }}<span class="note-more" @click="showFullNote(rent.recNote)" title="點擊查看完整內容"
+                >...</span
+              >
             </span>
             <span v-else>{{ rent.recNote }}</span>
           </td>
           <td>
-            <button class="btn-warning" @click="editRent(rent)">編輯</button><span> / </span>
+            <button class="btn-warning" @click="editRent(rent)">編輯</button><span>/</span>
             <button class="btn-danger ml-1" @click="deleteRent(rent.recId)">刪除</button>
           </td>
         </tr>
@@ -325,10 +353,18 @@ const showFullNote = (note) => {
       </div>
 
       <div class="floating-nav right" v-if="rentList.length > 0">
-        <button class="btn-float" :disabled="currentPage === totalPages" @click="goToPage(currentPage + 1)">
+        <button
+          class="btn-float"
+          :disabled="currentPage === totalPages"
+          @click="goToPage(currentPage + 1)"
+        >
           下頁
         </button>
-        <button class="btn-float" :disabled="currentPage === totalPages" @click="goToPage(totalPages)">
+        <button
+          class="btn-float"
+          :disabled="currentPage === totalPages"
+          @click="goToPage(totalPages)"
+        >
           末頁
         </button>
       </div>
@@ -347,8 +383,8 @@ const showFullNote = (note) => {
 
 .search-form {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
   align-items: end;
 }
 
@@ -387,9 +423,15 @@ const showFullNote = (note) => {
 
 .search-actions {
   display: flex;
+  padding: 0px;
   justify-content: flex-start;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+/* [新增] 設定操作區按鈕的最小寬度，讓按鈕整齊一致 */
+.search-actions button {
+  min-width: 65px;
 }
 
 .page-size-select {
@@ -491,6 +533,16 @@ button:hover {
   background: #a6a9ad;
 }
 
+/* [新增] 補上 btn-success (綠色按鈕) 的樣式 */
+.btn-success {
+  background: #67c23a;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #85ce61;
+}
+
 .btn-info {
   background: #17a2b8;
   color: white;
@@ -538,7 +590,7 @@ button:hover {
 }
 
 .ml-1 {
-  margin-left: 6px;
+  margin-left: 1px;
 }
 
 /* ========== 標題樣式 ========== */
@@ -602,7 +654,6 @@ h2 button {
 
 /* 針對 AdminLTE 側邊欄的響應式調整 (Desktop) */
 @media (min-width: 992px) {
-
   /* 當側邊欄展開時 (預設) - 避開 250px 的側邊欄 */
   :global(body:not(.sidebar-collapse)) .floating-nav.left {
     left: 255px;
