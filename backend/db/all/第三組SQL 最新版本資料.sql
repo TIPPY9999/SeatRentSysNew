@@ -529,7 +529,7 @@ VALUES
     ('superuser', 'Pass1234', N'黃巧玲', 'superuser@system.com', 9);
 --===============奕穎 DATA END=================
 
---=======================光宇DATA ver1150121===================
+--=======================光宇DATA ver1150206- 1150121===================
 -- 桃園市區域測試資料 (20筆)- 不插入 spotStatus，改吃 DEFAULT (N'營運中')
 INSERT INTO dbo.renting_Spot
     (spotCode, spotName, spotAddress, merchantId, latitude, longitude)
