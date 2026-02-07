@@ -1,6 +1,5 @@
 package com.example.backend.service.spot;
 
-import java.time.Year;
 import java.util.ArrayList;
 import java.util.List; // 確認這裡是 java.util.List
 
@@ -11,7 +10,6 @@ import com.example.backend.model.spot.Seat;
 import com.example.backend.repository.spot.SeatRepository;
 
 import jakarta.persistence.criteria.Predicate;
-import org.springframework.util.StringUtils;
 
 @Service
 @Transactional
@@ -32,40 +30,10 @@ public class SeatService implements ISeatService {
      */
     @Override
     public Seat insert(Seat seat) {
-        // 1. 判斷是否需要自動產生序號 (若前端傳來的是空值或空字串)
-        if (!StringUtils.hasText(seat.getSerialNumber())) {
-            String currentYear = String.valueOf(Year.now().getValue()); // 取得 "2026"
-            String prefix = "SN-" + currentYear; // 前綴 "SN-2026"
+        // 1. [優化] Serial Number 改由資料庫 Computed Column 自動生成
+        // Hibernate @Generated 標註會確保 insert/update 後自動撈回數值
 
-            // 找資料庫中符合此前綴的最大序號
-            Seat lastSeat = seatRepository.findTopBySerialNumberStartingWithOrderBySerialNumberDesc(prefix);
-
-            int nextSequence = 1; // 預設從 1 開始
-
-            if (lastSeat != null && StringUtils.hasText(lastSeat.getSerialNumber())) {
-                String lastSn = lastSeat.getSerialNumber();
-                // 嘗試解析後三碼 (例如 SN-2026005 -> 005)
-                if (lastSn.startsWith(prefix)) {
-                    try {
-                        String seqStr = lastSn.substring(prefix.length());
-                        nextSequence = Integer.parseInt(seqStr) + 1;
-                    } catch (NumberFormatException e) {
-                        // 若格式異常無法解析數字，就維持從 1 開始，或可在此紀錄 Log
-                    }
-                }
-            }
-
-            // 格式化為三位數，例如 "SN-2026006"
-            seat.setSerialNumber(prefix + String.format("%03d", nextSequence));
-
-        } else {
-            // 2. 若使用者有手動輸入序號，則檢查是否重複
-            if (seatRepository.existsBySerialNumber(seat.getSerialNumber())) {
-                throw new IllegalArgumentException("序號 (Serial Number) '" + seat.getSerialNumber() + "' 已存在，請使用不同的序號。");
-            }
-        }
-
-        // 3. 執行儲存
+        // 2. 執行儲存
         return seatRepository.save(seat);
     }
 
