@@ -153,11 +153,11 @@ const logout = () => {
             </router-link>
           </li>
 
-          <li class="menu-item" @click="router.push('')">
+          <li class="menu-item" @click="router.push('/VisitSiteReommand')">
             <span class="icon-wrapper">
               <el-icon><MapLocation /></el-icon>
             </span>
-            <span class="menu-text">猜你喜歡</span>
+            <span class="menu-text">美食景點</span>
           </li>
 
           <li class="menu-item" @click="router.push('')">

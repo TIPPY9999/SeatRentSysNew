@@ -74,6 +74,11 @@ const routes = [
         name: 'SearchSpot',
         component: () => import('@/views/rec/RecRentUserSearchPage.vue'),
       },
+      {
+        path: 'VisitSiteReommand',
+        name: 'VisitSiteReommand',
+        component: () => import('@/views/rec/VisitSiteReommandPage.vue'),
+      },
 
       // 將 'rec-rent-record' 路由重定向至帶有 action 參數的標準租借路由
       {
