@@ -57,7 +57,7 @@ public class Member {
     private String memInvoice;
 
     @Column(name = "memImage", length = 255)
-    private String memImage;
+    private String memImage = "default.png";
 
     public Member() {
     }

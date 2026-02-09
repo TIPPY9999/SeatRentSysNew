@@ -16,6 +16,15 @@ const form = reactive({
 
 const confirmPassword = ref('')
 
+const autoFill = () => {
+  form.memName = '林育辰'
+  form.memUsername = 'demo123'
+  form.memEmail = 'alan123145@gmail.com'
+  form.memPhone = '0998765432'
+  form.memPassword = 'demo987'
+  confirmPassword.value = 'demo987'
+}
+
 const submit = async () => {
   // 1️⃣ 空值檢查
   if (
@@ -52,7 +61,7 @@ const submit = async () => {
 
   // 5️⃣ 送後端
   try {
-    await axios.post('http://localhost:8080/members', form)
+    await axios.post('http://localhost:8080/api/members/register', form)
     await Swal.fire('成功', '註冊成功，請登入', 'success')
     router.push('/login')
   } catch (err) {
@@ -101,6 +110,10 @@ const goLogin = () => {
       </div>
 
       <button type="submit" class="submit-btn">加入會員</button>
+
+      <button type="button" class="demo-btn" @click="autoFill">
+        一鍵帶入
+      </button>
     </form>
 
     <div class="back-login-area">
@@ -215,5 +228,24 @@ const goLogin = () => {
     padding: 30px 20px;
     border: none;
   }
+}
+
+.demo-btn {
+  width: 100%;
+  height: 40px;
+  background-color: #f4f4f4;
+  color: #666;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.3s;
+}
+
+.demo-btn:hover {
+  background-color: #eee;
+  border-color: #ff7a66;
+  color: #ff7a66;
 }
 </style>

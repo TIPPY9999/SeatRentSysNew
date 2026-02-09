@@ -7,7 +7,7 @@ import Swal from 'sweetalert2'
 const router = useRouter()
 const route = useRoute()
 
-// 修改這裡：給予初始結構，確保 v-model 一開始就能找到對象，回填會更順
+// 保留你原本的初始結構與回填邏輯
 const member = ref({
   memId: '',
   memUsername: '',
@@ -20,7 +20,7 @@ const member = ref({
 const newPassword = ref('')
 const errorMsg = ref('')
 const isSubmitting = ref(false)
-const isLoading = ref(true) // 增加一個讀取狀態
+const isLoading = ref(true)
 
 const fetchMember = async () => {
   const id = route.params.id
@@ -30,11 +30,9 @@ const fetchMember = async () => {
       params: { memId: id },
     })
     
-    // 檢查點：如果後端回傳的 key 不是 memEmail 而是 email，這裡要做轉換
     const data = res.data
     member.value = {
       ...data,
-      // 萬一後端給的是 email，自動轉給 memEmail 確保帶入
       memEmail: data.memEmail || data.email || '', 
       memPhone: data.memPhone || data.phone || ''
     }
@@ -46,72 +44,61 @@ const fetchMember = async () => {
   }
 }
 
+// 保留原本的驗證邏輯
 const validateEditForm = () => {
   const m = member.value
-  // 1. 必填檢查
   if (!m.memUsername || !m.memName || !m.memEmail || !m.memPhone) {
     return '基本資料欄位皆為必填'
   }
-
-  // 2. 密碼驗證 (有填才查)
   if (newPassword.value) {
     const pwdRegex = /^(?=.*[a-zA-Z]).{6,}$/
     if (!pwdRegex.test(newPassword.value)) {
       return '新密碼需至少 6 個字元，並包含至少一個英文字母'
     }
   }
-
-  // 3. 手機驗證
   const phoneRegex = /^09\d{8}$/
   if (!phoneRegex.test(m.memPhone)) {
     return '手機格式錯誤，請輸入 09 開頭的 10 位數字'
   }
-
-  // 4. 信箱驗證
   const emailRegex = /^[^\s@]+@[^\s@]+\.com$/
   if (!emailRegex.test(m.memEmail)) {
     return '信箱格式錯誤，必須包含 @ 且結尾為 .com'
   }
-
-  // 5. 發票載具驗證：/ 開頭 + 7 碼大寫英文或數字 (共 8 碼)
   if (m.memInvoice) {
     const invoiceRegex = /^\/[A-Z0-9]{7}$/
     if (!invoiceRegex.test(m.memInvoice)) {
       return '載具格式錯誤！請輸入 / 開頭加上 7 碼大寫英數組合'
     }
   }
-
   return null
 }
 
 const submitEdit = async () => {
   if (!member.value) return
-
-  // 先進行格式校驗
   const error = validateEditForm()
   if (error) {
     await Swal.fire({
       icon: 'warning',
       title: '格式錯誤',
       text: error,
-      confirmButtonColor: '#e6a23c',
+      confirmButtonColor: '#5b9bd5',
     })
     return
   }
 
-  // --- 新增：二次確認視窗 ---
+  // 保留二次確認視窗
   const confirmResult = await Swal.fire({
     title: '確定要修改嗎？',
     text: "修改後的資料將會立即生效！",
     icon: 'question',
     showCancelButton: true,
-    confirmButtonColor: '#409eff',
+    confirmButtonColor: '#5b9bd5',
     cancelButtonColor: '#909399',
     confirmButtonText: '修改',
     cancelButtonText: '取消'
   })
 
-  if (!confirmResult.isConfirmed) return // 使用者按取消就停止
+  if (!confirmResult.isConfirmed) return
 
   errorMsg.value = ''
   isSubmitting.value = true
@@ -121,9 +108,7 @@ const submitEdit = async () => {
       ...member.value,
       ...(newPassword.value ? { memPassword: newPassword.value } : {}),
     }
-
     await axios.post('http://localhost:8080/api/members/update', payload)
-
     await Swal.fire({
       icon: 'success',
       title: '修改成功',
@@ -131,7 +116,6 @@ const submitEdit = async () => {
       timer: 1500,
       showConfirmButton: false
     })
-
     router.push('/admin/members')
   } catch (err) {
     const msg = err?.response?.data?.message || '修改失敗'
@@ -147,167 +131,230 @@ const submitEdit = async () => {
 }
 
 const goBack = () => router.push('/admin/members')
-
 onMounted(fetchMember)
 </script>
 
 <template>
-  <div class="container">
-    <h2>修改會員資料</h2>
-    <div v-if="isLoading" class="loading">資料載入中...</div>
-    
-    <form v-else @submit.prevent="submitEdit">
-      <input type="hidden" v-model="member.memId" />
-      
-      <label>帳號</label>
-      <input type="text" v-model="member.memUsername" />
-      
-      <label>新密碼</label>
-      <input type="password" v-model="newPassword" placeholder="不修改請留空" />
-      
-      <label>姓名</label>
-      <input type="text" v-model="member.memName" />
-      
-      <label>信箱</label>
-      <input type="text" v-model="member.memEmail" />
-      
-      <label>電話</label>
-      <input type="text" v-model="member.memPhone" maxlength="10" />
+  <div class="edit-page">
+    <div class="form-card">
+      <div class="card-header">
+        <div class="header-icon">
+          <i class="fas fa-user-edit"></i>
+        </div>
+        <h2>修改會員資料</h2>
+        <p>編輯 Take@Seat 會員帳號與點數資訊</p>
+      </div>
 
-      <label>點數</label>
-      <input type="number" v-model="member.memPoints" />
+      <el-alert 
+        v-if="errorMsg" 
+        :title="errorMsg" 
+        type="error" 
+        show-icon 
+        :closable="false" 
+        class="error-alert" 
+      />
       
-      <label>發票載具</label>
-      <input type="text" v-model="member.memInvoice" placeholder="未提供" />
-      
-      <button type="submit" class="primary-btn" :disabled="isSubmitting">
-        {{ isSubmitting ? '修改中...' : '確認修改' }}
-      </button>
-      
-      <a class="back-link" @click.prevent="goBack">回會員列表</a>
-    </form>
+      <div v-if="isLoading" class="loading-state">
+        <i class="fas fa-spinner fa-spin loading-icon"></i>
+        <p>資料載入中...</p>
+      </div>
+
+      <el-form v-else @submit.prevent="submitEdit" label-position="top" class="admin-form">
+        <input type="hidden" v-model="member.memId" />
+
+        <el-form-item label="帳號" required>
+          <el-input v-model="member.memUsername" prefix-icon="User" />
+        </el-form-item>
+
+        <el-form-item label="新密碼">
+          <el-input
+            type="password"
+            v-model="newPassword"
+            placeholder="若不修改請留空"
+            prefix-icon="Lock"
+            show-password
+          />
+          <div class="form-hint">
+            <i class="fas fa-info-circle"></i>
+            需至少 6 碼並含英文字，不修改請保持空白
+          </div>
+        </el-form-item>
+
+        <el-form-item label="姓名" required>
+          <el-input v-model="member.memName" prefix-icon="UserFilled" />
+        </el-form-item>
+
+        <el-form-item label="信箱" required>
+          <el-input v-model="member.memEmail" prefix-icon="Message" />
+        </el-form-item>
+
+        <el-form-item label="電話" required>
+          <el-input v-model="member.memPhone" maxlength="10" prefix-icon="Iphone" />
+        </el-form-item>
+
+        <el-form-item label="點數">
+          <el-input v-model.number="member.memPoints" type="number" prefix-icon="Coin" />
+        </el-form-item>
+
+        <el-form-item label="發票載具">
+          <el-input v-model="member.memInvoice" placeholder="例：/ABC1234" prefix-icon="Tickets" />
+        </el-form-item>
+
+        <div class="form-actions">
+          <el-button 
+            type="primary" 
+            size="large" 
+            native-type="submit" 
+            class="submit-btn"
+            :loading="isSubmitting"
+          >
+            <i class="fas fa-save mr-2"></i> {{ isSubmitting ? '修改中...' : '確認修改' }}
+          </el-button>
+          <el-button 
+            size="large" 
+            @click="goBack" 
+            class="back-btn"
+            style="margin-left: 0"
+          >
+            <i class="fas fa-arrow-left mr-2"></i> 回會員列表
+          </el-button>
+        </div>
+      </el-form>
+    </div>
   </div>
 </template>
 
 <style scoped>
-/* 樣式維持原有的 Glassmorphism 風格，增加 hover 效果 */
-.container {
-  width: 420px;
-  margin: 30px auto;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* 套用管理員修改頁面的高級樣式 */
+.edit-page {
+  min-height: 100vh;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-card {
+  width: 100%;
+  max-width: 480px;
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.header-icon {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #e8f4fc 0%, #d4e8f7 100%);
   border-radius: 16px;
-  padding: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #5b9bd5;
+  margin: 0 auto 16px;
 }
 
-h2 {
-  text-align: center;
-  margin-bottom: 24px;
-  color: #1e3a5f;
-  font-size: 1.5rem;
+.card-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
   font-weight: 700;
-  position: relative;
-  padding-bottom: 12px;
+  color: #303133;
 }
 
-h2::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80px;
-  height: 3px;
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  border-radius: 2px;
+.card-header p {
+  margin: 8px 0 0;
+  color: #909399;
+  font-size: 0.95rem;
 }
 
-label {
-  font-weight: 600;
-  margin-top: 12px;
-  display: block;
-  color: #334155;
-  font-size: 14px;
-}
-
-input {
-  width: 100%;
-  padding: 10px 14px;
-  margin-bottom: 8px;
-  margin-top: 6px;
-  box-sizing: border-box;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 14px;
-  background: #f8fafc;
-  transition: all 0.2s ease;
-}
-
-input:focus {
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
-  outline: none;
-  background: #ffffff;
-}
-
-.error {
-  color: #dc2626;
+.loading-state {
   text-align: center;
+  padding: 40px;
+}
+
+.loading-icon {
+  font-size: 36px;
+  color: #409eff;
   margin-bottom: 16px;
-  padding: 10px;
-  background: rgba(220, 38, 38, 0.1);
-  border-radius: 8px;
-  font-weight: 500;
 }
 
-.loading {
-  text-align: center;
-  color: #64748b;
-  padding: 20px;
-}
-
-.primary-btn {
-  width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  color: white;
-  border: none;
+.error-alert {
+  margin-bottom: 20px;
   border-radius: 10px;
+}
+
+.admin-form :deep(.el-form-item__label) {
+  font-weight: 600;
+  color: #606266;
+}
+
+.admin-form :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  padding: 4px 12px;
+}
+
+.form-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #909399;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-actions {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.submit-btn {
+  width: 100%;
+  height: 48px;
   font-size: 16px;
   font-weight: 600;
-  cursor: pointer;
-  margin-top: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #5b9bd5 0%, #7cb9e8 100%);
+  border: none;
+  color: white;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-.primary-btn:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-  transform: translateY(-1px);
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(91, 155, 213, 0.35);
 }
 
-.primary-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.back-link {
-  display: block;
-  margin-top: 20px;
-  text-align: center;
-  color: #3b82f6;
+.back-btn {
+  width: 100%;
+  height: 48px;
   font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  text-decoration: none;
-  transition: color 0.2s ease;
+  border-radius: 12px;
+  border: 1px solid #e8ecf1;
+  background: transparent;
+  color: #606266;
 }
 
-.back-link:hover {
-  color: #1d4ed8;
-  text-decoration: underline;
+.back-btn:hover {
+  border-color: #5b9bd5;
+  color: #5b9bd5;
+  background: rgba(91, 155, 213, 0.05);
 }
+
+.mr-2 { margin-right: 8px; }
 </style>

@@ -7,6 +7,12 @@ export const useAdminAuthStore = defineStore('adminAuth', {
       username: '',
       name: '',
       role: null,
+      admId: null,
+      admUsername: '',
+      admName: '',
+      admEmail: '',
+      admRole: null,
+      createdAt: null
     },
   }),
   actions: {
@@ -20,6 +26,12 @@ export const useAdminAuthStore = defineStore('adminAuth', {
         username: '',
         name: '',
         role: null,
+        admId: null,
+        admUsername: '',
+        admName: '',
+        admEmail: '',
+        admRole: null,
+        createdAt: null
       }
     },
   },
