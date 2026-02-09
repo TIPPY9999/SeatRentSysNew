@@ -57,24 +57,40 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
                 SELECT
                     s.spotId   AS spotId,
                     s.spotName AS spotName,
-                    COALESCE(ts.totalSeats, 0)  AS totalSeats,
-                    COALESCE(rc.rentedCount, 0) AS rentedCount
+                    COALESCE(ts.totalSeats, 0) AS totalSeats,
+                    -- 可借數 = 原始配置 - 從這裡借出的 + 跨據點還到這裡的
+                    COALESCE(ts.totalSeats, 0)
+                    - COALESCE(rOut.rentedCount, 0)
+                    + COALESCE(rIn.returnedCount, 0) AS availableSeats
                 FROM renting_Spot s
+                -- 原始配置座位數（以 spotId 為準）
                 LEFT JOIN (
                     SELECT spotId, COUNT(*) AS totalSeats
                     FROM seats
                     WHERE seatsStatus = N'啟用'
                     GROUP BY spotId
                 ) ts ON ts.spotId = s.spotId
+                -- 從這個據點借出去且尚未歸還的數量
                 LEFT JOIN (
-                    SELECT r.spotIdRent AS spotId, COUNT(DISTINCT r.seatsId) AS rentedCount
+                    SELECT spotIdRent, COUNT(*) AS rentedCount
+                    FROM recRent
+                    WHERE recStatus = N'租借中'
+                    GROUP BY spotIdRent
+                ) rOut ON rOut.spotIdRent = s.spotId
+                -- 還到這個據點的數量（跨據點還車）
+                LEFT JOIN (
+                    SELECT r.spotIdReturn, COUNT(*) AS returnedCount
                     FROM recRent r
-                    JOIN seats se ON se.serialNumber = r.seatsId
-                    WHERE r.recStatus = N'租借中'
-                      AND se.seatsStatus = N'啟用'
-                      AND se.spotId = r.spotIdRent
-                    GROUP BY r.spotIdRent
-                ) rc ON rc.spotId = s.spotId
+                    INNER JOIN (
+                        -- 找出每張椅子最後一次歷史紀錄
+                        SELECT seatsId, MAX(recSeqId) AS lastSeq
+                        FROM recRent
+                        WHERE recStatus = N'已完成' AND spotIdReturn IS NOT NULL
+                        GROUP BY seatsId
+                    ) latest ON r.seatsId = latest.seatsId AND r.recSeqId = latest.lastSeq
+                    WHERE r.spotIdRent != r.spotIdReturn  -- 只計算跨據點還車
+                    GROUP BY r.spotIdReturn
+                ) rIn ON rIn.spotIdReturn = s.spotId
                 WHERE s.spotStatus = N'營運中'
             """, nativeQuery = true)
     List<SpotMonitor> getSpotRealtimeStatus();

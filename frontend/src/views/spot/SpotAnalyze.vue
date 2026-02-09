@@ -58,10 +58,10 @@
               <el-table :data="statsData.spotMonitor" style="width: 100%" height="280">
                 <el-table-column prop="spotName" label="據點" />
                 <el-table-column prop="totalSeats" label="總位" width="80" align="center" />
-                <el-table-column prop="rentedCount" label="租借中" width="80" align="center" />
-                <el-table-column label="使用率" width="120">
+                <el-table-column prop="availableSeats" label="可借" width="80" align="center" />
+                <el-table-column label="可借率" width="120">
                   <template #default="scope">
-                    <el-progress :percentage="Math.round((scope.row.rentedCount/scope.row.totalSeats)*100)" />
+                    <el-progress :percentage="Math.round((scope.row.availableSeats/scope.row.totalSeats)*100)" />
                   </template>
                 </el-table-column>
               </el-table>

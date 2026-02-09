@@ -24,7 +24,7 @@ public class AnalyzeProjections {
 
         Integer getTotalSeats();
 
-        Integer getRentedCount();
+        Integer getAvailableSeats();
     }
 
     // 各租借時長區間統計
