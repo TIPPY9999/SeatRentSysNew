@@ -8,7 +8,7 @@ const API_URL = 'http://localhost:8080/rec-rent'
 const rentList = ref([])
 const searchCriteria = reactive({
   recSeqId: '',
-  
+
   recId: '',
   memId: '',
   memName: '',
@@ -18,8 +18,8 @@ const searchCriteria = reactive({
   returnDate: '',
   rentDate: '',
   recPayment: '',
-  recNote: '',  
-  serialNumber:'',
+  recNote: '',
+  serialNumber: '',
 })
 
 // 分頁相關狀態
@@ -112,18 +112,9 @@ const exportToCsv = () => {
 
   // 定義 CSV 檔案的表頭
   const headers = [
-    '訂單狀態',
-    '訂單編號',
-    '會員編號',
-    '會員姓名',
-    '座椅編號',
-    '租借點編號',
-    '租借點名稱',
-    '歸還點編號',
-    '歸還點名稱',
-    '租借時間',
-    '歸還時間',
-    '費用',
+    '訂單狀態',    '訂單編號',    '會員編號',    '會員姓名',
+    '座椅編號',    '租借點編號',    '租借點名稱',    '歸還點編號',
+    '歸還點名稱',    '租借時間',    '歸還時間',    '費用',    '備註',
   ]
   // 將每一筆訂單資料轉換為 CSV 的一列
   const rows = rentList.value.map((rent) =>
@@ -140,7 +131,6 @@ const exportToCsv = () => {
       `"${rent.recRentDT2 ? rent.recRentDT2.replace('T', ' ') : ''}"`,
       `"${rent.recReturnDT2 ? rent.recReturnDT2.replace('T', ' ') : ''}"`,
       `"${rent.recPayment || ''}"`,
-      `"${rent.recVio || ''}"`,
       `"${rent.recNote || ''}"`,
     ].join(','),
   )
@@ -266,7 +256,9 @@ const showFullNote = (note) => {
   </div>
   <div class="view-section active">
     <div class="search-actions">
-      <button class="btn-primary" @click="loadRents" style="min-width: 135px; margin:0 0 0 10px ">搜尋</button>
+      <button class="btn-primary" @click="loadRents" style="min-width: 135px; margin: 0 0 0 10px">
+        搜尋
+      </button>
       <button class="btn-secondary" @click="clearSearch">清除</button>
       <button class="btn-success" @click="loadRents">更新</button>
       <select v-model="pageSize" class="page-size-select">
@@ -290,9 +282,9 @@ const showFullNote = (note) => {
           <th>座椅編號</th>
           <th>租借點名稱</th>
           <th>-編號</th>
+          <th>租借時間</th>
           <th>歸還點名稱</th>
           <th>-編號</th>
-          <th>租借時間</th>
           <th>歸還時間</th>
           <th>費用</th>
           <th>備註</th>
@@ -311,9 +303,9 @@ const showFullNote = (note) => {
           <td>SN-20260{{ rent.seatsId ? String(rent.seatsId).padStart(4, '0') : '' }}</td>
           <td>{{ rent.rentSpotName }}</td>
           <td>{{ rent.spotIdRent }}</td>
+          <td>{{ rent.recRentDT2 ? rent.recRentDT2.replace('T', ' ') : '' }}</td>
           <td>{{ rent.returnSpotName }}</td>
           <td>{{ rent.spotIdReturn }}</td>
-          <td>{{ rent.recRentDT2 ? rent.recRentDT2.replace('T', ' ') : '' }}</td>
           <td>{{ rent.recReturnDT2 ? rent.recReturnDT2.replace('T', ' ') : '' }}</td>
           <td>{{ rent.recPayment }}</td>
           <td>

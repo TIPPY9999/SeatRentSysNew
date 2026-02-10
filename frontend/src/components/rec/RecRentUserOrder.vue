@@ -20,7 +20,8 @@ const router = useRouter()
 // --- Computed properties from store ---
 const isLoggedIn = computed(() => memberAuthStore.isLogin && !!memberAuthStore.member?.memId)
 const memberId = computed(() => memberAuthStore.member?.memId)
-const memberName = computed(() => memberAuthStore.member?.memName || 'Guest')
+const memberName = computed(() => memberAuthStore.member?.memName || '訪客')
+const memberUserName = computed(() => memberAuthStore.member?.memUsername || '訪客')
 console.log(isLoggedIn.value)
 
 // --- 狀態定義 ---
@@ -224,9 +225,10 @@ watch(
       <div class="card-body user-info-section">
         <div v-if="isLoggedIn">
           <h5><i class="fas fa-user-check"></i> 會員資訊</h5>
-          <p class="mb-0">
-            歡迎，<strong>{{ memberName }}</strong> (ID: {{ memberId }})
-          </p>
+          <h5 class="mb-0">
+            歡迎， <strong>{{ memberName }}</strong> (UID:
+            {{ memberUserName }})，請確認您的租借資訊:<br /><br />
+          </h5>
         </div>
         <div v-else class="alert alert-warning">
           <h5><i class="fas fa-exclamation-triangle"></i></h5>
@@ -260,7 +262,7 @@ watch(
             <select id="seat-select" class="form-control" v-model="selectedSeat">
               <option :value="null" disabled>-- 請選擇一個座椅 --</option>
               <option v-for="seat in seats" :key="seat.seatsId" :value="seat">
-                座椅編號: {{ seat.seatsId }} &nbsp;|&nbsp; 類型: {{ seat.seatsName }}
+                座椅編號: {{ seat.seatsId }} &nbsp;&nbsp;&nbsp; 類型: {{ seat.seatsName }}
               </option>
             </select>
           </div>
@@ -288,7 +290,8 @@ watch(
             <button
               @click="openTermsModal"
               class="btn btn-success btn-lg"
-              :disabled="!isReadyToRent">
+              :disabled="!isReadyToRent"
+            >
               {{ isReadyToRent ? '閱讀使用條款後租借' : '請先完成前置步驟' }}
             </button>
             <button class="btn btn-warning fw-bold" @click="handleReportIssue">
