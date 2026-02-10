@@ -5,6 +5,14 @@ import axios from 'axios'
 import Swal from 'sweetalert2'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 
+import { Bar, Line } from 'vue-chartjs'
+import { 
+  Chart as ChartJS, Title, Tooltip, Legend, BarElement, 
+  CategoryScale, LinearScale, PointElement, LineElement 
+} from 'chart.js'
+
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, PointElement, LineElement)
+
 const router = useRouter()
 const members = ref([])
 const keyword = ref('')
@@ -185,12 +193,122 @@ const checkPermission = (actionCallback) => {
   }
 };
 
+// --- 統計邏輯：點數級距 ---
+const pointStats = computed(() => {
+  const dist = { '0-100': 0, '101-500': 0, '501-1000': 0, '1000+': 0 }
+  members.value.forEach(m => {
+    if (m.memPoints <= 100) dist['0-100']++
+    else if (m.memPoints <= 500) dist['101-500']++
+    else if (m.memPoints <= 1000) dist['501-1000']++
+    else dist['1000+']++
+  })
+  return dist
+})
+
+// --- 統計邏輯：註冊趨勢 ---
+const registrationStats = computed(() => {
+  const counts = {}
+  members.value.forEach(m => {
+    if (m.createdAt) {
+      const date = m.createdAt.substring(0, 10)
+      counts[date] = (counts[date] || 0) + 1
+    }
+  })
+  const sortedDates = Object.keys(counts).sort().slice(-7) // 只取最近 7 筆日期
+  return {
+    labels: sortedDates,
+    data: sortedDates.map(d => counts[d])
+  }
+})
+
+// --- 圖表數據配置 ---
+const lineChartData = computed(() => ({
+  labels: registrationStats.value.labels,
+  datasets: [{
+    label: '每日新註冊人數',
+    data: registrationStats.value.data,
+    borderColor: '#409eff',
+    backgroundColor: 'rgba(64, 158, 255, 0.1)',
+    tension: 0.4,
+    fill: true
+  }]
+}))
+
+const barChartData = computed(() => ({
+  labels: Object.keys(pointStats.value),
+  datasets: [{
+    label: '會員人數',
+    data: Object.values(pointStats.value),
+    backgroundColor: ['#95d475', '#409eff', '#f89898', '#eebe77']
+  }]
+}))
+
+// --- CSV 匯出邏輯 ---
+const exportToCSV = () => {
+  if (members.value.length === 0) {
+    Swal.fire('提示', '目前無資料可導出', 'info');
+    return;
+  }
+
+  // 定義標題列
+  const headers = ['會員ID', '帳號', '姓名', 'Email', '手機', '點數', '註冊日期'];
+
+  // 處理資料內容
+  const rows = members.value.map(m => [
+    `\t${m.memId}`,
+    `\t${m.memUsername}`,
+    `\t${m.memName}`,
+    m.memEmail,
+    `\t${m.memPhone}`, // 加 \t 解決 9.1E+08 (科學記號)
+    m.memPoints,
+    `\t${m.createdAt?.substring(0, 10)}` // 加 \t 解決 #### 並格式化日期
+  ]);
+
+  // 轉成 CSV 字串，並用逗號分隔
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.join(','))
+  ].join('\n');
+
+  // 加上 BOM (\uFEFF) 解決 Excel 開啟中文亂碼問題
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `會員名單_${new Date().toLocaleDateString()}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
 onMounted(fetchMembers)
 </script>
 
 <template>
   <div class="member-page">
     <h2 class="title"><i class="fas fa-users"></i> 會員列表</h2>
+
+    <div class="dashboard-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title"><i class="fas fa-chart-line"></i> 註冊成長趨勢</span>
+          <button class="btn-csv" @click="exportToCSV">
+            <i class="fas fa-file-download"></i> 匯出報表 (CSV)
+          </button>
+        </div>
+        <div class="chart-body">
+          <Line :data="lineChartData" :options="chartOptions" />
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title"><i class="fas fa-chart-pie"></i> 會員點數級距</span>
+        </div>
+        <div class="chart-body">
+          <Bar :data="barChartData" :options="chartOptions" />
+        </div>
+      </div>
+    </div>
 
     <div class="toolbar">
       <div class="search-bar">
@@ -919,6 +1037,9 @@ th {
 }
 
 .close-x {
+  position: absolute;
+  top: 15px;         /* 距離頂部高度 */
+  right: 20px;
   border: none;
   background: none;
   font-size: 24px;
@@ -944,5 +1065,59 @@ th {
 .row-active .id-link-cell {
   color: #66b1ff;
   text-shadow: 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr; /* 左寬右窄 */
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.chart-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.chart-title {
+  font-weight: 600;
+  color: #606266;
+  font-size: 14px;
+}
+
+.chart-body {
+  height: 230px; /* 固定高度，避免表格被推太遠 */
+}
+
+.btn-csv {
+  padding: 6px 12px;
+  background-color: #f0f9ff;
+  color: #409eff;
+  border: 1px solid #d9ecff;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-csv:hover {
+  background-color: #409eff;
+  color: white;
+}
+
+/* 讓圖表變垂直排列 */
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

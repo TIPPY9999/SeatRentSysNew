@@ -278,8 +278,12 @@ onMounted(fetchAdmins)
             @keyup.enter="searchAdmins"
           />
         </div>
-        <button class="btn-action-search" @click="searchAdmins">搜尋</button>
-        <button class="btn-action-all" @click="fetchAdmins">顯示全部</button>
+        <button class="btn-action-search" @click="searchAdmins">
+          <i class="fas fa-search"></i> 搜尋
+        </button>
+        <button class="btn-action-all" @click="fetchAdmins">
+          <i class="fas fa-sync-alt"></i> 顯示全部
+        </button>
       </div>
 
       <div class="action-right-group">
@@ -469,6 +473,12 @@ onMounted(fetchAdmins)
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   border-left-width: 5px;
   border-left-style: solid;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
 }
 
 /* 左側邊框顏色 */
@@ -624,8 +634,9 @@ onMounted(fetchAdmins)
 }
 
 .btn-action-all {
-  background-color: white;
-  border: 1px solid #dcdfe6;
+  background-color: #52c41a;
+  color: white;
+  border: none;
   padding: 0 20px;
   border-radius: 8px;
 }

@@ -140,6 +140,9 @@ const login = async () => {
       username: res.data?.admUsername,
       name: res.data?.admName,
       role: res.data?.admRole,
+      admId: res.data?.admId,          // 補上 ID
+      admEmail: res.data?.admEmail,    // 補上 Email
+      admCreatedAt: res.data?.admCreatedAt // 補上到職日
     }
 
     // 3. 同步寫入 Pinia 和 LocalStorage

@@ -200,6 +200,7 @@ onMounted(() => {
             size="large" 
             @click="goBack" 
             class="back-btn"
+            style="margin-left: 0"
           >
             <i class="fas fa-arrow-left mr-2"></i> 回管理員列表
           </el-button>

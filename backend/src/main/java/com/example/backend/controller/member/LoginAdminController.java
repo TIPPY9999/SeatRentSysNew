@@ -69,6 +69,9 @@ public class LoginAdminController {
         result.put("admUsername", admin.getAdmUsername());
         result.put("admName", admin.getAdmName());
         result.put("admRole", admin.getAdmRole());
+        result.put("admId", admin.getAdmId()); // 補上 ID
+        result.put("admEmail", admin.getAdmEmail()); // 補上 Email
+        result.put("admCreatedAt", admin.getCreatedAt()); // 補上到職日期
 
         return ResponseEntity.ok(result);
     }

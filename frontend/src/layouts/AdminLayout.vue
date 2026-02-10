@@ -5,11 +5,13 @@
  * [新增] 整合 SweetAlert2 登出確認
  * [新增] 下拉選單導航設計
  */
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRouter, useRoute, RouterLink, RouterView } from 'vue-router'
 // 1. 引入 SweetAlert2
 import Swal from 'sweetalert2'
 import { useAdminAuthStore } from '@/stores/adminAuth'
+
+import AdminInfoModal from '@/views/member/AdminInfoModal.vue'
 
 const adminAuthStore = useAdminAuthStore()
 
@@ -27,6 +29,30 @@ const sidebarCollapseClasses = ['sidebar-collapse', 'sidebar-closed', 'sidebar-m
 
 // 側邊欄狀態（性能優化：避免重複操作DOM）
 const sidebarInitialized = ref(false)
+
+const showProfileModal = ref(false)
+
+const formattedAdminData = computed(() => {
+  const raw = adminAuthStore.admin || {}
+  return {
+    // 這裡的 Key (左邊) 必須呼應 Modal 裡的變數
+    admId: raw.admId || raw.id,           // Modal 用 adminData.admId
+    admName: raw.admName || raw.name,     // Modal 用 adminData.admName
+    admUsername: raw.admUsername || raw.username, // Modal 用 adminData.admUsername
+    admEmail: raw.admEmail || raw.email,   // Modal 用 adminData.admEmail
+    admRole: raw.admRole || raw.role,     // Modal 用 adminData.admRole
+    createdAt: raw.createdAt || raw.admCreatedAt // Modal 用 formatDate(adminData.createdAt)
+  }
+})
+
+const currentAdminAvatar = computed(() => {
+  const adminId = adminAuthStore.admin?.admId || adminAuthStore.admin?.id
+  if (adminId >= 1 && adminId <= 10) {
+    const fileName = String(adminId).padStart(2, '0')
+    return `/admin/${fileName}.jpg`
+  }
+  return '/admin/default.png'
+})
 
 // 選單群組定義
 const menuGroups = [
@@ -89,15 +115,15 @@ onMounted(() => {
   // 加入必要的 layout class
   document.body.classList.add(...bodyClasses)
   
-  // ✅ 主動移除會導致 sidebar 收合的 class
+  // 主動移除會導致 sidebar 收合的 class
   sidebarCollapseClasses.forEach(cls => {
     document.body.classList.remove(cls)
   })
   
-  // ✅ 確保 sidebar 展開狀態（一次性設定）
+  // 確保 sidebar 展開狀態（一次性設定）
   document.body.classList.add('sidebar-open')
   
-  // ✅ 延遲移除 hold-transition（避免初始化閃爍）
+  // 延遲移除 hold-transition（避免初始化閃爍）
   requestAnimationFrame(() => {
     document.body.classList.remove('hold-transition')
     sidebarInitialized.value = true
@@ -114,7 +140,7 @@ onBeforeUnmount(() => {
   if (!sidebarInitialized.value) return
   
   document.body.classList.remove(...bodyClasses)
-  // ✅ 清除 sidebar 狀態 class，避免 SPA 殘留
+  // 清除 sidebar 狀態 class，避免 SPA 殘留
   document.body.classList.remove('sidebar-open')
   sidebarCollapseClasses.forEach(cls => {
     document.body.classList.remove(cls)
@@ -175,7 +201,7 @@ const logout = async () => {
   // 3. 使用者按了「確定」
   if (!result.isConfirmed) return
 
-  // ✅ 統一清除 localStorage（跟 main.js / router 守衛一致）
+  // 統一清除 localStorage（跟 main.js / router 守衛一致）
   localStorage.removeItem('token')
   localStorage.removeItem('admin')
 
@@ -220,13 +246,6 @@ const logout = async () => {
       </ul>
 
       <ul class="navbar-nav ml-auto">
-        <!-- 管理員資訊顯示 -->
-        <li class="nav-item d-flex align-items-center me-3">
-          <span class="navbar-text">
-            <i class="fas fa-user-circle me-1"></i>
-            {{ adminAuthStore.admin.name || '管理員' }}
-          </span>
-        </li>
         <li class="nav-item">
           <a class="nav-link text-danger fw-bold" href="#" @click.prevent="logout">
             <i class="fas fa-sign-out-alt"></i> 登出
@@ -247,9 +266,9 @@ const logout = async () => {
 
       <div class="sidebar">
         <!-- 管理員資訊卡片 -->
-        <div class="user-card">
+        <div class="user-card" @click="showProfileModal = true" style="cursor: pointer;">
           <div class="user-avatar">
-            <i class="fas fa-user-circle"></i>
+            <img :src="currentAdminAvatar" class="sidebar-avatar-img" />
           </div>
           <div class="user-info">
             <span class="user-name">{{ adminAuthStore.admin.name || '管理員' }}</span>
@@ -310,6 +329,10 @@ const logout = async () => {
         </div>
       </section>
     </div>
+    <AdminInfoModal 
+      :show="showProfileModal" 
+      :adminData="formattedAdminData"  @close="showProfileModal = false"
+    />
   </div>
 </template>
 
@@ -361,7 +384,7 @@ const logout = async () => {
   background: linear-gradient(180deg, #bdddff 0%, #96b5d4 100%) !important;
   width:fit-content;
   overflow: hidden !important;
-  /* ✅ 統一由AdminLTE JS管理動畫，不重複定義transition */
+  /* 統一由AdminLTE JS管理動畫，不重複定義transition */
   will-change: transform;
 }
 
@@ -671,8 +694,25 @@ const logout = async () => {
   scrollbar-color: rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.15);
 }
 
-/* ✅ AdminLTE 主內容區：統一由AdminLTE JS管理動畫 */
+/* AdminLTE 主內容區：統一由AdminLTE JS管理動畫 */
 .content-wrapper {
   will-change: transform;
+}
+
+.sidebar-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px; /* 跟原本 .user-avatar 的圓角一致 */
+}
+
+/* 頂部導航欄微型頭像樣式 */
+.nav-avatar-mini {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 8px;
+  border: 1px solid #ddd;
 }
 </style>

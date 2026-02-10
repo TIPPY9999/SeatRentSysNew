@@ -1,8 +1,8 @@
 <script setup>
 /**
- * MemberCreateView.vue：新增會員（含格式驗證）
+ * MemberCreateView.vue：新增會員（換裝美化版）
  */
-import { ref, reactive } from 'vue'
+import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Swal from 'sweetalert2'
@@ -20,50 +20,40 @@ const member = reactive({
   memLevel: 1,
 })
 
-const errorMsg = ref('')
-const successMsg = ref('')
-
-// --- 格式驗證邏輯 ---
+// --- 格式驗證邏輯 (保留原樣) ---
 const validateForm = () => {
-  // 1. 必填檢查 (除了發票載具)
   if (!member.memUsername || !member.memPassword || !member.memName || !member.memEmail || !member.memPhone) {
     return '除了發票載具，其餘欄位皆為必填'
   }
 
-  // 2. 密碼驗證：至少 6 個字且包含至少一個英文
-  // 正則表達式：(?=.*[a-zA-Z]) 表示至少一個英文，.{6,} 表示至少六位
   const pwdRegex = /^(?=.*[a-zA-Z]).{6,}$/
   if (!pwdRegex.test(member.memPassword)) {
     return '密碼需至少 6 個字元，並包含至少一個英文字母'
   }
 
-  // 3. 手機驗證：09 開頭且共 10 位數字
   const phoneRegex = /^09\d{8}$/
   if (!phoneRegex.test(member.memPhone)) {
     return '手機格式錯誤，請輸入 09 開頭的 10 位數字'
   }
 
-  // 4. 信箱驗證：...@....com
-  // 嚴格檢查結尾必須是 .com
   const emailRegex = /^[^\s@]+@[^\s@]+\.com$/
   if (!emailRegex.test(member.memEmail)) {
     return '信箱格式錯誤，必須包含 @ 且結尾為 .com'
   }
 
-  return null // 代表驗證通過
+  return null
 }
 
 const submitCreate = async () => {
-  // 執行驗證
   const error = validateForm()
   if (error) {
     await Swal.fire({
       icon: 'warning',
       title: '格式錯誤',
       text: error,
-      confirmButtonColor: '#e6a23c',
+      confirmButtonColor: '#5b9bd5',
     })
-    return // 攔截，不執行 API
+    return
   }
 
   try {
@@ -77,8 +67,8 @@ const submitCreate = async () => {
       icon: 'success',
       title: '新增成功',
       text: res.data?.message || '會員已新增',
-      confirmButtonText: '確定',
-      confirmButtonColor: '#409eff',
+      timer: 1500,
+      showConfirmButton: false,
     })
 
     router.push('/admin/members')
@@ -88,7 +78,6 @@ const submitCreate = async () => {
       icon: 'error',
       title: '新增失敗',
       text: msg,
-      confirmButtonText: '確定',
       confirmButtonColor: '#f56c6c',
     })
   }
@@ -100,132 +89,208 @@ const goBack = () => {
 </script>
 
 <template>
-  <div class="container">
-    <h2>新增會員</h2>
-    <form @submit.prevent="submitCreate" autocomplete="off" novalidate>
-      <label>帳號</label>
-      <input type="text" v-model="member.memUsername" placeholder="請輸入帳號" autocomplete="new-username" />
-      
-      <label>密碼</label>
-      <input type="password" v-model="member.memPassword" placeholder="至少6字+1英文字母" autocomplete="new-password" />
-      
-      <label>姓名</label>
-      <input type="text" v-model="member.memName" placeholder="請輸入真實姓名" />
-      
-      <label>信箱</label>
-      <input type="email" v-model="member.memEmail" placeholder="example@mail.com" />
-      
-      <label>手機</label>
-      <input type="text" v-model="member.memPhone" placeholder="09xxxxxxxx" maxlength="10" />
-      
-      <label>發票載具</label>
-      <input type="text" v-model="member.memInvoice" placeholder="例：/ABC1234 (選填)" />
-      
-      <button type="submit" class="btn-submit">確認新增</button>
-    </form>
-    <a class="home-btn" @click.prevent="goBack">回會員列表</a>
+  <div class="create-page">
+    <div class="form-card">
+      <div class="card-header">
+        <div class="header-icon">
+          <i class="fas fa-user-plus"></i>
+        </div>
+        <h2>新增會員</h2>
+        <p>建立新的 Take@Seat 使用者帳號</p>
+      </div>
+
+      <el-form @submit.prevent="submitCreate" label-position="top" class="admin-form">
+        <el-form-item label="帳號" required>
+          <el-input
+            v-model="member.memUsername"
+            placeholder="請輸入帳號"
+            prefix-icon="User"
+            autocomplete="new-username"
+          />
+        </el-form-item>
+
+        <el-form-item label="密碼" required>
+          <el-input
+            type="password"
+            v-model="member.memPassword"
+            placeholder="至少 6 碼且包含英文字母"
+            prefix-icon="Lock"
+            autocomplete="new-password"
+            show-password
+          />
+        </el-form-item>
+
+        <el-form-item label="姓名" required>
+          <el-input
+            v-model="member.memName"
+            placeholder="請輸入真實姓名"
+            prefix-icon="UserFilled"
+          />
+        </el-form-item>
+
+        <el-form-item label="信箱" required>
+          <el-input
+            v-model="member.memEmail"
+            placeholder="example@mail.com"
+            prefix-icon="Message"
+          />
+        </el-form-item>
+
+        <el-form-item label="手機" required>
+          <el-input
+            v-model="member.memPhone"
+            placeholder="09xxxxxxxx"
+            maxlength="10"
+            prefix-icon="Iphone"
+          />
+        </el-form-item>
+
+        <el-form-item label="發票載具 (選填)">
+          <el-input
+            v-model="member.memInvoice"
+            placeholder="例：/ABC1234"
+            prefix-icon="Tickets"
+          />
+        </el-form-item>
+
+        <div class="form-actions">
+          <el-button 
+            type="primary" 
+            size="large" 
+            native-type="submit" 
+            class="submit-btn"
+          >
+            <i class="fas fa-check mr-2"></i> 確認新增
+          </el-button>
+          
+          <el-button 
+            size="large" 
+            @click="goBack" 
+            class="back-btn"
+            style="margin-left: 0" 
+          >
+            <i class="fas fa-arrow-left mr-2"></i> 回會員列表
+          </el-button>
+        </div>
+      </el-form>
+    </div>
   </div>
 </template>
 
 <style scoped>
-/* 樣式部分僅加入 hover 強化與細微調整 */
-.container {
-  width: 420px;
-  margin: 40px auto;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 32px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+/* ========== 頁面容器 ========== */
+.create-page {
+  min-height: 100vh;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========== 表單卡片 ========== */
+.form-card {
+  width: 100%;
+  max-width: 480px;
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== 標題區域 ========== */
+.card-header {
   text-align: center;
+  margin-bottom: 32px;
 }
 
-h2 {
-  color: #1e3a5f;
-  margin-bottom: 24px;
-  font-size: 1.5rem;
+.header-icon {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #3b82f6;
+  margin: 0 auto 16px;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
   font-weight: 700;
-  position: relative;
-  padding-bottom: 12px;
+  color: #1e3a5f;
 }
 
-h2::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 3px;
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  border-radius: 2px;
+.card-header p {
+  margin: 8px 0 0;
+  color: #94a3b8;
+  font-size: 0.95rem;
 }
 
-label {
-  display: block;
-  text-align: left;
-  margin-bottom: 6px;
+/* ========== 表單樣式 ========== */
+.admin-form :deep(.el-form-item__label) {
   font-weight: 600;
-  font-size: 14px;
-  color: #334155;
+  color: #475569;
 }
 
-input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 2px solid #e2e8f0;
+.admin-form :deep(.el-input__wrapper) {
   border-radius: 10px;
-  height: 42px;
-  box-sizing: border-box;
-  margin-bottom: 16px;
-  font-size: 14px;
-  background: #f8fafc;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 4px 12px;
+  background-color: #f8fafc;
 }
 
-input:focus {
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
-  outline: none;
-  background: #ffffff;
+/* ========== 按鈕區域 ========== */
+.form-actions {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.btn-submit {
+.submit-btn {
   width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  color: white;
-  border: none;
-  border-radius: 10px;
+  height: 48px;
   font-size: 16px;
   font-weight: 600;
-  cursor: pointer;
-  margin-top: 8px;
-  transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.btn-submit:hover {
+  border-radius: 12px;
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
-  transform: translateY(-1px);
+  border: none;
+  color: white;
 }
 
-.home-btn {
-  display: inline-block;
-  margin-top: 20px;
-  text-decoration: none;
-  color: #3b82f6;
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.35);
+}
+
+.back-btn {
+  width: 100%;
+  height: 48px;
   font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 0.2s ease;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
 }
 
-.home-btn:hover {
-  color: #1d4ed8;
-  text-decoration: underline;
+.back-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #f0f7ff;
+}
+
+.mr-2 { margin-right: 8px; }
+
+@media (max-width: 520px) {
+  .form-card { padding: 24px; }
 }
 </style>

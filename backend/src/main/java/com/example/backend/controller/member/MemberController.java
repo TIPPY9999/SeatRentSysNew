@@ -87,6 +87,7 @@ public class MemberController {
         old.setMemPhone(member.getMemPhone());
         old.setMemInvoice(member.getMemInvoice());
         old.setMemUsername(member.getMemUsername());
+        old.setMemPoints(member.getMemPoints());
 
         // 呼叫 Service 更新 (只呼叫這一個 update 即可，它會處理存檔)
         try {

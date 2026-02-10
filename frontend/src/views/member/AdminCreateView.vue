@@ -85,6 +85,15 @@ const submitCreate = () => {
     })
 }
 
+// 一鍵帶入功能
+const autoFill = () => {
+  admin.admUsername = 'demoEmployee'
+  admin.admPassword = 'demo987'
+  admin.admName = '測試員工'
+  admin.admEmail = 'alan123145@gmail.com'
+  admin.admRole = 1
+}
+
 const goBack = () => {
   router.push('/admin/admins')
 }
@@ -162,7 +171,18 @@ const goBack = () => {
           >
             <i class="fas fa-check mr-2"></i> 確認新增
           </el-button>
-          <el-button size="large" @click="goBack" class="back-btn">
+
+          <el-button 
+              type="info" 
+              plain 
+              size="large" 
+              @click="autoFill" 
+              class="demo-btn"
+          >
+            <i class="fas fa-magic mr-2"></i> 一鍵帶入
+          </el-button>
+
+          <el-button size="large" @click="goBack" class="back-btn" style="margin-left: 0">
             <i class="fas fa-arrow-left mr-2"></i> 回管理員列表
           </el-button>
         </div>
@@ -331,5 +351,30 @@ const goBack = () => {
     height: 60px;
     font-size: 24px;
   }
+}
+
+/* ========== 一鍵帶入按鈕樣式 ========== */
+.demo-btn {
+  width: 100%;
+  height: 44px;
+  font-size: 15px;
+  border-radius: 10px;
+  border: 1px dashed #909399; /* 虛線邊框 */
+  background: #f8f9fa;
+  color: #606266;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  margin-left: 0 !important; /* 強制覆蓋 Element Plus 預設間距 */
+}
+
+.demo-btn:hover {
+  background: #f0f2f5;
+  border-color: #5b9bd5;
+  color: #5b9bd5;
+  transform: translateY(-1px);
+}
+
+.demo-btn:active {
+  transform: scale(0.98);
 }
 </style>
