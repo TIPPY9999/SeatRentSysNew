@@ -942,6 +942,57 @@ VALUES
     (N'賴秀英', N'美好環境維護', '0920-555-123', 'hsiuying.lai@nice-env.com', N'負責垃圾清運與資源回收分類', 1),
     (N'徐文雄', N'金鑰匙鎖印行', '0970-111-999', 'wh.hsu@key-lock.tw', N'電子鎖電池更換與開鎖服務', 1),
     (N'蘇郁婷', N'連線通科技', '0916-222-888', 'yuting.su@connect-tech.com', N'路由器與交換器硬體設定', 1);
+
+
+USE [SeatRentSys];
+GO
+
+INSERT INTO [dbo].[maintenanceInformation]
+    (
+    [spotId],
+    [seatsId],
+    [issueType],
+    [issueDesc],
+    [issuePriority],
+    [issueStatus],
+    [assignedStaffId],
+    [startAt],
+    [resolvedAt],
+    [resolveNote],
+    [resultType]
+    )
+VALUES
+    -- 1 機台：螢幕閃爍
+    (1, NULL, N'機台故障異常', N'機台螢幕閃爍且亮度不穩，疑似排線接觸不良，已重新固定並測試正常。', 'HIGH', 'RESOLVED', 1, DATEADD(HOUR,-6, SYSDATETIME()), DATEADD(HOUR,-3, SYSDATETIME()), N'已完成檢修，顯示正常。', N'REPAIRED'),
+
+    -- 2 椅子：升降失效
+    (1, 1, N'椅子損壞', N'椅子高度調整失效，已更換並確認可正常升降。', 'NORMAL', 'RESOLVED', 2, DATEADD(HOUR,-20,SYSDATETIME()), DATEADD(HOUR,-18,SYSDATETIME()), N'已更換零件，功能正常。', N'REPAIRED'),
+
+    -- 3 機台：網路斷線
+    (2, NULL, N'機台故障異常', N'機台網路間歇性斷線，已更換網路線並重啟設備，連線恢復穩定。', 'URGENT', 'RESOLVED', 5, DATEADD(DAY,-2, SYSDATETIME()), DATEADD(DAY,-2, DATEADD(HOUR,2,SYSDATETIME())), N'已排除斷線原因。', N'REPAIRED'),
+
+    -- 4 椅子：鎖扣卡死
+    (2, 5, N'椅子損壞', N'椅子無法解鎖，鎖扣機構卡死，已清潔調整並上潤滑，解鎖正常。', 'LOW', 'RESOLVED', 6, DATEADD(DAY,-3, SYSDATETIME()), DATEADD(DAY,-3, DATEADD(HOUR,1,SYSDATETIME())), N'已清潔保養，恢復正常。', N'REPAIRED'),
+
+    -- 5 機台：噪音
+    (3, NULL, N'機台故障異常', N'機台風扇噪音過大，已清潔灰塵並更換風扇，運轉噪音改善。', 'NORMAL', 'RESOLVED', 7, DATEADD(DAY,-4, SYSDATETIME()), DATEADD(DAY,-4, DATEADD(HOUR,3,SYSDATETIME())), N'已更換風扇，散熱正常。', N'REPAIRED'),
+
+    -- 6 椅子：椅背晃動
+    (3, 9, N'椅子損壞', N'椅背搖晃且有異音，已重新鎖固螺絲並加強固定，異音消失。', 'HIGH', 'RESOLVED', 16, DATEADD(DAY,-5, SYSDATETIME()), DATEADD(DAY,-5, DATEADD(HOUR,2,SYSDATETIME())), N'已鎖固加強，結構穩定。', N'REPAIRED'),
+
+    -- 7 機台：網路斷線
+    (4, NULL, N'機台故障異常', N'機台網路間歇性斷線，已更換網路線並重啟設備，連線恢復穩定。', 'HIGH', 'RESOLVED', 9, DATEADD(DAY,-6, SYSDATETIME()), DATEADD(DAY,-6, DATEADD(HOUR,1,SYSDATETIME())), N'已恢復刷卡功能。', N'REPAIRED'),
+
+    -- 8 椅子：輪子卡住
+    (4, 12, N'椅子損壞', N'椅子卡髒東西導致滑動困難，已清潔輪組並上潤滑，滑動順暢。', 'LOW', 'RESOLVED', 8, DATEADD(DAY,-7, SYSDATETIME()), DATEADD(DAY,-7, DATEADD(HOUR,1,SYSDATETIME())), N'已清潔輪組，狀態正常。', N'REPAIRED'),
+
+    -- 9 機台：保養（清潔散熱）
+    (5, NULL, N'保養', N'定期保養：清潔散熱孔與風扇區域，並進行溫度與運轉測試，結果正常。', 'NORMAL', 'RESOLVED', 3, DATEADD(DAY,-8, SYSDATETIME()), DATEADD(DAY,-8, DATEADD(HOUR,2,SYSDATETIME())), N'保養完成，運作正常。', N'MAINTAINED'),
+
+    -- 10 椅子：感應異常（保養）
+    (5, 20, N'保養', N'定期保養：椅面感應偶發異常，已重新校正感應器並測試占用狀態回報正常。', 'NORMAL', 'RESOLVED', 10, DATEADD(DAY,-9, SYSDATETIME()), DATEADD(DAY,-9, DATEADD(HOUR,2,SYSDATETIME())), N'校正完成，回報正常。', N'MAINTAINED');
+GO
+
 --=============================== 翌帆 DATA END======================================
 --==============子桓 DATAver.20260121===============
 INSERT INTO recRent

@@ -19,7 +19,7 @@ const router = useRouter()
 const route = useRoute()
 
 // 展開的選單群組
-const expandedGroups = ref(['spot', 'member'])
+const expandedGroups = ref([''])
 
 // AdminLTE 3 必備的 Body Class
 const bodyClasses = ['hold-transition', 'layout-fixed']
@@ -36,12 +36,12 @@ const formattedAdminData = computed(() => {
   const raw = adminAuthStore.admin || {}
   return {
     // 這裡的 Key (左邊) 必須呼應 Modal 裡的變數
-    admId: raw.admId || raw.id,           // Modal 用 adminData.admId
-    admName: raw.admName || raw.name,     // Modal 用 adminData.admName
+    admId: raw.admId || raw.id, // Modal 用 adminData.admId
+    admName: raw.admName || raw.name, // Modal 用 adminData.admName
     admUsername: raw.admUsername || raw.username, // Modal 用 adminData.admUsername
-    admEmail: raw.admEmail || raw.email,   // Modal 用 adminData.admEmail
-    admRole: raw.admRole || raw.role,     // Modal 用 adminData.admRole
-    createdAt: raw.createdAt || raw.admCreatedAt // Modal 用 formatDate(adminData.createdAt)
+    admEmail: raw.admEmail || raw.email, // Modal 用 adminData.admEmail
+    admRole: raw.admRole || raw.role, // Modal 用 adminData.admRole
+    createdAt: raw.createdAt || raw.admCreatedAt, // Modal 用 formatDate(adminData.createdAt)
   }
 })
 
@@ -61,11 +61,26 @@ const menuGroups = [
     title: '場地與座位',
     icon: 'fas fa-building',
     items: [
-      { path: '/admin/spot/list', icon: 'fas fa-map-marker-alt', title: '據點管理', prefix: '/admin/spot/list' },
+      {
+        path: '/admin/spot/list',
+        icon: 'fas fa-map-marker-alt',
+        title: '據點管理',
+        prefix: '/admin/spot/list',
+      },
       { path: '/admin/seat/list', icon: 'fas fa-chair', title: '座位管理', prefix: '/admin/seat' },
-      { path: '/admin/spot/analyze', icon: 'fas fa-chart-bar', title: '據點分析', prefix: '/admin/spot/analyze' },
-      { path: '/admin/spot/monitor', icon: 'fas fa-broadcast-tower', title: '調度中心', prefix: '/admin/spot/monitor' }
-    ]
+      {
+        path: '/admin/spot/analyze',
+        icon: 'fas fa-chart-bar',
+        title: '據點分析',
+        prefix: '/admin/spot/analyze',
+      },
+      {
+        path: '/admin/spot/monitor',
+        icon: 'fas fa-broadcast-tower',
+        title: '調度中心',
+        prefix: '/admin/spot/monitor',
+      },
+    ],
   },
   {
     id: 'member',
@@ -73,56 +88,102 @@ const menuGroups = [
     icon: 'fas fa-users-cog',
     items: [
       { path: '/admin/members', icon: 'fas fa-users', title: '會員列表', prefix: '/admin/members' },
-      { path: '/admin/admins', icon: 'fas fa-user-cog', title: '管理員列表', prefix: '/admin/admins' }
-    ]
+      {
+        path: '/admin/admins',
+        icon: 'fas fa-user-cog',
+        title: '管理員列表',
+        prefix: '/admin/admins',
+      },
+    ],
   },
   {
     id: 'merchant',
     title: '商家與優惠',
     icon: 'fas fa-store-alt',
     items: [
-      { path: '/admin/merchants', icon: 'fas fa-store', title: '商家管理', prefix: '/admin/merchants' },
-      { path: '/admin/discounts', icon: 'fas fa-ticket-alt', title: '優惠券管理', prefix: '/admin/discounts' },
-      { path: '/admin/redemption-logs', icon: 'fas fa-chart-bar', title: '兌換紀錄報表', prefix: '/admin/redemption' },
-      { path: '/admin/sponsors', icon: 'fas fa-chart-bar', title: '贊助紀錄報表', prefix: '/admin/sponsors' }
-    ]
+      {
+        path: '/admin/merchants',
+        icon: 'fas fa-store',
+        title: '商家管理',
+        prefix: '/admin/merchants',
+      },
+      {
+        path: '/admin/discounts',
+        icon: 'fas fa-ticket-alt',
+        title: '優惠券管理',
+        prefix: '/admin/discounts',
+      },
+      {
+        path: '/admin/redemption-logs',
+        icon: 'fas fa-chart-bar',
+        title: '兌換紀錄報表',
+        prefix: '/admin/redemption',
+      },
+      {
+        path: '/admin/sponsors',
+        icon: 'fas fa-chart-bar',
+        title: '贊助紀錄報表',
+        prefix: '/admin/sponsors',
+      },
+    ],
   },
   {
     id: 'order',
     title: '租借與訂單',
     icon: 'fas fa-clipboard-list',
     items: [
-      { path: '/admin/rec-chart', icon: 'fas fa-file-invoice', title: '統計圖表', prefix: '/admin/rec-chart' },
-      { path: '/admin/rec-rent', icon: 'fas fa-file-invoice', title: '訂單管理', prefix: '/admin/rec-rent' }
-    ]
+      {
+        path: '/admin/rec-chart',
+        icon: 'fas fa-file-invoice',
+        title: '統計圖表',
+        prefix: '/admin/rec-chart',
+      },
+      {
+        path: '/admin/rec-rent',
+        icon: 'fas fa-file-invoice',
+        title: '訂單管理',
+        prefix: '/admin/rec-rent',
+      },
+    ],
   },
   {
     id: 'maintenance',
     title: '維護與工單',
     icon: 'fas fa-tools',
     items: [
-      { path: '/admin/staff-list', icon: 'fas fa-user-shield', title: '維護人員管理', prefix: '/admin/staff' },
-      { path: '/admin/mtif-list', icon: 'fas fa-wrench', title: '維修工單管理', prefix: '/admin/mtif' },
-      { path: '/admin/maintenance/schedule', icon: 'fas fa-calendar-check', title: '定期排程管理', prefix: '/admin/maintenance/schedule' }
-    ]
-  }
+      {
+        path: '/admin/staff-list',
+        icon: 'fas fa-user-shield',
+        title: '維護人員管理',
+        prefix: '/admin/staff',
+      },
+      {
+        path: '/admin/mtif-list',
+        icon: 'fas fa-wrench',
+        title: '維修工單管理',
+        prefix: '/admin/mtif',
+      },
+      {
+        path: '/admin/maintenance/schedule',
+        icon: 'fas fa-calendar-check',
+        title: '定期排程管理',
+        prefix: '/admin/maintenance/schedule',
+      },
+    ],
+  },
 ]
 
 onMounted(() => {
   // 性能優化：避免重複DOM操作
   if (sidebarInitialized.value) return
-  
+
   // 加入必要的 layout class
   document.body.classList.add(...bodyClasses)
-  
-  // 主動移除會導致 sidebar 收合的 class
-  sidebarCollapseClasses.forEach(cls => {
-    document.body.classList.remove(cls)
-  })
-  
-  // 確保 sidebar 展開狀態（一次性設定）
-  document.body.classList.add('sidebar-open')
-  
+
+  // ✅ 預設收合（關閉）
+  document.body.classList.add('sidebar-collapse')
+  document.body.classList.remove('sidebar-open')
+
   // 延遲移除 hold-transition（避免初始化閃爍）
   requestAnimationFrame(() => {
     document.body.classList.remove('hold-transition')
@@ -138,14 +199,14 @@ onMounted(() => {
 onBeforeUnmount(() => {
   // 性能優化：只在已初始化時清理
   if (!sidebarInitialized.value) return
-  
+
   document.body.classList.remove(...bodyClasses)
   // 清除 sidebar 狀態 class，避免 SPA 殘留
   document.body.classList.remove('sidebar-open')
-  sidebarCollapseClasses.forEach(cls => {
+  sidebarCollapseClasses.forEach((cls) => {
     document.body.classList.remove(cls)
   })
-  
+
   sidebarInitialized.value = false
 })
 
@@ -160,7 +221,7 @@ const isActiveGroup = (prefix) => {
  * 判斷群組是否有活動項目
  */
 const isGroupActive = (group) => {
-  return group.items.some(item => route.path.startsWith(item.prefix))
+  return group.items.some((item) => route.path.startsWith(item.prefix))
 }
 
 /**
@@ -266,7 +327,7 @@ const logout = async () => {
 
       <div class="sidebar">
         <!-- 管理員資訊卡片 -->
-        <div class="user-card" @click="showProfileModal = true" style="cursor: pointer;">
+        <div class="user-card" @click="showProfileModal = true" style="cursor: pointer">
           <div class="user-avatar">
             <img :src="currentAdminAvatar" class="sidebar-avatar-img" />
           </div>
@@ -283,11 +344,14 @@ const logout = async () => {
         <nav class="sidebar-nav">
           <!-- 選單群組 -->
           <div class="nav-section">
-            <div 
-              v-for="group in menuGroups" 
-              :key="group.id" 
+            <div
+              v-for="group in menuGroups"
+              :key="group.id"
               class="menu-group"
-              :class="{ 'is-active': isGroupActive(group), 'is-expanded': isGroupExpanded(group.id) }"
+              :class="{
+                'is-active': isGroupActive(group),
+                'is-expanded': isGroupExpanded(group.id),
+              }"
             >
               <!-- 群組標題 -->
               <div class="group-header" @click="toggleGroup(group.id)">
@@ -329,9 +393,10 @@ const logout = async () => {
         </div>
       </section>
     </div>
-    <AdminInfoModal 
-      :show="showProfileModal" 
-      :adminData="formattedAdminData"  @close="showProfileModal = false"
+    <AdminInfoModal
+      :show="showProfileModal"
+      :adminData="formattedAdminData"
+      @close="showProfileModal = false"
     />
   </div>
 </template>
@@ -382,7 +447,7 @@ const logout = async () => {
 /* ========== 側邊欄整體 ========== */
 .main-sidebar {
   background: linear-gradient(180deg, #bdddff 0%, #96b5d4 100%) !important;
-  width:fit-content;
+  width: fit-content;
   overflow: hidden !important;
   /* 統一由AdminLTE JS管理動畫，不重複定義transition */
   will-change: transform;
@@ -406,7 +471,9 @@ const logout = async () => {
   background: rgba(255, 255, 255, 0.25);
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.35);
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
   will-change: background, box-shadow;
 }
 
@@ -510,7 +577,7 @@ const logout = async () => {
 }
 
 .group-header:hover .group-icon {
-  background: rgba(255, 255, 255, 0.4);  
+  background: rgba(255, 255, 255, 0.4);
   transform: scale(1.1) rotate(5deg);
 }
 
@@ -574,7 +641,7 @@ const logout = async () => {
 }
 
 .menu-item:hover {
-  color: #000000;  
+  color: #000000;
   font-weight: 900;
 }
 
@@ -603,15 +670,17 @@ const logout = async () => {
 
 /* ========== 展開動畫（性能優化版） ========== */
 .slide-enter-active {
-  transition: max-height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              opacity 0.25s ease-out;
+  transition:
+    max-height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 0.25s ease-out;
   overflow: hidden;
   will-change: max-height, opacity;
 }
 
 .slide-leave-active {
-  transition: max-height 0.25s cubic-bezier(0.55, 0.06, 0.68, 0.19),
-              opacity 0.2s ease-in;
+  transition:
+    max-height 0.25s cubic-bezier(0.55, 0.06, 0.68, 0.19),
+    opacity 0.2s ease-in;
   overflow: hidden;
   will-change: max-height, opacity;
 }
@@ -644,18 +713,18 @@ const logout = async () => {
 }
 
 /* 漢堡按鈕動態效果（簡化版） */
-.main-header .navbar-nav .nav-link[data-widget="pushmenu"] {
+.main-header .navbar-nav .nav-link[data-widget='pushmenu'] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: color 0.15s ease;
 }
 
-.main-header .navbar-nav .nav-link[data-widget="pushmenu"]:active {
+.main-header .navbar-nav .nav-link[data-widget='pushmenu']:active {
   color: #1d4ed8;
 }
 
-.main-header .navbar-nav .nav-link[data-widget="pushmenu"]:hover {
+.main-header .navbar-nav .nav-link[data-widget='pushmenu']:hover {
   color: #3b82f6;
 }
 
