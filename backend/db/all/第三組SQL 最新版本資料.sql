@@ -544,7 +544,7 @@ CREATE TABLE recRent
 
 
 --=========================TEST DATA===========================
---=================奕穎 DATA ver 20260121 =========================
+--=================奕穎 DATA ver 20260210 =========================
 INSERT INTO member
     (memUsername, memPassword, memName, memEmail, memPhone,
     memStatus, memPoints, memViolation, memLevel, memInvoice)
@@ -558,8 +558,7 @@ VALUES
     ('tony888', 't888pass', N'王東尼', 'tony888@gmail.com', '0911222333', 1, 50, 0, 1, NULL),
     ('qiqi520', 'q520love', N'蔡琪琪', 'qiqi520@gmail.com', '0988999555', 1, 375, 1, 2, '/QR88991'),
     ('jason007', 'j007pwd', N'李宗翰', 'jason007@gmail.com', '0988777666', 1, 135, 0, 1, NULL),
-    ('apple321', 'a321pass', N'鄭雅萍', 'apple321@gmail.com', '0977555444', 1, 520, 2, 3, '/UUII77T'),
-    ('hsieh111', 'h1110k', N'謝俊宏', 'hsieh111@gmail.com', '0999888777', 1, 60, 0, 1, NULL);
+    ('apple321', 'a321pass', N'鄭雅萍', 'apple321@gmail.com', '0977555444', 1, 520, 2, 3, '/UUII77T');
 
 INSERT INTO admin
     (admUsername, admPassword, admName, admEmail, admRole)
@@ -574,8 +573,30 @@ VALUES
     ('admin002', 'Pass1234', N'王大明', 'admin002@system.com', 1),
     ('sysadmin', 'Pass1234', N'林小華', 'sysadmin@system.com', 1),
     ('manager02', 'Pass1234', N'陳美麗', 'manager02@system.com', 9),
-    ('backend01', 'Pass1234', N'張志宏', 'backend01@system.com', 1),
-    ('superuser', 'Pass1234', N'黃巧玲', 'superuser@system.com', 9);
+    ('backend01', 'Pass1234', N'張志宏', 'backend01@system.com', 1);
+
+--=================更新資料成真實資料 ver 20260210 =========================
+UPDATE Member SET memName = '陳冠廷', memPhone = '0912445892', createdAt = '2026-01-21 10:15:30' WHERE memId = 1;
+UPDATE Member SET memName = '林志宏', memPhone = '0933612301', createdAt = '2026-01-21 16:45:05' WHERE memId = 2;
+UPDATE Member SET memName = '李雅婷', memPhone = '0921554398', createdAt = '2026-01-22 14:22:11' WHERE memId = 3;
+UPDATE Member SET memName = '黃婉婷', memPhone = '0910832654', createdAt = '2026-01-22 14:22:11' WHERE memId = 4;
+UPDATE Member SET memName = '張家豪', memPhone = '0987154226', createdAt = '2026-01-23 09:30:44' WHERE memId = 5;
+UPDATE Member SET memName = '吳佩珊', memPhone = '0975412987', createdAt = '2026-01-23 09:30:44' WHERE memId = 6;
+UPDATE Member SET memName = '王柏翰', memPhone = '0952789413', createdAt = '2026-01-25 21:10:12' WHERE memId = 7;
+UPDATE Member SET memName = '蔡依潔', memPhone = '0963201547', createdAt = '2026-01-25 21:10:12' WHERE memId = 8;
+UPDATE Member SET memName = '楊曉菁', memPhone = '0918667312', createdAt = '2026-01-25 21:10:12' WHERE memId = 9;
+UPDATE Member SET memName = '許銘傑', memPhone = '0905228765', createdAt = '2026-01-25 21:10:12' WHERE memId = 10;
+
+UPDATE Admin SET admName = '林美惠', createdAt = '2026-01-01 09:00:00', admEmail = 'meihui@gmail.com' WHERE admId = 1;
+UPDATE Admin SET admName = '陳淑芬', createdAt = '2026-01-01 13:30:45', admEmail = 'shufen@gmail.com' WHERE admId = 2;
+UPDATE Admin SET admName = '張家銘', createdAt = '2026-01-03 08:50:12', admEmail = 'jiaming@gmail.com' WHERE admId = 3;
+UPDATE Admin SET admName = '李佳玲', createdAt = '2026-01-05 10:15:30', admEmail = 'jialing@gmail.com' WHERE admId = 4;
+UPDATE Admin SET admName = '王俊傑', createdAt = '2026-01-06 09:11:22', admEmail = 'alan123149@gmail.com' WHERE admId = 5;
+UPDATE Admin SET admName = '吳佩芬', createdAt = '2026-01-08 16:40:05', admEmail = 'peifen@gmail.com' WHERE admId = 6;
+UPDATE Admin SET admName = '黃雅婷', createdAt = '2026-01-10 08:20:55', admEmail = 'yating@gmail.com' WHERE admId = 7;
+UPDATE Admin SET admName = '蔡宜君', createdAt = '2026-01-12 11:05:18', admEmail = 'yichun@gmail.com' WHERE admId = 8;
+UPDATE Admin SET admName = '楊惠雯', createdAt = '2026-01-15 09:45:33', admEmail = 'huiwen@gmail.com' WHERE admId = 9;
+UPDATE Admin SET admName = '許嘉玲', createdAt = '2026-01-18 14:12:00', admEmail = 'jialing.hsu@gmail.com' WHERE admId = 10;
 --===============奕穎 DATA END=================
 
 --=======================光宇DATA ver1150206- 1150121===================
