@@ -569,93 +569,106 @@ VALUES
     ('火鍋套餐滿500折100', '火鍋套餐滿500折100', 180, '2025-02-15', '2026-12-31', 10, 1, '500元套餐折價100.jpg');
 --=========================================翊庭 TEST DATA  END===================================
 
---=======================光宇DATA ver1150121===================
--- 桃園市區域測試資料 (20筆)- 不插入 spotStatus，改吃 DEFAULT (N'營運中')
+--=======================光宇DATA ver1150210===================
+/* =========================================================
+   SPOT 假資料：桃園 20 筆 + 台北 20 筆
+   - 不插 spotStatus / createdAt / updatedAt，全部吃 DEFAULT
+   ========================================================= */
+
 INSERT INTO dbo.renting_Spot
     (spotCode, spotName, spotAddress, merchantId, latitude, longitude)
 VALUES
-    (N'TYN001', N'桃園高鐵站', N'桃園市中壢區高鐵北路一段6號', NULL, 25.0133300, 121.2144300),
-    (N'TYN002', N'中壢火車站', N'桃園市中壢區中和路139號', 1, 24.9537811, 121.2255764),
-    (N'TYN003', N'桃園火車站', N'桃園市桃園區萬壽路三段123號', 2, 24.9898236, 121.3134382),
-    (N'TYN004', N'內壢火車站', N'桃園市中壢區中華路一段27號', NULL, 24.9748600, 121.2673200),
-    (N'TYN005', N'埔心火車站', N'桃園市楊梅區永美路2號', NULL, 24.9284000, 121.1810500),
-    (N'TYN006', N'桃園市政府', N'桃園市桃園區縣府路1號', NULL, 24.9930115, 121.3015976),
-    (N'TYN007', N'桃園展演中心', N'桃園市桃園區中正路1188號', 5, 25.0152016, 121.3009949),
-    (N'TYN008', N'國立中央大學', N'桃園市中壢區中大路300號', NULL, 24.9682000, 121.1921200),
-    (N'TYN009', N'元智大學', N'桃園市中壢區遠東路135號', NULL, 24.9715100, 121.2690300),
-    (N'TYN010', N'長庚大學', N'桃園市龜山區文化一路259號', NULL, 25.0441500, 121.3857600),
-    (N'TYN011', N'台茂購物中心', N'桃園市蘆竹區南崁路一段112號', 8, 25.0475311, 121.2926712),
-    (N'TYN012', N'大江國際購物中心', N'桃園市中壢區中園路二段501號', 9, 25.0130692, 121.2335663),
-    (N'TYN013', N'華泰名品城', N'桃園市中壢區春德路189號', 10, 25.0425301, 121.2148132),
-    (N'TYN014', N'統領廣場', N'桃園市桃園區中正路61號', NULL, 24.9902600, 121.3138800),
-    (N'TYN015', N'中原夜市', N'桃園市中壢區實踐路', NULL, 24.9575900, 121.2393300),
-    (N'TYN016', N'竹圍漁港', N'桃園市大園區沙崙里1鄰10號', NULL, 25.1118100, 121.2096300),
-    (N'TYN017', N'石門水庫', N'桃園市大溪區復興里環湖路一段68號', NULL, 24.8118000, 121.2464000),
-    (N'TYN018', N'小人國主題樂園', N'桃園市龍潭區高原路891號', NULL, 24.8315100, 121.1895600),
-    (N'TYN019', N'桃園國際棒球場', N'桃園市中壢區領航北路一段1號', NULL, 25.0345000, 121.2036000),
-    (N'TYN020', N'林口長庚紀念醫院', N'桃園市龜山區復興街5號', NULL, 25.0494400, 121.3713900);
+    ('TYN001', N'桃園高鐵站', N'桃園市中壢區高鐵北路一段6號', NULL, 25.0133300, 121.2144300),
+    ('TYN002', N'中壢火車站', N'桃園市中壢區中和路139號', 1,    24.9537811, 121.2255764),
+    ('TYN003', N'桃園火車站', N'桃園市桃園區萬壽路三段123號', 2,    24.9898236, 121.3134382),
+    ('TYN004', N'內壢火車站', N'桃園市中壢區中華路一段27號', NULL, 24.9748600, 121.2673200),
+    ('TYN005', N'埔心火車站', N'桃園市楊梅區永美路2號', NULL, 24.9284000, 121.1810500),
+    ('TYN006', N'桃園市政府', N'桃園市桃園區縣府路1號', NULL, 24.9930115, 121.3015976),
+    ('TYN007', N'桃園展演中心', N'桃園市桃園區中正路1188號', 5,   25.0152016, 121.3009949),
+    ('TYN008', N'國立中央大學', N'桃園市中壢區中大路300號', NULL, 24.9682000, 121.1921200),
+    ('TYN009', N'元智大學', N'桃園市中壢區遠東路135號', NULL, 24.9715100, 121.2690300),
+    ('TYN010', N'長庚大學', N'桃園市龜山區文化一路259號', NULL, 25.0441500, 121.3857600),
+    ('TYN011', N'台茂購物中心', N'桃園市蘆竹區南崁路一段112號', 8,  25.0475311, 121.2926712),
+    ('TYN012', N'大江國際購物中心', N'桃園市中壢區中園路二段501號', 9, 25.0130692, 121.2335663),
+    ('TYN013', N'華泰名品城', N'桃園市中壢區春德路189號', 10,    25.0425301, 121.2148132),
+    ('TYN014', N'統領廣場', N'桃園市桃園區中正路61號', NULL, 24.9902600, 121.3138800),
+    ('TYN015', N'中原夜市', N'桃園市中壢區實踐路', NULL, 24.9575900, 121.2393300),
+    ('TYN016', N'竹圍漁港', N'桃園市大園區沙崙里1鄰10號', NULL, 25.1118100, 121.2096300),
+    ('TYN017', N'石門水庫', N'桃園市大溪區復興里環湖路一段68號', NULL, 24.8118000, 121.2464000),
+    ('TYN018', N'小人國主題樂園', N'桃園市龍潭區高原路891號', NULL, 24.8315100, 121.1895600),
+    ('TYN019', N'桃園國際棒球場', N'桃園市中壢區領航北路一段1號', NULL, 25.0345000, 121.2036000),
+    ('TYN020', N'林口長庚紀念醫院', N'桃園市龜山區復興街5號', NULL, 25.0494400, 121.3713900);
 
-
--- 台北市區域測試資料 (20筆) - 不插入 spotStatus，改吃 DEFAULT (N'營運中')
 INSERT INTO dbo.renting_Spot
     (spotCode, spotName, spotAddress, merchantId, latitude, longitude)
 VALUES
-    (N'TPE001', N'台北101', N'台北市信義區信義路五段7號', 1, 25.0339640, 121.5644720),
-    (N'TPE002', N'國立故宮博物院', N'台北市士林區至善路二段221號', NULL, 25.1022200, 121.5484200),
-    (N'TPE003', N'台北車站', N'台北市中正區黎明里北平西路3號', 2, 25.0477600, 121.5170900),
-    (N'TPE004', N'西門紅樓', N'台北市萬華區成都路10號', NULL, 25.0423000, 121.5073600),
-    (N'TPE005', N'總統府', N'台北市中正區重慶南路一段122號', NULL, 25.0403000, 121.5117200),
-    (N'TPE006', N'中正紀念堂', N'台北市中正區中山南路21號', NULL, 25.0348200, 121.5219200),
-    (N'TPE007', N'國立臺灣大學', N'台北市大安區羅斯福路四段1號', NULL, 25.0173500, 121.5397500),
-    (N'TPE008', N'台北市立動物園', N'台北市文山區新光路二段30號', NULL, 24.9984900, 121.5810700),
-    (N'TPE009', N'松山文創園區', N'台北市信義區光復南路133號', 5, 25.0436900, 121.5601500),
-    (N'TPE010', N'士林夜市', N'台北市士林區基河路101號', NULL, 25.0877400, 121.5242400),
-    (N'TPE011', N'台北市政府', N'台北市信義區市府路1號', NULL, 25.0375000, 121.5636100),
-    (N'TPE012', N'SOGO忠孝館', N'台北市大安區忠孝東路四段45號', 8, 25.0430200, 121.5445200),
-    (N'TPE013', N'新光三越 台北信義新天地A8', N'台北市信義區松高路12號', 9, 25.0371300, 121.5663700),
-    (N'TPE014', N'美麗華百樂園', N'台北市中山區敬業三路20號', 10, 25.0833900, 121.5562700),
-    (N'TPE015', N'台北小巨蛋', N'台北市松山區南京東路四段2號', NULL, 25.0514100, 121.5531700),
-    (N'TPE016', N'捷運大安森林公園站', N'台北市大安區信義路三段100號', NULL, 25.0326100, 121.5367500),
-    (N'TPE017', N'捷運市政府站', N'台北市信義區忠孝東路五段6號', NULL, 25.0409000, 121.5645000),
-    (N'TPE018', N'捷運中山站', N'台北市大同區南京西路16號', NULL, 25.0524400, 121.5204400),
-    (N'TPE019', N'捷運東門站', N'台北市中正區信義路二段166號', NULL, 25.0330600, 121.5292400),
-    (N'TPE020', N'南港展覽館1館', N'台北市南港區經貿二路1號', NULL, 25.0551800, 121.6154600);
+    ('TPE001', N'台北101', N'台北市信義區信義路五段7號', 1, 25.0339640, 121.5644720),
+    ('TPE002', N'國立故宮博物院', N'台北市士林區至善路二段221號', NULL, 25.1022200, 121.5484200),
+    ('TPE003', N'台北車站', N'台北市中正區黎明里北平西路3號', 2, 25.0477600, 121.5170900),
+    ('TPE004', N'西門紅樓', N'台北市萬華區成都路10號', NULL, 25.0423000, 121.5073600),
+    ('TPE005', N'總統府', N'台北市中正區重慶南路一段122號', NULL, 25.0403000, 121.5117200),
+    ('TPE006', N'中正紀念堂', N'台北市中正區中山南路21號', NULL, 25.0348200, 121.5219200),
+    ('TPE007', N'國立臺灣大學', N'台北市大安區羅斯福路四段1號', NULL, 25.0173500, 121.5397500),
+    ('TPE008', N'台北市立動物園', N'台北市文山區新光路二段30號', NULL, 24.9984900, 121.5810700),
+    ('TPE009', N'松山文創園區', N'台北市信義區光復南路133號', 5, 25.0436900, 121.5601500),
+    ('TPE010', N'士林夜市', N'台北市士林區基河路101號', NULL, 25.0877400, 121.5242400),
+    ('TPE011', N'台北市政府', N'台北市信義區市府路1號', NULL, 25.0375000, 121.5636100),
+    ('TPE012', N'SOGO忠孝館', N'台北市大安區忠孝東路四段45號', 8, 25.0430200, 121.5445200),
+    ('TPE013', N'新光三越 台北信義新天地A8', N'台北市信義區松高路12號', 9, 25.0371300, 121.5663700),
+    ('TPE014', N'美麗華百樂園', N'台北市中山區敬業三路20號', 10, 25.0833900, 121.5562700),
+    ('TPE015', N'台北小巨蛋', N'台北市松山區南京東路四段2號', NULL, 25.0514100, 121.5531700),
+    ('TPE016', N'捷運大安森林公園站', N'台北市大安區信義路三段100號', NULL, 25.0326100, 121.5367500),
+    ('TPE017', N'捷運市政府站', N'台北市信義區忠孝東路五段6號', NULL, 25.0409000, 121.5645000),
+    ('TPE018', N'捷運中山站', N'台北市大同區南京西路16號', NULL, 25.0524400, 121.5204400),
+    ('TPE019', N'捷運東門站', N'台北市中正區信義路二段166號', NULL, 25.0330600, 121.5292400),
+    ('TPE020', N'南港展覽館1館', N'台北市南港區經貿二路1號', NULL, 25.0551800, 121.6154600);
 
--- seats（不插入 seatsStatus，改吃 DEFAULT(N'啟用')）
-INSERT INTO dbo.seats
-    (seatsName, seatsType, spotId, updatedAt, createdAt)
-VALUES
-    (N'置物椅-A01', N'E椅', 11, SYSDATETIME(), DEFAULT),
-    (N'置物椅-A01', N'E椅', 11, SYSDATETIME(), DEFAULT),
-    (N'置物椅-A02', N'E椅', 11, SYSDATETIME(), DEFAULT),
-    (N'置物椅-B01', N'E椅', 12, SYSDATETIME(), DEFAULT),
-    (N'置物椅-B02', N'E椅', 12, SYSDATETIME(), DEFAULT),
-    (N'基本椅-C01', N'B椅', 13, SYSDATETIME(), DEFAULT),
-    (N'基本椅-C02', N'B椅', 13, SYSDATETIME(), DEFAULT),
-    (N'置物椅-D01', N'E椅', 14, SYSDATETIME(), DEFAULT),
-    (N'置物椅-D02', N'E椅', 14, SYSDATETIME(), DEFAULT),
-    (N'基本椅-E01', N'E椅', 15, SYSDATETIME(), DEFAULT),
-    (N'基本椅-F01', N'B椅', 16, SYSDATETIME(), DEFAULT),
-    (N'基本椅-G01', N'B椅', 17, SYSDATETIME(), DEFAULT),
-    (N'置物椅-H01', N'E椅', 18, SYSDATETIME(), DEFAULT),
-    (N'置物椅-I01', N'E椅', 19, SYSDATETIME(), DEFAULT),
-    (N'置物椅-J01', N'E椅', 20, SYSDATETIME(), DEFAULT),
-    (N'置物椅-A01', N'E椅', 1, SYSDATETIME(), DEFAULT),
-    (N'置物椅-A01', N'E椅', 1, SYSDATETIME(), DEFAULT),
-    (N'置物椅-A02', N'E椅', 1, SYSDATETIME(), DEFAULT),
-    (N'置物椅-B01', N'E椅', 2, SYSDATETIME(), DEFAULT),
-    (N'置物椅-B02', N'E椅', 2, SYSDATETIME(), DEFAULT),
-    (N'基本椅-C01', N'B椅', 3, SYSDATETIME(), DEFAULT),
-    (N'基本椅-C02', N'B椅', 3, SYSDATETIME(), DEFAULT),
-    (N'置物椅-D01', N'E椅', 4, SYSDATETIME(), DEFAULT),
-    (N'置物椅-D02', N'E椅', 4, SYSDATETIME(), DEFAULT),
-    (N'基本椅-E01', N'E椅', 5, SYSDATETIME(), DEFAULT),
-    (N'基本椅-F01', N'B椅', 6, SYSDATETIME(), DEFAULT),
-    (N'基本椅-G01', N'B椅', 7, SYSDATETIME(), DEFAULT),
-    (N'置物椅-H01', N'E椅', 8, SYSDATETIME(), DEFAULT),
-    (N'置物椅-I01', N'E椅', 9, SYSDATETIME(), DEFAULT),
-    (N'置物椅-J01', N'E椅', 10, SYSDATETIME(), DEFAULT),
-    (N'備用設備-Z99', N'S椅', NULL, SYSDATETIME(), DEFAULT);
+============================================================
+
+/* =========================================================
+   SEATS 假資料
+   - 不插 seatsStatus（吃 DEFAULT 啟用）
+   - 不插 createdAt / updatedAt（吃 DEFAULT；UPDATE 才會 trigger）
+   - 不插 serialNumber（computed persisted 自動算）
+   - 不硬寫 spotId，改用 spotCode 找 spotId（可重跑、可移植）
+   ========================================================= */
+
+INSERT INTO dbo.seats (seatsName, seatsType, spotId, createdAt)
+SELECT N'置物椅-A01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN011'
+UNION ALL SELECT N'置物椅-A02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN011'
+UNION ALL SELECT N'置物椅-A03', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN011'
+UNION ALL SELECT N'置物椅-B01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN012'
+UNION ALL SELECT N'置物椅-B02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN012'
+UNION ALL SELECT N'基本椅-C01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN013'
+UNION ALL SELECT N'基本椅-C02', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN013'
+UNION ALL SELECT N'置物椅-D01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN014'
+UNION ALL SELECT N'置物椅-D02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN014'
+UNION ALL SELECT N'基本椅-E01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN015'
+UNION ALL SELECT N'基本椅-F01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN016'
+UNION ALL SELECT N'基本椅-G01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN017'
+UNION ALL SELECT N'置物椅-H01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN018'
+UNION ALL SELECT N'置物椅-I01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN019'
+UNION ALL SELECT N'置物椅-J01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN020'
+UNION ALL SELECT N'置物椅-A01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN001'
+UNION ALL SELECT N'置物椅-A02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN001'
+UNION ALL SELECT N'置物椅-A03', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN001'
+UNION ALL SELECT N'置物椅-B01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN002'
+UNION ALL SELECT N'置物椅-B02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN002'
+UNION ALL SELECT N'基本椅-C01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN003'
+UNION ALL SELECT N'基本椅-C02', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN003'
+UNION ALL SELECT N'置物椅-D01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN004'
+UNION ALL SELECT N'置物椅-D02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN004'
+UNION ALL SELECT N'基本椅-E01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN005'
+UNION ALL SELECT N'基本椅-F01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN006'
+UNION ALL SELECT N'基本椅-G01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN007'
+UNION ALL SELECT N'置物椅-H01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN008'
+UNION ALL SELECT N'置物椅-I01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN009'
+UNION ALL SELECT N'置物椅-J01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN010';
+
+-- 允許不綁 spot 的備用設備
+INSERT INTO dbo.seats (seatsName, seatsType, spotId, createdAt)
+VALUES (N'備用設備-Z99', N'S椅', NULL, '2026-01-01');
+
 --=========================================光宇 TEST DATA  END===================================
 
 USE [SeatRentSys];
@@ -687,16 +700,40 @@ VALUES
 INSERT INTO recRent 
     (memId, couponId, seatsId, spotIdRent, spotIdReturn, recRentDT2, recReturnDT2, recUsageDT2, recStatus, 
     recPrice, recRequestPay, recPayment, recPayBy, recInvoice, recCarrier, recViolatInt, recNote)
-VALUES
-    -- 1~5: 已完成的訂單 (同點歸還)
-    (1, NULL, 'SN-2026000017', 1, 9, '2021-03-12 10:00:00', '2021-03-12 13:00:00', 3, N'已完成', 100, 100, 100, 'CreditCard', 'AB-12345678', '/AB12345', 0, NULL),
-    (2, 1, 'SN-2026000019', 2, 2, '2021-11-15 12:30:00', '2021-11-15 15:30:00', 3, N'已完成', 50, 45, 45, 'LinePay', 'AB-12345679', '/CD67890', 0, NULL),
-    (3, NULL, 'SN-2026000021', 3, 3, '2022-05-20 09:00:00', '2022-05-20 13:00:00', 4, N'已完成', 300, 300, 300, 'Cash', 'AB-12345680', NULL, 0, NULL),
-    (4, NULL, 'SN-2026000023', 4, 4, '2022-08-10 14:00:00', '2022-08-10 18:00:00', 4, N'已完成', 50, 50, 50, 'ApplePay', 'AB-12345681', '/EF11223', 0, NULL),
-    (5, 2, 'SN-2026000017', 1, 1, '2023-01-05 18:00:00', '2023-01-05 23:00:00', 5, N'已完成', 100, 80, 80, 'CreditCard', 'AB-12345682', NULL, 0, NULL),
+-- 1~5: 已完成的訂單 (同點或跨點)
+SELECT 
+    (SELECT memId FROM member WHERE memUsername = 'user01'), 
+    NULL, 'SN-2026000017', 
+    (SELECT spotId FROM renting_Spot WHERE spotCode = 'TPE001'), 
+    (SELECT spotId FROM renting_Spot WHERE spotCode = 'TPE009'), 
+    '2021-03-12 10:00:00', '2021-03-12 13:00:00', 3, N'已完成', 100, 100, 100, 'CreditCard', 'AB-12345678', '/AB12345', 0, NULL
+UNION ALL SELECT 
+    (SELECT memId FROM member WHERE memUsername = 'user02'), 
+    (SELECT couponId FROM discount WHERE couponDescription = N'火鍋套餐滿500折100'), 'SN-2026000019', 
+    (SELECT spotId FROM renting_Spot WHERE spotCode = 'TPE002'), 
+    (SELECT spotId FROM renting_Spot WHERE spotCode = 'TPE002'), 
+    '2021-11-15 12:30:00', '2021-11-15 15:30:00', 3, N'已完成', 50, 45, 45, 'LinePay', 'AB-12345679', '/CD67890', 0, NULL
+UNION ALL SELECT 
+    (SELECT memId FROM member WHERE memUsername = 'user03'), 
+    NULL, 'SN-2026000021', 
+    (SELECT spotId FROM renting_Spot WHERE spotCode = 'TPE003'), 
+    (SELECT spotId FROM renting_Spot WHERE spotCode = 'TPE003'), 
+    '2022-05-20 09:00:00', '2022-05-20 13:00:00', 4, N'已完成', 300, 300, 300, 'Cash', 'AB-12345680', NULL, 0, NULL
+UNION ALL SELECT 
+    (SELECT memId FROM member WHERE memUsername = 'user04'), 
+    NULL, 'SN-2026000023', 
+    (SELECT spotId FROM renting_Spot WHERE spotCode = 'TPE004'), 
+    (SELECT spotId FROM renting_Spot WHERE spotCode = 'TPE004'), 
+    '2022-08-10 14:00:00', '2022-08-10 18:00:00', 4, N'已完成', 50, 50, 50, 'ApplePay', 'AB-12345681', '/EF11223', 0, NULL;
 
-    -- 6~10: 甲地租乙地還 (已完成)
-    (6, NULL, 'SN-2026000025', 5, 6, '2023-04-22 10:00:00', '2023-04-22 11:30:00', 2, N'已完成', 150, 150, 150, 'LinePay', 'AB-12345683', '/GH33445', 0, N'甲租乙還'),
+-- 6~10: 甲地租乙地還 (租借中或已完成範例)
+INSERT INTO recRent (memId, couponId, seatsId, spotIdRent, spotIdReturn, recRentDT2, recReturnDT2, recUsageDT2, recStatus, recPrice, recRequestPay, recPayment, recPayBy, recInvoice, recCarrier, recViolatInt, recNote)
+SELECT 
+    (SELECT memId FROM member WHERE memUsername = 'user06'), 
+    NULL, 'SN-2026000025', 
+    (SELECT spotId FROM renting_Spot WHERE spotCode = 'TYN001'), 
+    (SELECT spotId FROM renting_Spot WHERE spotCode = 'TYN002'), 
+    '2023-04-22 10:00:00', '2023-04-22 11:30:00', 2, N'已完成', 150, 150, 150, 'LinePay', 'AB-12345683', '/GH33445', 0, N'甲租乙還');
     (7, NULL, 'SN-2026000027', 7, 8, '2023-12-15 15:00:00', '2023-12-15 17:00:00', 2, N'已完成', 100, 100, 100, 'Cash', 'AB-12345684', NULL, 0, NULL),
     (8, 3, 'SN-2026000029', 9, 10, '2024-02-14 08:00:00', '2024-02-14 10:00:00', 2, N'已完成', 100, 90, 90, 'CreditCard', 'AB-12345685', '/IJ55667', 0, NULL),
     (9, NULL, 'SN-2026000018', 1, 3, '2024-06-30 20:00:00', '2024-07-01 00:00:00', 4, N'已完成', 200, 200, 200, 'JKOPay', 'AB-12345686', NULL, 0, NULL),
