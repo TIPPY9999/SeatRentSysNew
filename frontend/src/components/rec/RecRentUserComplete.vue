@@ -64,7 +64,7 @@ const goToPayment = () => {
 
   router.push({
     name: 'payment-order',
-    returnSpotId:selectedSpot.value?.spotId,
+    returnSpotId: selectedSpot.value?.spotId,
     query: {
       recId: recId,
       total: rentCalculation.value.totalFee,
@@ -135,7 +135,10 @@ const proceedWithRent = async () => {
     if (!recId) throw new Error('找不到訂單編號')
 
     // [修正] 將 spotIdReturn 同時放在 URL Query String 中，確保後端一定能收到
-    const response = await axios.put(`http://localhost:8080/rec-rent/${recId}?spotIdReturn=${rentalData.spotIdReturn}`, rentalData)
+    const response = await axios.put(
+      `http://localhost:8080/rec-rent/${recId}?spotIdReturn=${rentalData.spotIdReturn}`,
+      rentalData,
+    )
 
     if (response.status === 200) {
       // 資料更新成功後，呼叫 goToPayment 進入付款流程
@@ -179,7 +182,7 @@ const rentCalculation = computed(() => {
   // 3. 計算費用: 使用時間/30 取整後 + 20
   // 註：若您的費率是 "每30分鐘30元"，公式應為 Math.floor(durationMinutes / 30) * 30 + 20
   // 這裡依照您的指示 "使用時間/30 取整後+20" 實作
-  const totalFee = Math.floor(durationMinutes / 30) * 30 +45
+  const totalFee = Math.floor(durationMinutes / 30) * 30 + 45
 
   // 4. 格式化時間顯示 (YYYY/MM/DD HH:mm:ss)
   const formatTime = (date) => {
@@ -216,13 +219,8 @@ const generateInvoiceNumber = () => {
 // --- 測試功能：快速歸還 ---
 const handleQuickReturnTest = async () => {
   if (!activeRent.value) return
-  if (
-    !confirm(
-      `[測試功能] 確定要強制歸還訂單 ${activeRent.value.recId} 嗎？`,
-    )
-  )
-    return
-//Date()轉換LocalDateTime()
+  if (!confirm(`[測試功能] 確定要強制歸還訂單 ${activeRent.value.recId} 嗎？`)) return
+  //Date()轉換LocalDateTime()
   const d = new Date()
   const localDate = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, -1)
   try {
@@ -232,7 +230,7 @@ const handleQuickReturnTest = async () => {
       spotIdRent: activeRent.value.spotIdRent,
       spotIdReturn: selectedSpot.value?.spotId, // 若未選站點則使用原站點
       recRentDT2: activeRent.value.recRentDT2 || activeRent.value.recRentDT,
-      recReturnDT2: localDate ,//轉換LocalDateTime()
+      recReturnDT2: localDate, //轉換LocalDateTime()
       recUsageDT2: rentCalculation.value.duration,
       recStatus: '已完成',
       recPrice: rentCalculation.value.totalFee, // 價格或費率可由後端根據座位類型和站點決定
@@ -258,6 +256,20 @@ const handleQuickReturnTest = async () => {
     console.error('測試歸還失敗:', error)
     alert('測試歸還失敗，請檢查後端或網路。')
   }
+}
+
+// --- (翌帆2026-1-31新增 客服回報用)【新增】處理問題回報：導向 /support/report 並帶入 query 參數 ---
+const handleReportIssue = () => {
+  const spotId = null //
+  const seatId = null // 地圖頁目前沒有特定 seatId，可依需求擴充
+  const recId = null // 地圖頁目前沒有 recId
+
+  const query = {}
+  if (spotId) query.spotId = spotId
+  if (seatId) query.seatId = seatId
+  if (recId) query.recId = recId
+
+  router.push({ path: '/support/report', query })
 }
 // --- Watchers ---
 watch(selectedSpot, (newSpot) => {
@@ -290,7 +302,9 @@ onMounted(async () => {
     try {
       const res = await axios.get(`http://localhost:8080/rec-rent?memId=${memberId.value}`)
       // [修改] 找到該筆訂單並存入 activeRent
-      const foundRent = res.data.find((rent) => rent.recStatus === '租借中'||rent.recStatus === '未付款')
+      const foundRent = res.data.find(
+        (rent) => rent.recStatus === '租借中' || rent.recStatus === '未付款',
+      )
 
       if (!foundRent) {
         alert('您目前沒有租借中的訂單，無法進行歸還。\n將為您導向至租借紀錄頁面。')
@@ -385,7 +399,7 @@ onMounted(async () => {
               <button class="btn btn-outline-danger fw-bold me-2" @click="handleQuickReturnTest">
                 <i class="fas fa-bug"></i> 測試歸還
               </button>
-              <button class="btn btn-warning fw-bold" @click="handleReport">
+              <button class="btn btn-warning fw-bold" @click="handleReportIssue">
                 <i class="fas fa-exclamation-circle"></i> 我有訂單問題!
               </button>
             </div>

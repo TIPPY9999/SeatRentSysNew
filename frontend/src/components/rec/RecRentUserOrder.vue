@@ -180,6 +180,20 @@ const proceedWithRent = async () => {
   }
 }
 
+// --- (翌帆2026-1-31新增 客服回報用)【新增】處理問題回報：導向 /support/report 並帶入 query 參數 ---
+const handleReportIssue = () => {
+  const spotId = null //
+  const seatId = null // 地圖頁目前沒有特定 seatId，可依需求擴充
+  const recId = null // 地圖頁目前沒有 recId
+
+  const query = {}
+  if (spotId) query.spotId = spotId
+  if (seatId) query.seatId = seatId
+  if (recId) query.recId = recId
+
+  router.push({ path: '/support/report', query })
+}
+
 // --- Computed ---
 
 const isStep1Completed = computed(() => !!selectedSeat.value)
@@ -246,7 +260,7 @@ watch(
             <select id="seat-select" class="form-control" v-model="selectedSeat">
               <option :value="null" disabled>-- 請選擇一個座椅 --</option>
               <option v-for="seat in seats" :key="seat.seatsId" :value="seat">
-                座椅編號: {{ seat.seatsId }} | 類型: {{ seat.seatsType }}
+                座椅編號: {{ seat.seatsId }} &nbsp;|&nbsp; 類型: {{ seat.seatsName }}
               </option>
             </select>
           </div>
@@ -265,14 +279,22 @@ watch(
         <fieldset :disabled="!isStep1Completed || !isLoggedIn">
           <h2><i class="fas fa-check-circle"></i> 確認使用條款後租借</h2>
           <p>請確認您的選擇，點擊下方按鈕以同意使用條款並完成租借。</p>
-          <h3>
+          <h4>
             費率說明:<br />
-            前半小時 20 NTD，半小時後 30 NTD / 30 min
-          </h3>
-
-          <button @click="openTermsModal" class="btn btn-success btn-lg" :disabled="!isReadyToRent">
-            {{ isReadyToRent ? '閱讀使用條款後租借' : '請先完成前置步驟' }}
-          </button>
+            前半小時 45 NTD，半小時後 30 NTD / 30 min
+          </h4>
+          <br />
+          <div class="d-flex justify-content-between align-items-center">
+            <button
+              @click="openTermsModal"
+              class="btn btn-success btn-lg"
+              :disabled="!isReadyToRent">
+              {{ isReadyToRent ? '閱讀使用條款後租借' : '請先完成前置步驟' }}
+            </button>
+            <button class="btn btn-warning fw-bold" @click="handleReportIssue">
+              <i class="fas fa-exclamation-circle"></i> 我有訂單問題!
+            </button>
+          </div>
         </fieldset>
       </div>
     </div>
