@@ -3,6 +3,8 @@ package com.example.backend.controller.game;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +34,13 @@ public class GameController {
 
             // 3. 執行累加邏輯
             // 修正點：你的 Member.java 裡面的方法名稱是 getMemPoints()
+            // --- 封頂邏輯：如果 newPoints 超過 50，強制設為 50 ---
+            if (newPoints > 50) {
+                newPoints = 50;
+                System.out.println("觸發封頂：會員 " + memberId + " 請求點數上限為 50 點");
+            }
+            if (newPoints < 0)
+                newPoints = 0;
             int currentPoints = member.getMemPoints();
             int updatedTotal = currentPoints + newPoints;
 

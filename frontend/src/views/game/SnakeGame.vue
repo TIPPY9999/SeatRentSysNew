@@ -146,7 +146,7 @@
         <ul class="rules-list">
           <li>方向鍵控制移動，撞牆或撞到自己即結束。</li>
           <li>吃到食物獲得 200 分，蛇身變長。</li>
-          <li>每累積 <strong>100 分</strong> 可兌換 <strong>1 點</strong>（無條件捨去）。</li>
+          <li>每累積 <strong>100 分</strong> 可兌換 <strong>1 點(上限50點)</strong>（無條件捨去）。</li>
           <li>領取點數前請先登入會員帳號。</li>
           <li>
             每日遊玩次數上限：<strong>{{ maxDailyPlays }}</strong> 次（超過需隔天再來）。
