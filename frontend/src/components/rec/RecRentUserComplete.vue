@@ -13,6 +13,7 @@ const route = useRoute()
 const isLoggedIn = computed(() => memberAuthStore.isLogin && !!memberAuthStore.member?.memId)
 const memberId = computed(() => memberAuthStore.member?.memId)
 const memberName = computed(() => memberAuthStore.member?.memName || '訪客')
+const memberUserName = computed(() => memberAuthStore.member?.memUsername || '訪客')
 
 // --- 狀態定義 ---
 const seats = ref([])
@@ -64,7 +65,7 @@ const goToPayment = () => {
 
   router.push({
     name: 'payment-order',
-    returnSpotId:selectedSpot.value?.spotId,
+    returnSpotId: selectedSpot.value?.spotId,
     query: {
       recId: recId,
       total: rentCalculation.value.totalFee,
@@ -135,7 +136,10 @@ const proceedWithRent = async () => {
     if (!recId) throw new Error('找不到訂單編號')
 
     // [修正] 將 spotIdReturn 同時放在 URL Query String 中，確保後端一定能收到
-    const response = await axios.put(`http://localhost:8080/rec-rent/${recId}?spotIdReturn=${rentalData.spotIdReturn}`, rentalData)
+    const response = await axios.put(
+      `http://localhost:8080/rec-rent/${recId}?spotIdReturn=${rentalData.spotIdReturn}`,
+      rentalData,
+    )
 
     if (response.status === 200) {
       // 資料更新成功後，呼叫 goToPayment 進入付款流程
@@ -179,7 +183,7 @@ const rentCalculation = computed(() => {
   // 3. 計算費用: 使用時間/30 取整後 + 20
   // 註：若您的費率是 "每30分鐘30元"，公式應為 Math.floor(durationMinutes / 30) * 30 + 20
   // 這裡依照您的指示 "使用時間/30 取整後+20" 實作
-  const totalFee = Math.floor(durationMinutes / 30) * 30 +45
+  const totalFee = Math.floor(durationMinutes / 30) * 30 + 45
 
   // 4. 格式化時間顯示 (YYYY/MM/DD HH:mm:ss)
   const formatTime = (date) => {
@@ -213,49 +217,59 @@ const generateInvoiceNumber = () => {
     .padStart(8, '0')
   return `${letters}-${numbers}`
 }
-// --- 測試功能：快速歸還 ---
-const handleQuickReturnTest = async () => {
-  if (!activeRent.value) return
-  if (
-    !confirm(
-      `[測試功能] 確定要強制歸還訂單 ${activeRent.value.recId} 嗎？`,
-    )
-  )
-    return
+// --- 測試功能：快速歸還 --- 在訂單問題前的BTN
+// const handleQuickReturnTest = async () => {
+//   if (!activeRent.value) return
+//   if (!confirm(`[測試功能] 確定要強制歸還訂單 ${activeRent.value.recId} 嗎？`)) return
+//   //Date()轉換LocalDateTime()
+//   const d = new Date()
+//   const localDate = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, -1)
+//   try {
+//     const testReturnData = {
+//       memId: memberId.value,
+//       seatsId: activeRent.value.seatsId,
+//       spotIdRent: activeRent.value.spotIdRent,
+//       spotIdReturn: selectedSpot.value?.spotId, // 若未選站點則使用原站點
+//       recRentDT2: activeRent.value.recRentDT2 || activeRent.value.recRentDT,
+//       recReturnDT2: localDate, //轉換LocalDateTime()
+//       recUsageDT2: rentCalculation.value.duration,
+//       recStatus: '已完成',
+//       recPrice: rentCalculation.value.totalFee, // 價格或費率可由後端根據座位類型和站點決定
+//       recRequestPay: 0, // 因為無需確認付款，所以請求付款金額為 0
+//       recPayment: 0, // 同上，實際付款為 0
+//       recPayBy: '信用卡', //
+//       recInvoice: generateInvoiceNumber(), // 歸還時生成發票號碼
+//       recCarrier: memberAuthStore.member.memInvoice,
+//       recViolatInt: 0, //
+//     }
+//     // [修改] 增加訂單ID的回退(fallback)機制與防呆，避免產生 undefined 的 API 請求
+//     const updateId = activeRent.value.recId //|| activeRent.value.recId
+//     if (!updateId) {
+//       alert('錯誤：無法找到訂單 ID，無法完成測試歸還。')
+//       console.error('訂單物件:', activeRent.value)
+//       return
+//     }
+//     await axios.put(`http://localhost:8080/rec-rent/${updateId}`, testReturnData)
+//     alert('測試歸還成功，將導向紀錄頁面。')
+//     router.push({ name: 'rec-rent-user', params: { action: 'record' } })
+//   } catch (error) {
+//     console.error('測試歸還失敗:', error)
+//     alert('測試歸還失敗，請檢查後端或網路。')
+//   }
+// }
 
-  try {
-    const testReturnData = {
-      memId: memberId.value,
-      seatsId: activeRent.value.seatsId,
-      spotIdRent: activeRent.value.spotIdRent,
-      spotIdReturn: selectedSpot.value?.spotId, // 若未選站點則使用原站點
-      recRentDT2: activeRent.value.recRentDT2 || activeRent.value.recRentDT,
-      recReturnDT2: new Date().toISOString(), // 紀錄當下時間 (ISO 8601 格式)
-      recUsageDT2: rentCalculation.value.duration,
-      recStatus: '已完成',
-      recPrice: rentCalculation.value.totalFee, // 價格或費率可由後端根據座位類型和站點決定
-      recRequestPay: 0, // 因為無需確認付款，所以請求付款金額為 0
-      recPayment: 0, // 同上，實際付款為 0
-      recPayBy: '信用卡', //
-      recInvoice: generateInvoiceNumber(), // 歸還時生成發票號碼
-      recCarrier: memberAuthStore.member.memInvoice,
-      recViolatInt: 0, //
-    }
+// --- (翌帆2026-1-31新增 客服回報用)【新增】處理問題回報：導向 /support/report 並帶入 query 參數 ---
+const handleReportIssue = () => {
+  const spotId = null //
+  const seatId = null // 地圖頁目前沒有特定 seatId，可依需求擴充
+  const recId = null // 地圖頁目前沒有 recId
 
-    // [修改] 增加訂單ID的回退(fallback)機制與防呆，避免產生 undefined 的 API 請求
-    const updateId = activeRent.value.recId //|| activeRent.value.recId
-    if (!updateId) {
-      alert('錯誤：無法找到訂單 ID，無法完成測試歸還。')
-      console.error('訂單物件:', activeRent.value)
-      return
-    }
-    await axios.put(`http://localhost:8080/rec-rent/${updateId}`, testReturnData)
-    alert('測試歸還成功，將導向紀錄頁面。')
-    router.push({ name: 'rec-rent-user', params: { action: 'record' } })
-  } catch (error) {
-    console.error('測試歸還失敗:', error)
-    alert('測試歸還失敗，請檢查後端或網路。')
-  }
+  const query = {}
+  if (spotId) query.spotId = spotId
+  if (seatId) query.seatId = seatId
+  if (recId) query.recId = recId
+
+  router.push({ path: '/support/report', query })
 }
 // --- Watchers ---
 watch(selectedSpot, (newSpot) => {
@@ -267,6 +281,8 @@ watch(selectedSpot, (newSpot) => {
     selectedSeat.value = null
   }
 })
+
+var recId="";
 
 onMounted(async () => {
   // Debug: 確認進入頁面時的狀態
@@ -288,18 +304,22 @@ onMounted(async () => {
     try {
       const res = await axios.get(`http://localhost:8080/rec-rent?memId=${memberId.value}`)
       // [修改] 找到該筆訂單並存入 activeRent
-      const foundRent = res.data.find((rent) => rent.recStatus === '租借中'||rent.recStatus === '未付款')
+      const foundRent = res.data.find(
+        (rent) => rent.recStatus === '租借中' || rent.recStatus === '未付款',
+      )
 
       if (!foundRent) {
         alert('您目前沒有租借中的訂單，無法進行歸還。\n將為您導向至租借紀錄頁面。')
         router.push({ name: 'rec-rent-user', params: { action: 'record' } })
         return
       } else {
-        // --- DEBUG --- 印出找到的訂單物件，以確認 recSeqId 屬性是否存在及其值
-        console.log('訂單Id 為:', foundRent?.recId)
-        console.log('seatsId 為:', foundRent?.seatsId)
-        console.log('spotReturnId 為:', memberAuthStore.selectedSpotId)
+        // // --- DEBUG --- 印出找到的訂單物件，以確認 recSeqId 屬性是否存在及其值
+        // console.log('訂單Id 為:', foundRent?.recId)
+        // console.log('seatsId 為:', foundRent?.seatsId)
+        // console.log('spotReturnId 為:', memberAuthStore.selectedSpotId)
         activeRent.value = foundRent
+        recId=activeRent.value.recId;
+  
       }
     } catch (error) {
       console.error('檢查租借狀態失敗:', error)
@@ -323,7 +343,8 @@ onMounted(async () => {
       <div class="card-body user-info-section">
         <div v-if="isLoggedIn">
           <h5 class="mb-0">
-            您好: <strong>{{ memberName }}</strong> (ID: {{ memberId }})，請確認您的歸還資訊。
+            您好: <strong>{{ memberName }}</strong> (UID: {{ memberUserName }})，請確認您的歸還資訊:<br><br>
+          <strong>訂單編號: {{ recId }}</strong>
           </h5>
         </div>
         <div v-else class="alert alert-warning">
@@ -368,7 +389,7 @@ onMounted(async () => {
           <h5>租借時間: {{ rentCalculation.rentTime }}</h5>
           <h5>歸還時間: {{ rentCalculation.returnTime }}</h5>
           <h5>使用時間: {{ rentCalculation.duration }} 分鐘</h5>
-          <h5>費率: 45 NTD (基本) + 30 NTD 每30分鐘</h5>
+          <h5>費率:前半小時 45 NTD，半小時後 30 NTD / 30 min</h5>
           <hr />
           <h3>費用總計: {{ rentCalculation.totalFee }} NTD</h3>
           <div class="d-flex justify-content-between align-items-center">
@@ -380,10 +401,10 @@ onMounted(async () => {
               {{ isReadyToRent ? '前往付款' : '請完成歸還步驟' }}
             </button>
             <div>
-              <button class="btn btn-outline-danger fw-bold me-2" @click="handleQuickReturnTest">
+              <!-- <button class="btn btn-outline-danger fw-bold me-2" @click="handleQuickReturnTest">
                 <i class="fas fa-bug"></i> 測試歸還
-              </button>
-              <button class="btn btn-warning fw-bold" @click="handleReport">
+              </button> -->
+              <button class="btn btn-warning fw-bold" @click="handleReportIssue">
                 <i class="fas fa-exclamation-circle"></i> 我有訂單問題!
               </button>
             </div>

@@ -66,22 +66,19 @@ const startScan = () => {
   isScanning.value = true
   nextTick(() => {
     // 確保 DOM 元素已渲染
-    html5QrCode = new Html5Qrcode("reader")
+    html5QrCode = new Html5Qrcode('reader')
     const config = { fps: 10, qrbox: { width: 250, height: 250 } }
-    
+
     // 優先使用後置鏡頭
-    html5QrCode.start(
-      { facingMode: "environment" }, 
-      config, 
-      onScanSuccess, 
-      (errorMessage) => {
+    html5QrCode
+      .start({ facingMode: 'environment' }, config, onScanSuccess, (errorMessage) => {
         // 掃描過程中的錯誤通常忽略，避免 log 洗版
-      }
-    ).catch(err => {
-      console.error("啟動鏡頭失敗", err)
-      alert("無法啟動鏡頭，請確認您使用的是 HTTPS 連線並已授權相機權限。")
-      isScanning.value = false
-    })
+      })
+      .catch((err) => {
+        console.error('啟動鏡頭失敗', err)
+        alert('無法啟動鏡頭，請確認您使用的是 HTTPS 連線並已授權相機權限。')
+        isScanning.value = false
+      })
   })
 }
 
@@ -94,10 +91,13 @@ const onScanSuccess = (decodedText, decodedResult) => {
 
 const stopScan = () => {
   if (html5QrCode) {
-    html5QrCode.stop().then(() => {
-      html5QrCode.clear()
-      isScanning.value = false
-    }).catch(err => console.error("停止掃描失敗", err))
+    html5QrCode
+      .stop()
+      .then(() => {
+        html5QrCode.clear()
+        isScanning.value = false
+      })
+      .catch((err) => console.error('停止掃描失敗', err))
   } else {
     isScanning.value = false
   }
@@ -332,11 +332,11 @@ onMounted(() => {
 </script>
 
 <template>
-  
   <div class="map-container-wrapper">
-    <!-- 地點搜尋列 --><button class="search-button scan-btn" @click="startScan" title="掃描 QR Code">
-        <el-icon :size="20"><Camera /></el-icon>
-      </button>
+    <!-- 地點搜尋列 -->
+    <!-- <button class="search-button scan-btn" @click="startScan" title="掃描 QR Code">
+      <el-icon :size="20"><Camera /></el-icon>
+    </button> -->
     <div class="search-bar-container">
       <GMapAutocomplete
         @place_changed="onPlaceChanged"
@@ -353,7 +353,7 @@ onMounted(() => {
           @keyup.enter="performSearch"
         />
       </GMapAutocomplete>
-      
+
       <button class="search-button" @click="performSearch" title="搜尋">
         <el-icon :size="20"><LocationFilled /></el-icon>
       </button>
@@ -461,9 +461,7 @@ onMounted(() => {
     <div v-if="isScanning" class="scanner-overlay">
       <div class="scanner-container">
         <div id="reader" width="100%"></div>
-        <button class="btn btn-primary close-scan-btn" @click="stopScan">
-          關閉掃描
-        </button>
+        <button class="btn btn-primary close-scan-btn" @click="stopScan">關閉掃描</button>
       </div>
     </div>
   </div>

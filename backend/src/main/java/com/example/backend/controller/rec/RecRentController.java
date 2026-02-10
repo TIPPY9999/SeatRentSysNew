@@ -92,12 +92,12 @@ public class RecRentController {
         // 說明: 租借訂單建立成功後，同步更新該座位的 spotId 為 0 (表示已被租用，不在任何可選地點上)
         // 由於整個 Controller 已標記為 @Transactional，此操作將與上面的訂單新增在同一個資料庫交易中，確保資料一致性。
         Integer seatId = Integer.valueOf(savedRent.getSeatsId());
-        if (seatId != null) {
-            Seat seatToUpdate = seatService.selectById(seatId);
-            if (seatToUpdate != null) {
-                seatToUpdate.setSpotId(null);
-                seatService.update(seatToUpdate);
-            }
+
+        Seat seatToUpdate = seatService.selectById(seatId);
+        if (seatToUpdate != null) {
+            seatToUpdate.setSpotId(null);
+            seatService.update(seatToUpdate);
+
         }
 
         // 4. 返回 201 Created 狀態碼以及已儲存的訂單物件

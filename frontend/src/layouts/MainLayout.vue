@@ -116,7 +116,7 @@ const logout = () => {
               }"
               :aria-disabled="!uidClickable"
             >
-              <span class="icon-wrapper" style="font-size: 130%; font-weight: 400">您好 </span>
+              <span class="icon-wrapper" style="font-size: 130%; font-weight: 400">UID: </span>
               <span class="menu-text">
                 <span v-if="displayUID">{{ displayUID }}</span>
                 <span v-else> 歡迎使用 </span>
@@ -159,14 +159,6 @@ const logout = () => {
             </span>
             <span class="menu-text">美食景點</span>
           </li>
-
-          <li class="menu-item" @click="router.push('')">
-            <span class="icon-wrapper">
-              <el-icon><Comment /></el-icon>
-            </span>
-            <span class="menu-text">分享討論</span>
-          </li>
-
           <li class="menu-item" @click="router.push('/support')">
             <span class="icon-wrapper">
               <el-icon><Phone /></el-icon>
@@ -238,10 +230,10 @@ const logout = () => {
 /* --- 0. App Layout --- */
 .app-layout {
   display: flex;
-  flex-direction: column;
-  height: 100vh;
+  flex-direction:column;
+  height:100vh;
   width: 100%;
-  background-color: #f4f6f9;
+  background-color: #ffffff;
 }
 
 /* --- 1. CSS 變數 --- */
@@ -392,11 +384,13 @@ const logout = () => {
 .main-footer {
   flex-shrink: 0;
   background-color: #ffffff;
-  padding: 2px 0px;
-  border-top: 1px solid #dee2e6;
+  padding: 0;
+  border-top: 1px solid #ffffff;
   color: #6c757d;
   font-size: 0.8rem;
   text-align: center;
+   flex-direction: column;
+  margin:0%;
 }
 
 .footer-links {
