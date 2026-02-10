@@ -222,7 +222,9 @@ const handleQuickReturnTest = async () => {
     )
   )
     return
-
+//Date()轉換LocalDateTime()
+  const d = new Date()
+  const localDate = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, -1)
   try {
     const testReturnData = {
       memId: memberId.value,
@@ -230,7 +232,7 @@ const handleQuickReturnTest = async () => {
       spotIdRent: activeRent.value.spotIdRent,
       spotIdReturn: selectedSpot.value?.spotId, // 若未選站點則使用原站點
       recRentDT2: activeRent.value.recRentDT2 || activeRent.value.recRentDT,
-      recReturnDT2: new Date().toISOString(), // 紀錄當下時間 (ISO 8601 格式)
+      recReturnDT2: localDate ,//轉換LocalDateTime()
       recUsageDT2: rentCalculation.value.duration,
       recStatus: '已完成',
       recPrice: rentCalculation.value.totalFee, // 價格或費率可由後端根據座位類型和站點決定

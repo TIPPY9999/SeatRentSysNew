@@ -160,7 +160,7 @@ onMounted(() => {
               <span class="ms-2 title-text">訂單編號: {{ rent.recId || rent.recSeqId }}</span>
             </h5>
             <span style="margin: 0 60px"> </span>
-            <span class="ms-2 title-text">座椅編號: SN-25-{{ rent.seatsId }}</span>
+            <span class="ms-2 title-text">座椅編號: {{ rent.serialNumber }}</span>
             <span></span> <span style="margin: 0 40px"> </span>
             <h5 class="mb-0 text-primary fw-bold">
               <button class="btn btn-sm btn-outline-warning" @click="handleReport(rent)">

@@ -8,6 +8,7 @@ const API_URL = 'http://localhost:8080/rec-rent'
 const rentList = ref([])
 const searchCriteria = reactive({
   recSeqId: '',
+  
   recId: '',
   memId: '',
   memName: '',
@@ -17,7 +18,8 @@ const searchCriteria = reactive({
   returnDate: '',
   rentDate: '',
   recPayment: '',
-  recNote: '',
+  recNote: '',  
+  serialNumber:'',
 })
 
 // 分頁相關狀態
@@ -63,6 +65,7 @@ const loadRents = async () => {
     if (searchCriteria.recVio) params.append('recPayment', searchCriteria.recPayment)
     if (searchCriteria.recPayment) params.append('recPayment', searchCriteria.recPayment)
     if (searchCriteria.recNote) params.append('recNote', searchCriteria.recNote)
+    if (searchCriteria.serialNumber) params.append('serialNumber', searchCriteria.serialNumber)
 
     const queryString = params.toString()
     const requestUrl = queryString ? `${API_URL}?${queryString}` : API_URL
@@ -305,7 +308,7 @@ const showFullNote = (note) => {
           </td>
           <td>{{ rent.memId }}</td>
           <td>{{ rent.memName }}</td>
-          <td>SN-{{ rent.seatsId ? String(rent.seatsId).padStart(4, '0') : '' }}</td>
+          <td>SN-20260{{ rent.seatsId ? String(rent.seatsId).padStart(4, '0') : '' }}</td>
           <td>{{ rent.rentSpotName }}</td>
           <td>{{ rent.spotIdRent }}</td>
           <td>{{ rent.returnSpotName }}</td>

@@ -51,7 +51,9 @@ onMounted(async () => {
   if (memberAuthStore.isLogin && memberId.value) {
     try {
       const res = await axios.get(`http://localhost:8080/rec-rent?memId=${memberId.value}`)
-      const hasActiveRent = res.data.some((rent) => rent.recStatus === '租借中'||rent.recStatus === '未付款')
+      const hasActiveRent = res.data.some(
+        (rent) => rent.recStatus === '租借中' || rent.recStatus === '未付款',
+      )
 
       if (hasActiveRent) {
         alert('您尚有未完成的租借訂單。\n請先完成歸還或洽詢客服人員。')
@@ -130,12 +132,15 @@ const proceedWithRent = async () => {
     return
   }
 
+  //Date()轉換LocalDateTime()
+  const d = new Date()
+  const localDate = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, -1)
   // 根據使用者要求組合新的訂單資料
   const newOrderData = {
     memId: memberAuthStore.member.memId, // 直接從 Pinia Store 獲取 USERID
     seatsId: selectedSeat.value.seatsId,
     spotIdRent: parseInt(props.spotId), // 從 props 取得 spotId
-    recRentDT2: new Date().toISOString(), // 紀錄當下時間 (ISO 8601 格式)
+    recRentDT2: localDate, // 紀錄當下時間 (ISO 8601 格式)
     recStatus: '租借中',
     recPrice: 0, // 價格或費率可由後端根據座位類型和站點決定
     recRequestPay: 0, // 因為無需確認付款，所以請求付款金額為 0
@@ -241,7 +246,7 @@ watch(
             <select id="seat-select" class="form-control" v-model="selectedSeat">
               <option :value="null" disabled>-- 請選擇一個座椅 --</option>
               <option v-for="seat in seats" :key="seat.seatsId" :value="seat">
-                ID: {{ seat.seatsId }} | 類型: {{ seat.seatsType }}
+                座椅編號: {{ seat.seatsId }} | 類型: {{ seat.seatsType }}
               </option>
             </select>
           </div>
