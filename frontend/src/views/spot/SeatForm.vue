@@ -66,7 +66,7 @@
                   <el-col :span="12">
                     <!-- 序號 -->
                     <el-form-item label="序號">
-                      <el-input v-model="formData.serialNumber" placeholder="例如：SN-2023001" clearable>
+                      <el-input v-model="formData.serialNumber" :placeholder="isEditMode ? '例如：SN-2023001' : '留空則自動產生 (例如：SN-2026001)'" clearable>
                         <template #prefix><i class="fas fa-barcode"></i></template>
                       </el-input>
                     </el-form-item>

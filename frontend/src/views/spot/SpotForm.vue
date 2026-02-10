@@ -173,16 +173,25 @@
 
                 <el-row :gutter="20">
                   <el-col :span="8">
-                    <el-form-item label="所屬商家 ID (Merchant ID)">
-                      <el-input
-                        v-model.number="formData.merchantId"
-                        type="number"
-                        :min="1"
-                        placeholder="無商家可留空"
+                    <el-form-item label="所屬商家 (Merchant)">
+                      <el-select
+                        v-model="formData.merchantId"
+                        placeholder="請選擇商家 (可留空)"
                         clearable
+                        filterable
+                        style="width: 100%"
                       >
                         <template #prefix><i class="fas fa-building"></i></template>
-                      </el-input>
+                        <el-option
+                          v-for="item in merchantOptions"
+                          :key="item.merchantId"
+                          :label="item.merchantName"
+                          :value="item.merchantId"
+                        >
+                          <span style="float: left">{{ item.merchantName }}</span>
+                          <span style="float: right; color: #8492a6; font-size: 13px">ID: {{ item.merchantId }}</span>
+                        </el-option>
+                      </el-select>
                     </el-form-item>
                   </el-col>
                 </el-row>
@@ -284,6 +293,7 @@ const router = useRouter()
 
 //  後端 Controller 是 /spot（沒有 /api）
 const API_BASE = '/spot'
+const MERCHANT_API_BASE = '/spot/merchants'
 
 // 3. 定義 formRef 變數，對應 template 中的 ref="formRef"
 const formRef = ref(null)
@@ -307,6 +317,7 @@ const selectedFile = ref(null)
 const previewUrl = ref('')
 const spotDataForView = ref(null) // [新增] 用於顯示的原始資料
 const isUploading = ref(false)
+const merchantOptions = ref([])
 
 // ========== 表單資料模型 ==========
 const formData = ref({
@@ -366,6 +377,16 @@ onUnmounted(() => {
   if (geoTimer) clearTimeout(geoTimer)
 })
 
+// ========== 取得商家列表 ==========
+const fetchMerchants = async () => {
+  try {
+    const res = await axios.get(MERCHANT_API_BASE)
+    merchantOptions.value = res.data
+  } catch (error) {
+    console.error('無法取得商家列表:', error)
+  }
+}
+
 // ========== 初始化：編輯模式載入資料 ==========
 onMounted(async () => {
   // [初始化步驟 1] 等待 Vue 將模板渲染成真實的 DOM。
@@ -373,6 +394,9 @@ onMounted(async () => {
   await nextTick()
   // [初始化步驟 2] 呼叫 Composable 中的初始化函式，將 Google Autocomplete 綁定到地址輸入框。
   await initPlacesAutocomplete()
+
+  // 載入商家選項
+  await fetchMerchants()
 
   // 如果是編輯模式，則從後端載入既有資料。
   if (isEditMode.value) {

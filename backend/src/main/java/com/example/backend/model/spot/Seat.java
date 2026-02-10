@@ -37,7 +37,7 @@ public class Seat {
     @Column(name = "spotId")
     private Integer spotId;
 
-    @Column(name = "serialNumber", length = 50)
+    @Column(name = "serialNumber", length = 50, insertable = false, updatable = false)
     private String serialNumber;
 
     // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取

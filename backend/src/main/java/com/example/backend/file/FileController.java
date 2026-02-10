@@ -1,16 +1,14 @@
 package com.example.backend.file;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
 import java.util.Map;
 
 @RestController
-@RequestMapping("/files") // 加上統一前綴，避免汙染根路徑
+@RequestMapping("/files")
 public class FileController {
 
     private final FileStorageService fileStorageService;
@@ -19,24 +17,28 @@ public class FileController {
         this.fileStorageService = fileStorageService;
     }
 
+    /**
+     * 通用上傳
+     * - 預設存到 uploads/spots
+     * - 回傳 filePath = "spots/uuid_xxx.jpg" (直接可存 DB)
+     * - 回傳 url = "/images/spots/uuid_xxx.jpg" (前端可預覽)
+     */
     @PostMapping("/upload")
-    public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
-        // 1. 儲存檔案並取得新檔名
-        String fileName = fileStorageService.store(file);
+    public ResponseEntity<Map<String, String>> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "folder", defaultValue = "spots") String folder) {
+        // 1) 儲存檔案並取得「相對路徑」：例如 "spots/uuid_xxx.jpg"
+        String filePath = fileStorageService.store(file, folder);
 
-        // 2. 根據當前請求的 context path，自動產生完整的 URL
-        String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                // [注意] 這裡的 "/images/" 必須與 WebConfig 中的 addResourceHandlers 設定一致
-                // 如果您的 WebConfig 是 registry.addResourceHandler("/uploads/**")... 這裡就要改成
-                // "/uploads/"
-                .path("/images/") // 對應 WebConfig 中的 addResourceHandlers
-                .path(fileName)
+        // 2) 組出前端可直接用的 URL（對應 WebConfig: /images/** → uploads/）
+        String url = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/images/")
+                .path(filePath) // filePath 已含 "spots/..."
                 .toUriString();
 
-        // 3. 回傳一個 JSON 物件，包含檔名和完整的 URL
+        // 3) 回傳 JSON（filePath 用於存 DB；url 用於預覽）
         return ResponseEntity.ok(Map.of(
-                "fileName", fileName, // 供存入資料庫
-                "url", fileDownloadUri // 供前端即時預覽
-        ));
+                "filePath", filePath,
+                "url", url));
     }
 }

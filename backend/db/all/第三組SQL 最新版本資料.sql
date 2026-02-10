@@ -115,7 +115,12 @@ CREATE TABLE dbo.renting_Spot
     spotDescription NVARCHAR(500) NULL,
     spotImage VARCHAR(255) NULL,
     CONSTRAINT PK_renting_Spot PRIMARY KEY CLUSTERED (spotId),
-    CONSTRAINT CK_renting_Spot_spotStatus  CHECK (spotStatus IN (N'營運中', N'停用', N'維修中'))
+    CONSTRAINT CK_renting_Spot_spotStatus  CHECK (spotStatus IN (N'營運中', N'停用', N'維修中')),
+    CONSTRAINT CK_renting_Spot_latlng_pair CHECK (
+    (latitude IS NULL AND longitude IS NULL)
+        OR
+        (latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180)
+)
 );
 GO
 
@@ -132,7 +137,8 @@ CREATE TABLE dbo.seats
     spotId INT NULL,
     updatedAt DATETIME2(7) NOT NULL
         CONSTRAINT DF_seats_updatedAt DEFAULT (SYSDATETIME()),
-    serialNumber VARCHAR(50) NULL,
+    -- serialNumber VARCHAR(50) NULL,
+    serialNumber AS ('SN-' + CAST(YEAR(createdAt) AS VARCHAR(4)) + RIGHT('000000' + CAST(seatsId AS VARCHAR(10)), 6)) PERSISTED,
     createdAt DATETIME2(7) NOT NULL
         CONSTRAINT DF_seats_createdAt DEFAULT (SYSDATETIME()),
     CONSTRAINT PK_seats PRIMARY KEY CLUSTERED (seatsId),
@@ -149,10 +155,9 @@ CREATE NONCLUSTERED INDEX IX_seats_spotId
 ON dbo.seats (spotId);
 GO
 
-/* serialNumber 唯一索引：Filtered Unique Index，避免 NULL 互相衝突 */
-CREATE UNIQUE NONCLUSTERED INDEX UQ_seats_spot_serialNumber
-ON dbo.seats (serialNumber)
-WHERE serialNumber IS NOT NULL;
+/* serialNumber 唯一索引 */
+CREATE UNIQUE NONCLUSTERED INDEX UQ_seats_serialNumber
+ON dbo.seats (serialNumber);
 GO
 
 /* =========================================================
@@ -415,6 +420,11 @@ CREATE TABLE merchant
     createdTime DATETIME2 DEFAULT SYSDATETIME()
     -- 建立時間
 );
+
+-- 建立外鍵約束：確保 renting_Spot 的 merchantId 必須存在於 merchant 表中 (或為 NULL)
+-- 建立 renting_Spot 時，merchant 表格還不存在，所以必須使用 ALTER TABLE（事後補建）先建立表格，之後再加上外鍵約束
+ALTER TABLE renting_Spot ADD CONSTRAINT FK_renting_Spot_merchant FOREIGN KEY (merchantId) REFERENCES merchant(merchantId);
+
 CREATE TABLE discount
 (
     couponId INT IDENTITY(1,1) PRIMARY KEY,
@@ -497,7 +507,7 @@ CREATE TABLE recRent
     --  外鍵:Member ID (可為 NULL)
     couponId INT NULL,
     --  外鍵：使用的優惠方案
-    seatsId VARCHAR(10) NOT NULL,
+    seatsId VARCHAR(50) NOT NULL,
     --  外鍵：便攜座椅編號
     spotIdRent INT NOT NULL,
     --  外鍵：租用點機台 ID (必須與 spot 表格的 spotId 類型一致)
@@ -767,7 +777,109 @@ VALUES
     ('壽司套餐折50', '壽司套餐折50', 120, '2025-06-01', '2026-12-31', 9, 1, '折50.jpg'),
     ('火鍋套餐滿500折100', '火鍋套餐滿500折100', 180, '2025-02-15', '2026-12-31', 10, 1, '500元套餐折價100.jpg');
 --=========================================翊庭 TEST DATA  END===================================
---================翌帆 DATA ver.20260121==============
+
+--=======================光宇DATA ver1150210===================
+/* =========================================================
+   SPOT 假資料：桃園 20 筆 + 台北 20 筆
+   - 不插 spotStatus / createdAt / updatedAt，全部吃 DEFAULT
+   ========================================================= */
+
+INSERT INTO dbo.renting_Spot
+    (spotCode, spotName, spotAddress, merchantId, latitude, longitude)
+VALUES
+    ('TYN001', N'桃園高鐵站', N'桃園市中壢區高鐵北路一段6號', NULL, 25.0133300, 121.2144300),
+    ('TYN002', N'中壢火車站', N'桃園市中壢區中和路139號', 1,    24.9537811, 121.2255764),
+    ('TYN003', N'桃園火車站', N'桃園市桃園區萬壽路三段123號', 2,    24.9898236, 121.3134382),
+    ('TYN004', N'內壢火車站', N'桃園市中壢區中華路一段27號', NULL, 24.9748600, 121.2673200),
+    ('TYN005', N'埔心火車站', N'桃園市楊梅區永美路2號', NULL, 24.9284000, 121.1810500),
+    ('TYN006', N'桃園市政府', N'桃園市桃園區縣府路1號', NULL, 24.9930115, 121.3015976),
+    ('TYN007', N'桃園展演中心', N'桃園市桃園區中正路1188號', 5,   25.0152016, 121.3009949),
+    ('TYN008', N'國立中央大學', N'桃園市中壢區中大路300號', NULL, 24.9682000, 121.1921200),
+    ('TYN009', N'元智大學', N'桃園市中壢區遠東路135號', NULL, 24.9715100, 121.2690300),
+    ('TYN010', N'長庚大學', N'桃園市龜山區文化一路259號', NULL, 25.0441500, 121.3857600),
+    ('TYN011', N'台茂購物中心', N'桃園市蘆竹區南崁路一段112號', 8,  25.0475311, 121.2926712),
+    ('TYN012', N'大江國際購物中心', N'桃園市中壢區中園路二段501號', 9, 25.0130692, 121.2335663),
+    ('TYN013', N'華泰名品城', N'桃園市中壢區春德路189號', 10,    25.0425301, 121.2148132),
+    ('TYN014', N'統領廣場', N'桃園市桃園區中正路61號', NULL, 24.9902600, 121.3138800),
+    ('TYN015', N'中原夜市', N'桃園市中壢區實踐路', NULL, 24.9575900, 121.2393300),
+    ('TYN016', N'竹圍漁港', N'桃園市大園區沙崙里1鄰10號', NULL, 25.1118100, 121.2096300),
+    ('TYN017', N'石門水庫', N'桃園市大溪區復興里環湖路一段68號', NULL, 24.8118000, 121.2464000),
+    ('TYN018', N'小人國主題樂園', N'桃園市龍潭區高原路891號', NULL, 24.8315100, 121.1895600),
+    ('TYN019', N'桃園國際棒球場', N'桃園市中壢區領航北路一段1號', NULL, 25.0345000, 121.2036000),
+    ('TYN020', N'林口長庚紀念醫院', N'桃園市龜山區復興街5號', NULL, 25.0494400, 121.3713900);
+
+INSERT INTO dbo.renting_Spot
+    (spotCode, spotName, spotAddress, merchantId, latitude, longitude)
+VALUES
+    ('TPE001', N'台北101', N'台北市信義區信義路五段7號', 1, 25.0339640, 121.5644720),
+    ('TPE002', N'國立故宮博物院', N'台北市士林區至善路二段221號', NULL, 25.1022200, 121.5484200),
+    ('TPE003', N'台北車站', N'台北市中正區黎明里北平西路3號', 2, 25.0477600, 121.5170900),
+    ('TPE004', N'西門紅樓', N'台北市萬華區成都路10號', NULL, 25.0423000, 121.5073600),
+    ('TPE005', N'總統府', N'台北市中正區重慶南路一段122號', NULL, 25.0403000, 121.5117200),
+    ('TPE006', N'中正紀念堂', N'台北市中正區中山南路21號', NULL, 25.0348200, 121.5219200),
+    ('TPE007', N'國立臺灣大學', N'台北市大安區羅斯福路四段1號', NULL, 25.0173500, 121.5397500),
+    ('TPE008', N'台北市立動物園', N'台北市文山區新光路二段30號', NULL, 24.9984900, 121.5810700),
+    ('TPE009', N'松山文創園區', N'台北市信義區光復南路133號', 5, 25.0436900, 121.5601500),
+    ('TPE010', N'士林夜市', N'台北市士林區基河路101號', NULL, 25.0877400, 121.5242400),
+    ('TPE011', N'台北市政府', N'台北市信義區市府路1號', NULL, 25.0375000, 121.5636100),
+    ('TPE012', N'SOGO忠孝館', N'台北市大安區忠孝東路四段45號', 8, 25.0430200, 121.5445200),
+    ('TPE013', N'新光三越 台北信義新天地A8', N'台北市信義區松高路12號', 9, 25.0371300, 121.5663700),
+    ('TPE014', N'美麗華百樂園', N'台北市中山區敬業三路20號', 10, 25.0833900, 121.5562700),
+    ('TPE015', N'台北小巨蛋', N'台北市松山區南京東路四段2號', NULL, 25.0514100, 121.5531700),
+    ('TPE016', N'捷運大安森林公園站', N'台北市大安區信義路三段100號', NULL, 25.0326100, 121.5367500),
+    ('TPE017', N'捷運市政府站', N'台北市信義區忠孝東路五段6號', NULL, 25.0409000, 121.5645000),
+    ('TPE018', N'捷運中山站', N'台北市大同區南京西路16號', NULL, 25.0524400, 121.5204400),
+    ('TPE019', N'捷運東門站', N'台北市中正區信義路二段166號', NULL, 25.0330600, 121.5292400),
+    ('TPE020', N'南港展覽館1館', N'台北市南港區經貿二路1號', NULL, 25.0551800, 121.6154600);
+
+============================================================
+
+/* =========================================================
+   SEATS 假資料
+   - 不插 seatsStatus（吃 DEFAULT 啟用）
+   - 不插 createdAt / updatedAt（吃 DEFAULT；UPDATE 才會 trigger）
+   - 不插 serialNumber（computed persisted 自動算）
+   - 不硬寫 spotId，改用 spotCode 找 spotId（可重跑、可移植）
+   ========================================================= */
+
+INSERT INTO dbo.seats (seatsName, seatsType, spotId, createdAt)
+SELECT N'置物椅-A01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN011'
+UNION ALL SELECT N'置物椅-A02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN011'
+UNION ALL SELECT N'置物椅-A03', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN011'
+UNION ALL SELECT N'置物椅-B01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN012'
+UNION ALL SELECT N'置物椅-B02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN012'
+UNION ALL SELECT N'基本椅-C01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN013'
+UNION ALL SELECT N'基本椅-C02', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN013'
+UNION ALL SELECT N'置物椅-D01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN014'
+UNION ALL SELECT N'置物椅-D02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN014'
+UNION ALL SELECT N'基本椅-E01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN015'
+UNION ALL SELECT N'基本椅-F01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN016'
+UNION ALL SELECT N'基本椅-G01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN017'
+UNION ALL SELECT N'置物椅-H01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN018'
+UNION ALL SELECT N'置物椅-I01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN019'
+UNION ALL SELECT N'置物椅-J01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN020'
+UNION ALL SELECT N'置物椅-A01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN001'
+UNION ALL SELECT N'置物椅-A02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN001'
+UNION ALL SELECT N'置物椅-A03', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN001'
+UNION ALL SELECT N'置物椅-B01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN002'
+UNION ALL SELECT N'置物椅-B02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN002'
+UNION ALL SELECT N'基本椅-C01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN003'
+UNION ALL SELECT N'基本椅-C02', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN003'
+UNION ALL SELECT N'置物椅-D01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN004'
+UNION ALL SELECT N'置物椅-D02', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN004'
+UNION ALL SELECT N'基本椅-E01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN005'
+UNION ALL SELECT N'基本椅-F01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN006'
+UNION ALL SELECT N'基本椅-G01', N'B椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN007'
+UNION ALL SELECT N'置物椅-H01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN008'
+UNION ALL SELECT N'置物椅-I01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN009'
+UNION ALL SELECT N'置物椅-J01', N'E椅', spotId, '2026-01-01' FROM dbo.renting_Spot WHERE spotCode = 'TYN010';
+
+-- 允許不綁 spot 的備用設備
+INSERT INTO dbo.seats (seatsName, seatsType, spotId, createdAt)
+VALUES (N'備用設備-Z99', N'S椅', NULL, '2026-01-01');
+
+--=========================================光宇 TEST DATA  END===================================
+
 USE [SeatRentSys];
 INSERT INTO [dbo].[maintenanceStaff]
     ([staffName], [staffCompany], [staffPhone], [staffEmail], [staffNote], [isActive])

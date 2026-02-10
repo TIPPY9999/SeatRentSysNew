@@ -4,6 +4,7 @@ import com.example.backend.dto.spot.SpotUpdateRequest;
 import com.example.backend.model.spot.RentalSpot;
 import com.example.backend.service.spot.RentalSpotService;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/spot") // [修正] 配合前端 Proxy 移除 /api 前綴的行為，改為監聽 /spot
 public class RentalSpotController {
+
+    @Value("${app.file.upload-path}")
+    private String configUploadPath;
 
     private final RentalSpotService rentalSpotService;
 
@@ -59,6 +63,15 @@ public class RentalSpotController {
             @RequestParam(required = false) String spotName, @RequestParam(required = false) String spotStatus,
             @RequestParam(required = false) Integer merchantId) {
         return rentalSpotService.findByCondition(spotCode, spotName, spotStatus, merchantId);
+    }
+
+    /**
+     * [新增] 取得商家下拉選單資料 (GET /spot/merchants)
+     * 供前端下拉選單使用，回傳商家 ID 與名稱
+     */
+    @GetMapping("/merchants")
+    public ResponseEntity<List<Map<String, Object>>> getMerchantOptions() {
+        return ResponseEntity.ok(rentalSpotService.findAllMerchantsForSelect());
     }
 
     // endregion
@@ -157,7 +170,8 @@ public class RentalSpotController {
             }
 
             // 5. 建立 uploads 目錄（如果不存在）
-            String uploadDir = "uploads/spots";
+            String projectRoot = System.getProperty("user.dir");
+            String uploadDir = projectRoot + "/" + configUploadPath + "/spots";
             java.io.File directory = new java.io.File(uploadDir);
             if (!directory.exists()) {
                 directory.mkdirs();
@@ -170,31 +184,32 @@ public class RentalSpotController {
                 fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
             }
             String fileName = "spot_" + spotId + "_" + System.currentTimeMillis() + fileExtension;
-            String filePath = uploadDir + "/" + fileName;
+            String dbFilePath = configUploadPath + "/spots/" + fileName;
 
             // 7. 刪除舊圖片（如果存在）
             if (spot.getSpotImage() != null && !spot.getSpotImage().isEmpty()) {
-                java.io.File oldFile = new java.io.File(spot.getSpotImage());
+                // 刪除時也要用絕對路徑找檔案
+                java.io.File oldFile = new java.io.File(projectRoot, spot.getSpotImage());
                 if (oldFile.exists()) {
                     oldFile.delete();
                 }
             }
 
             // 8. 儲存檔案到檔案系統
-            java.io.File destFile = new java.io.File(filePath);
+            java.io.File destFile = new java.io.File(directory, fileName);
             file.transferTo(destFile);
 
             // 9. 更新據點的圖片欄位（儲存相對路徑）
-            spot.setSpotImage(filePath);
+            spot.setSpotImage(dbFilePath);
             rentalSpotService.update(spot);
 
             // 10. 回傳檔案 URL（前端可用於顯示）
-            String imageUrl = "/" + filePath; // 前端透過靜態資源存取
+            String imageUrl = "/" + dbFilePath; // 前端透過靜態資源存取
 
             return ResponseEntity.ok(Map.of(
                     "message", "圖片上傳成功",
                     "imageUrl", imageUrl,
-                    "filePath", filePath));
+                    "filePath", dbFilePath));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -216,7 +231,8 @@ public class RentalSpotController {
 
         // 刪除檔案系統中的圖片
         if (spot.getSpotImage() != null && !spot.getSpotImage().isEmpty()) {
-            java.io.File file = new java.io.File(spot.getSpotImage());
+            String projectRoot = System.getProperty("user.dir");
+            java.io.File file = new java.io.File(projectRoot, spot.getSpotImage());
             if (file.exists()) {
                 file.delete();
             }

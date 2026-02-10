@@ -71,7 +71,7 @@
               <th>ID</th>
               <th>租借據點名稱</th>
               <th>各據點容量上限</th>
-              <th>已租借數</th>
+              <th>可借數</th>
               <th>可租用率</th>
               <th>調度建議</th>
               <th>操作</th>
@@ -82,7 +82,7 @@
               <td>{{ spot.spotId }}</td>
               <td class="fw-bold">{{ spot.spotName }}</td>
               <td>{{ spot.totalSeats }}</td>
-              <td>{{ spot.rentedCount }}</td>
+              <td>{{ spot.availableSeats }}</td>
               <td style="width: 200px;">
                 <div class="progress" style="height: 20px;">
                   <div 
@@ -130,12 +130,10 @@ const API_URL = '/api/analyze/spot-monitor';
 
 const getRentableRate = (spot) => {
   const total = Number(spot.totalSeats) || 0;
-  const rented = Number(spot.rentedCount) || 0;
+  const available = Number(spot.availableSeats) || 0;
   if (total <= 0) return 0;
 
-  const available = Math.max(0, total - rented);
   const rate = Math.round((available / total) * 100);
-
   return Math.min(100, Math.max(0, rate));
 };
 

@@ -1,6 +1,7 @@
 package com.example.backend.service.spot;
 
 import java.util.List;
+import java.util.Map;
 
 import com.example.backend.model.spot.RentalSpot;
 
@@ -19,5 +20,7 @@ public interface IRentalSpotService {
     public List<RentalSpot> findByCondition(String spotCode, String spotName, String spotStatus, Integer merchantId);
 
     public List<RentalSpot> selectByKeyword(String keyword);
+
+    public List<Map<String, Object>> findAllMerchantsForSelect();
 
 }

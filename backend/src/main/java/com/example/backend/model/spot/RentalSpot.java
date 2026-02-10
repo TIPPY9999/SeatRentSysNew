@@ -40,11 +40,11 @@ public class RentalSpot {
     @Column(name = "merchantId")
     private Integer merchantId;
 
-    // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
+    // 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
     @Column(name = "createdAt", updatable = false, insertable = false)
     private LocalDateTime createdAt;
 
-    // [優化] 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
+    // 因 DB 已有 Default 與 Trigger，改由 DB 全權管理，JPA 不寫入、只讀取
     @Column(name = "updatedAt", updatable = false, insertable = false)
     private LocalDateTime updatedAt;
 

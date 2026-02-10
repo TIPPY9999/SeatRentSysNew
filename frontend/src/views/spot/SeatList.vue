@@ -86,7 +86,7 @@
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column prop="seatsStatus" label="狀態" width="100" align="center">
+                <el-table-column prop="seatsStatus" label="設備狀態" width="100" align="center">
                   <!-- 增加對後端可能回傳 1/0 或 ACTIVE/INACTIVE 的相容性判斷 -->
                   <template #default="{ row }">
                     <el-tag

@@ -36,6 +36,15 @@ export function useGoogleMaps(formData, manualOverride) {
   }
 
   /**
+  清理 Google 回傳的地址格式
+   */
+  const formatGoogleAddress = (rawAddress) => {
+    if (!rawAddress) return ''
+    // Regex: 移除開頭的 "數字+空白(可選)" 以及 "台灣"
+    return rawAddress.replace(/^(\d+\s?)?(台灣)?/, '').trim()
+  }
+
+  /**
    * [關鍵] 將 formData 中的 spotAddress「強制同步」回 ElementPlus 的原生 input 元素。
    * 這是為了解決 Google Maps Autocomplete 腳本會覆蓋 Vue 響應式更新的問題。
    * 透過多次延遲執行，確保在 Google 初始化完成後，我們的值能成功寫入。
@@ -96,8 +105,21 @@ const initPlacesAutocomplete = async () => {
 
   if (!nativeInput) return
 
+  // [新增] 等待機制：如果 Google Maps API 還沒載入，就稍微等一下 (最多等 3 秒)
   if (!window.google?.maps?.places?.Autocomplete) {
-    geoError.value = 'Google Places 尚未載入（請確認載入 places library）'
+    await new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (window.google?.maps?.places?.Autocomplete) {
+          clearInterval(checkInterval)
+          resolve()
+        }
+      }, 100) // 每 0.1 秒檢查一次
+      setTimeout(() => { clearInterval(checkInterval); resolve() }, 3000) // 3秒後超時放棄
+    })
+  }
+
+  if (!window.google?.maps?.places?.Autocomplete) {
+    geoError.value = 'Google Places 載入失敗或逾時（請確認網路狀況或 API Key 設定）'
     return
   }
 
@@ -129,7 +151,7 @@ const initPlacesAutocomplete = async () => {
     }
 
     if (place.formatted_address) {
-      formData.value.spotAddress = place.formatted_address
+      formData.value.spotAddress = formatGoogleAddress(place.formatted_address)
       syncAddressToNativeInput()
     }
 
@@ -205,7 +227,7 @@ const initPlacesAutocomplete = async () => {
         const location = results[0].geometry.location
         formData.value.latitude = Number(location.lat())
         formData.value.longitude = Number(location.lng())
-        formData.value.spotAddress = results[0].formatted_address
+        formData.value.spotAddress = formatGoogleAddress(results[0].formatted_address)
         syncAddressToNativeInput()
         
         geoPrecision.value = results[0].geometry.location_type

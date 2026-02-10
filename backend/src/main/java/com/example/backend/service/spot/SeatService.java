@@ -10,7 +10,6 @@ import com.example.backend.model.spot.Seat;
 import com.example.backend.repository.spot.SeatRepository;
 
 import jakarta.persistence.criteria.Predicate;
-import org.springframework.util.StringUtils;
 
 @Service
 @Transactional
@@ -31,22 +30,10 @@ public class SeatService implements ISeatService {
      */
     @Override
     public Seat insert(Seat seat) {
-        // 1. 檢查 serialNumber 是否為空或空字串。
-        // 只有在使用者確實輸入了序號時，才需要檢查重複性。
-        // 這裡使用 Spring Framework 的 StringUtils.hasText 來判斷。
-        if (StringUtils.hasText(seat.getSerialNumber())) {
+        // 1. [優化] Serial Number 改由資料庫 Computed Column 自動生成
+        // Hibernate @Generated 標註會確保 insert/update 後自動撈回數值
 
-            // 2. 呼叫 Repository 的 existsBySerialNumber 方法進行檢查。
-            if (seatRepository.existsBySerialNumber(seat.getSerialNumber())) {
-
-                // 3. 如果序號已存在，拋出一個業務邏輯異常。
-                // 建議在 Controller 層或使用 @RestControllerAdvice 捕捉此異常，
-                // 並回傳 HTTP 409 (Conflict) 或 400 (Bad Request) 給前端。
-                throw new IllegalArgumentException("序號 (Serial Number) '" + seat.getSerialNumber() + "' 已存在，請使用不同的序號。");
-            }
-        }
-
-        // 4. 如果檢查通過 (序號不存在或為空)，則執行儲存操作。
+        // 2. 執行儲存
         return seatRepository.save(seat);
     }
 
