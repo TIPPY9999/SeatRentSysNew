@@ -51,7 +51,7 @@ onMounted(async () => {
   if (memberAuthStore.isLogin && memberId.value) {
     try {
       const res = await axios.get(`http://localhost:8080/rec-rent?memId=${memberId.value}`)
-      const hasActiveRent = res.data.some((rent) => rent.recStatus === '租借中')
+      const hasActiveRent = res.data.some((rent) => rent.recStatus === '租借中'||rent.recStatus === '未付款')
 
       if (hasActiveRent) {
         alert('您尚有未完成的租借訂單。\n請先完成歸還或洽詢客服人員。')

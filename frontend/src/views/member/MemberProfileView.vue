@@ -6,7 +6,7 @@ import { useMemberAuthStore } from '@/stores/memberAuth'
 
 import RecRentUserRecord from '@/components/rec/RecRentUserRecord.vue'
 
-import Swal from 'sweetalert2';
+import Swal from 'sweetalert2'
 
 const memberAuth = useMemberAuthStore()
 const member = ref(null)
@@ -43,11 +43,10 @@ const fetchProfile = async () => {
       memEmail: m.memEmail?.trim() || '',
       memInvoice: m.memInvoice?.trim() || '',
     }
-    memberAuth.setMemberLogin(m); // 更新 Pinia store
-    
+    memberAuth.setMemberLogin(m) // 更新 Pinia store
+
     // 取得個人資料後，接著取得租借狀態
-    await fetchRentalStatus();
-    
+    await fetchRentalStatus()
   } catch (e) {
     errorMsg.value = '尚未登入'
   }
@@ -55,71 +54,75 @@ const fetchProfile = async () => {
 
 // 查詢租借狀態
 const fetchRentalStatus = async () => {
-  isLoadingRentStatus.value = true;
+  isLoadingRentStatus.value = true
   try {
-    const memId = memberAuth.member?.memId;
+    const memId = memberAuth.member?.memId
     if (!memId) {
-      activeRent.value = null;
-      return;
+      activeRent.value = null
+      return
     }
 
     // 查詢會員的租借紀錄，目的是為了找到進行中訂單的 ID
-    const rentListRes = await axios.get(`http://localhost:8080/rec-rent?memId=${memId}`);
-    const basicRentInfo = rentListRes.data.find(rent => rent.recStatus === '租借中');
+    const rentListRes = await axios.get(`http://localhost:8080/rec-rent?memId=${memId}`)
+    const basicRentInfo = rentListRes.data.find((rent) => rent.recStatus === '租借中')
 
     // 如果找到進行中的訂單
     if (basicRentInfo && basicRentInfo.recId) {
       try {
         // 使用訂單 ID 去查詢完整的、包含站點名稱的詳細資訊
-        const detailsRes = await axios.get(`http://localhost:8080/api/rent-details/${basicRentInfo.recId}`);
-        const currentRentDetails = detailsRes.data;
+        const detailsRes = await axios.get(
+          `http://localhost:8080/api/rent-details/${basicRentInfo.recId}`,
+        )
+        const currentRentDetails = detailsRes.data
 
         if (currentRentDetails) {
-          activeRent.value = currentRentDetails;
+          activeRent.value = currentRentDetails
           // 直接從回傳的詳細資料中取得站點名稱
-          rentSpotName.value = currentRentDetails.spotNameRent || '未知站點';
+          rentSpotName.value = currentRentDetails.spotNameRent || '未知站點'
         } else {
-           activeRent.value = null; // 如果詳細資料查無，也當作沒有
+          activeRent.value = null // 如果詳細資料查無，也當作沒有
         }
       } catch (detailsError) {
-        console.error(`查詢訂單詳細資訊 ${basicRentInfo.recId} 失敗:`, detailsError);
+        console.error(`查詢訂單詳細資訊 ${basicRentInfo.recId} 失敗:`, detailsError)
         // Fallback: 即使詳細資料查詢失敗，仍然顯示基本資訊
-        activeRent.value = basicRentInfo;
-        rentSpotName.value = '站點資料讀取失敗';
+        activeRent.value = basicRentInfo
+        rentSpotName.value = '站點資料讀取失敗'
       }
     } else {
       // 如果連基本訂單都找不到，則確認無租借中訂單
-      activeRent.value = null;
+      activeRent.value = null
     }
   } catch (error) {
-    console.error('查詢租借狀態失敗:', error);
-    activeRent.value = null;
+    console.error('查詢租借狀態失敗:', error)
+    activeRent.value = null
   } finally {
-    isLoadingRentStatus.value = false;
+    isLoadingRentStatus.value = false
   }
 }
 
 onMounted(fetchProfile)
 
 const formatDate = (dt) => {
-  if (!dt) return '';
-  return dt.substring(0, 10).replace(/-/g, '-'); 
-};
+  if (!dt) return ''
+  return dt.substring(0, 10).replace(/-/g, '-')
+}
 
 // [新增] 格式化日期時間的函式
 const formatDateTime = (dt) => {
-  if (!dt) return '';
-  const date = new Date(dt);
-  return date.toLocaleString('zh-TW', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).replace(/\//g, '-');
-};
+  if (!dt) return ''
+  const date = new Date(dt)
+  return date
+    .toLocaleString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })
+    .replace(/\//g, '-')
+}
 
 const startEdit = () => {
   originForm.value = { ...form.value }
@@ -133,49 +136,50 @@ const cancelEdit = () => {
 
 const saveEdit = async () => {
   // 密碼格式初步檢查 (前端擋路)
-  const passwordRegex = /^(?=.*[A-Za-z])[A-Za-z\d!@#$%^&*()_+=\[\]{}:;"'<>,.?/\-]{6,}$/;
+  const passwordRegex = /^(?=.*[A-Za-z])[A-Za-z\d!@#$%^&*()_+=\[\]{}:;"'<>,.?/\-]{6,}$/
   if (form.value.memPassword && !passwordRegex.test(form.value.memPassword)) {
-    Swal.fire('格式錯誤', '密碼必須至少 6 碼且包含 1 個英文字母', 'error');
-    return;
+    Swal.fire('格式錯誤', '密碼必須至少 6 碼且包含 1 個英文字母', 'error')
+    return
   }
 
-  const phoneRegex = /^09\d{8}$/;
+  const phoneRegex = /^09\d{8}$/
   if (!phoneRegex.test(form.value.memPhone.trim())) {
-    Swal.fire('格式錯誤', '手機號碼請輸入 09 開頭的 10 碼數字', 'error');
-    return;
+    Swal.fire('格式錯誤', '手機號碼請輸入 09 開頭的 10 碼數字', 'error')
+    return
   }
 
   // Email 格式：標準電子郵件，結尾需為 .com
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]*com$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]*com$/
   if (!emailRegex.test(form.value.memEmail.trim())) {
-    Swal.fire('格式錯誤', 'Email 格式不正確（需包含 @ 且以 .com 結尾）', 'error');
-    return;
+    Swal.fire('格式錯誤', 'Email 格式不正確（需包含 @ 且以 .com 結尾）', 'error')
+    return
   }
 
   // 發票載具：/ 開頭，後接 7 碼大寫英文或數字
-  const invoiceRegex = /^\/[A-Z0-9]{7}$/;
+  const invoiceRegex = /^\/[A-Z0-9]{7}$/
   if (form.value.memInvoice && !invoiceRegex.test(form.value.memInvoice.trim())) {
-    Swal.fire('格式錯誤', '發票載具格式錯誤（應為 / 開頭加上 7 碼大寫英數）', 'error');
-    return;
+    Swal.fire('格式錯誤', '發票載具格式錯誤（應為 / 開頭加上 7 碼大寫英數）', 'error')
+    return
   }
 
   // 二次確認彈窗
   const confirmResult = await Swal.fire({
     title: '確定要變更資料嗎？',
-    text: "修改後將會立即生效",
+    text: '修改後將會立即生效',
     icon: 'question',
     showCancelButton: true,
     confirmButtonColor: '#22c55e',
     cancelButtonColor: '#9ca3af',
     confirmButtonText: '確定更新',
-    cancelButtonText: '取消'
-  });
+    cancelButtonText: '取消',
+  })
 
-  if (!confirmResult.isConfirmed) return;
+  if (!confirmResult.isConfirmed) return
 
   try {
     // 修正這裡的路徑與方法
-    const res = await axios.post( // 1. 改回 post
+    const res = await axios.post(
+      // 1. 改回 post
       'http://localhost:8080/api/members/update', // 2. 指向正確的後端路徑
       {
         memId: member.value.memId, // 3. 務必傳送 memId，否則後端 findById 會找不到人
@@ -184,28 +188,28 @@ const saveEdit = async () => {
         memEmail: form.value.memEmail.trim(),
         memInvoice: form.value.memInvoice.trim(),
         memPassword: form.value.memPassword,
-        memUsername: member.value.memUsername // 建議也帶上，確保資料完整
+        memUsername: member.value.memUsername, // 建議也帶上，確保資料完整
       },
-      { withCredentials: true }
+      { withCredentials: true },
     )
 
     // 4. 注意：後端回傳的是 "會員修改成功"，這裡要對齊字串
-    if (res.data === '會員修改成功') { 
+    if (res.data === '會員修改成功') {
       Swal.fire({
         title: '編輯成功',
         text: '您的資料已同步',
         icon: 'success',
         timer: 1500,
         showConfirmButton: false,
-      });
-      
+      })
+
       isEdit.value = false
       fetchProfile()
     } else {
-      Swal.fire('更新失敗', res.data, 'error');
+      Swal.fire('更新失敗', res.data, 'error')
     }
   } catch (e) {
-    Swal.fire('系統錯誤', '無法連接至伺服器', 'error');
+    Swal.fire('系統錯誤', '無法連接至伺服器', 'error')
     form.value = { ...originForm.value }
   }
 }
@@ -219,10 +223,10 @@ const saveEdit = async () => {
       <!-- 頭像 + 名稱 -->
       <div class="profile-header">
         <div class="avatar">
-          <img 
-            class="member-photo" 
-            :src="member.memImage ? `/members/${member.memImage}` : '/members/default.png'" 
-            @error="(e) => e.target.src = '/members/default.png'"
+          <img
+            class="member-photo"
+            :src="member.memImage ? `/members/${member.memImage}` : '/members/default.png'"
+            @error="(e) => (e.target.src = '/members/default.png')"
             alt="會員頭像"
           />
           <div v-if="isEdit" class="photo-edit-hint">
@@ -266,29 +270,17 @@ const saveEdit = async () => {
 
         <div class="row">
           <label>姓名</label>
-          <input
-            class="value-input"
-            v-model="form.memName"
-            :readonly="!isEdit"
-          />
+          <input class="value-input" v-model="form.memName" :readonly="!isEdit" />
         </div>
 
         <div class="row">
           <label>手機</label>
-          <input
-            class="value-input"
-            v-model="form.memPhone"
-            :readonly="!isEdit"
-          />
+          <input class="value-input" v-model="form.memPhone" :readonly="!isEdit" />
         </div>
 
         <div class="row">
           <label>Email</label>
-          <input
-            class="value-input"
-            v-model="form.memEmail"
-            :readonly="!isEdit"
-          />
+          <input class="value-input" v-model="form.memEmail" :readonly="!isEdit" />
         </div>
 
         <!-- 會員點數（唯讀） -->
@@ -307,7 +299,9 @@ const saveEdit = async () => {
             <div v-if="isLoadingRentStatus" class="placeholder">讀取中...</div>
             <!-- 有租借中訂單 -->
             <div v-else-if="activeRent" class="rent-details">
-              <div><strong>狀態:</strong> <span class="status-active">{{ activeRent.recStatus }}</span></div>
+              <div>
+                <strong>狀態:</strong> <span class="status-active">{{ activeRent.recStatus }}</span>
+              </div>
               <div><strong>訂單編號:</strong> {{ activeRent.recId }}</div>
               <div><strong>租借站點:</strong> {{ activeRent.rentSpotName }}</div>
               <div><strong>租借時間:</strong> {{ formatDateTime(activeRent.recRentDT2) }}</div>
@@ -319,11 +313,7 @@ const saveEdit = async () => {
 
         <div class="row">
           <label>發票載具</label>
-          <input
-            class="value-input"
-            v-model="form.memInvoice"
-            :readonly="!isEdit"
-          />
+          <input class="value-input" v-model="form.memInvoice" :readonly="!isEdit" />
         </div>
 
         <div class="row">
@@ -343,12 +333,15 @@ const saveEdit = async () => {
 <style scoped>
 /* 整體 */
 .profile-page {
-  max-width: 720px;
-  margin: 0 auto;
+  max-width: 920px;
   width: 100%;
-  padding: 40px 20px 0 20px; 
-  margin-bottom: 10px; /* 改用 margin 確保它會推開底部的 footer */
+  margin: 0 auto;
+  padding: 40px 20px 0; /*  小螢幕不貼邊（左右 20） */
   box-sizing: border-box;
+
+  /*  可留可不留：留著也不會壞，未來更好做版面控制 */
+  display: flex;
+  flex-direction: column;
 }
 
 /* 頭像 */
@@ -358,21 +351,21 @@ const saveEdit = async () => {
 }
 
 .avatar {
-  width: 120px;          /* 稍微加大一點比較好看 */
+  width: 120px; /* 稍微加大一點比較好看 */
   height: 120px;
   border-radius: 50%;
   background: #f0f2f5;
   margin: 0 auto 15px;
-  position: relative;     /* 為了定位編輯圖示 */
-  overflow: hidden;       /* 確保圖片超出圓圈會被裁切 */
+  position: relative; /* 為了定位編輯圖示 */
+  overflow: hidden; /* 確保圖片超出圓圈會被裁切 */
   border: 4px solid #fff;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .member-photo {
   width: 100%;
   height: 100%;
-  object-fit: cover;      /* 關鍵：保持比例填充 */
+  object-fit: cover; /* 關鍵：保持比例填充 */
   display: block;
 }
 
@@ -427,6 +420,8 @@ const saveEdit = async () => {
 .profile-card {
   background: #fff;
   border-radius: 12px;
+  width: auto;
+  margin: 0 20px 0 20px;
   padding: 20px 20px 5px 20px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
   margin-bottom: 30px;
@@ -453,7 +448,7 @@ label {
 .value,
 .value-input {
   flex: 1;
-  font-size:large;
+  font-size: large;
 }
 
 .value-input {

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import axios from 'axios'
+import Swal from 'sweetalert2'
 
 const API_URL = 'http://localhost:8080/rec-rent'
 
@@ -16,6 +17,7 @@ const searchCriteria = reactive({
   returnDate: '',
   rentDate: '',
   recPayment: '',
+  recNote: '',
 })
 
 // 分頁相關狀態
@@ -58,13 +60,16 @@ const loadRents = async () => {
     if (searchCriteria.spotName) params.append('spotName', searchCriteria.spotName)
     if (searchCriteria.returnDate) params.append('returnDate', searchCriteria.returnDate)
     if (searchCriteria.rentDate) params.append('rentDate', searchCriteria.rentDate)
+    if (searchCriteria.recVio) params.append('recPayment', searchCriteria.recPayment)
     if (searchCriteria.recPayment) params.append('recPayment', searchCriteria.recPayment)
+    if (searchCriteria.recNote) params.append('recNote', searchCriteria.recNote)
 
     const queryString = params.toString()
     const requestUrl = queryString ? `${API_URL}?${queryString}` : API_URL
 
     const res = await axios.get(requestUrl)
-    rentList.value = res.data
+    // 將搜尋結果依照 recId 由大到小排序 (最新到最舊)
+    rentList.value = res.data.sort((a, b) => new Date(b.recRentDT2) - new Date(a.recRentDT2))
   } catch (err) {
     console.error('載入失敗:', err)
     alert('無法載入資料，請確認後端伺服器是否已啟動.\n錯誤: ' + err.message)
@@ -132,6 +137,8 @@ const exportToCsv = () => {
       `"${rent.recRentDT2 ? rent.recRentDT2.replace('T', ' ') : ''}"`,
       `"${rent.recReturnDT2 ? rent.recReturnDT2.replace('T', ' ') : ''}"`,
       `"${rent.recPayment || ''}"`,
+      `"${rent.recVio || ''}"`,
+      `"${rent.recNote || ''}"`,
     ].join(','),
   )
 
@@ -172,6 +179,17 @@ const exportToJson = () => {
 defineExpose({
   loadRents,
 })
+
+// [新增] 顯示完整備註的彈窗函式
+const showFullNote = (note) => {
+  Swal.fire({
+    title: '備註-詳細內容',
+    text: note,
+    confirmButtonText: '點擊任意處或點此關閉',
+    confirmButtonColor: '#409eff',
+    allowOutsideClick: true, // 允許點擊遮罩層(外部)關閉
+  })
+}
 </script>
 
 <template>
@@ -180,15 +198,30 @@ defineExpose({
     <div class="search-form">
       <div class="form-group-search">
         <label>訂單編號:</label>
-        <input v-model="searchCriteria.recId" type="text" placeholder="依訂單編號" @keyup.enter="loadRents" />
+        <input
+          v-model="searchCriteria.recId"
+          type="text"
+          placeholder="依訂單編號"
+          @keyup.enter="loadRents"
+        />
       </div>
       <div class="form-group-search">
         <label>會員編號:</label>
-        <input v-model="searchCriteria.memId" type="text" placeholder="依會員編號" @keyup.enter="loadRents" />
+        <input
+          v-model="searchCriteria.memId"
+          type="text"
+          placeholder="依會員編號"
+          @keyup.enter="loadRents"
+        />
       </div>
       <div class="form-group-search">
         <label>會員姓名:</label>
-        <input v-model="searchCriteria.memName" type="text" placeholder="依會員姓名(模糊)" @keyup.enter="loadRents" />
+        <input
+          v-model="searchCriteria.memName"
+          type="text"
+          placeholder="依會員姓名(模糊)"
+          @keyup.enter="loadRents"
+        />
       </div>
       <div class="form-group-search">
         <label>訂單狀態:</label>
@@ -202,11 +235,21 @@ defineExpose({
       </div>
       <div class="form-group-search">
         <label>站點編號:</label>
-        <input v-model="searchCriteria.spotId" type="text" placeholder="依站點編號" @keyup.enter="loadRents" />
+        <input
+          v-model="searchCriteria.spotId"
+          type="text"
+          placeholder="依站點編號"
+          @keyup.enter="loadRents"
+        />
       </div>
       <div class="form-group-search">
         <label>站點名稱:</label>
-        <input v-model="searchCriteria.spotName" type="text" placeholder="依站點名稱(模糊)" @keyup.enter="loadRents" />
+        <input
+          v-model="searchCriteria.spotName"
+          type="text"
+          placeholder="依站點名稱(模糊)"
+          @keyup.enter="loadRents"
+        />
       </div>
       <div class="form-group-search">
         <label>租借日期:</label>
@@ -220,7 +263,7 @@ defineExpose({
   </div>
   <div class="view-section active">
     <div class="search-actions">
-      <button class="btn-primary" @click="loadRents">搜尋</button>
+      <button class="btn-primary" @click="loadRents" style="min-width: 135px; margin:0 0 0 10px ">搜尋</button>
       <button class="btn-secondary" @click="clearSearch">清除</button>
       <button class="btn-success" @click="loadRents">更新</button>
       <select v-model="pageSize" class="page-size-select">
@@ -242,13 +285,14 @@ defineExpose({
           <th>會員編號</th>
           <th>會員姓名</th>
           <th>座椅編號</th>
-          <th>租借點編號</th>
           <th>租借點名稱</th>
-          <th>歸還點編號</th>
+          <th>-編號</th>
           <th>歸還點名稱</th>
+          <th>-編號</th>
           <th>租借時間</th>
           <th>歸還時間</th>
           <th>費用</th>
+          <th>備註</th>
           <th width="150">操作</th>
         </tr>
       </thead>
@@ -261,16 +305,26 @@ defineExpose({
           </td>
           <td>{{ rent.memId }}</td>
           <td>{{ rent.memName }}</td>
-          <td>{{ rent.seatsId }}</td>
-          <td>{{ rent.spotIdRent }}</td>
+          <td>SN-{{ rent.seatsId ? String(rent.seatsId).padStart(4, '0') : '' }}</td>
           <td>{{ rent.rentSpotName }}</td>
-          <td>{{ rent.spotIdReturn }}</td>
+          <td>{{ rent.spotIdRent }}</td>
           <td>{{ rent.returnSpotName }}</td>
+          <td>{{ rent.spotIdReturn }}</td>
           <td>{{ rent.recRentDT2 ? rent.recRentDT2.replace('T', ' ') : '' }}</td>
           <td>{{ rent.recReturnDT2 ? rent.recReturnDT2.replace('T', ' ') : '' }}</td>
           <td>{{ rent.recPayment }}</td>
           <td>
-            <button class="btn-warning" @click="editRent(rent)">編輯</button><span> / </span>
+            <!-- [修改] 判斷備註長度，若超過 5 字元則截斷並顯示可點擊的 ... -->
+            <span v-if="rent.recNote && rent.recNote.length > 5">
+              {{ rent.recNote.substring(0, 5)
+              }}<span class="note-more" @click="showFullNote(rent.recNote)" title="點擊查看完整內容"
+                >...</span
+              >
+            </span>
+            <span v-else>{{ rent.recNote }}</span>
+          </td>
+          <td>
+            <button class="btn-warning" @click="editRent(rent)">編輯</button><span>/</span>
             <button class="btn-danger ml-1" @click="deleteRent(rent.recId)">刪除</button>
           </td>
         </tr>
@@ -299,10 +353,18 @@ defineExpose({
       </div>
 
       <div class="floating-nav right" v-if="rentList.length > 0">
-        <button class="btn-float" :disabled="currentPage === totalPages" @click="goToPage(currentPage + 1)">
+        <button
+          class="btn-float"
+          :disabled="currentPage === totalPages"
+          @click="goToPage(currentPage + 1)"
+        >
           下頁
         </button>
-        <button class="btn-float" :disabled="currentPage === totalPages" @click="goToPage(totalPages)">
+        <button
+          class="btn-float"
+          :disabled="currentPage === totalPages"
+          @click="goToPage(totalPages)"
+        >
           末頁
         </button>
       </div>
@@ -321,8 +383,8 @@ defineExpose({
 
 .search-form {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
   align-items: end;
 }
 
@@ -361,9 +423,15 @@ defineExpose({
 
 .search-actions {
   display: flex;
+  padding: 0px;
   justify-content: flex-start;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+/* [新增] 設定操作區按鈕的最小寬度，讓按鈕整齊一致 */
+.search-actions button {
+  min-width: 65px;
 }
 
 .page-size-select {
@@ -465,6 +533,16 @@ button:hover {
   background: #a6a9ad;
 }
 
+/* [新增] 補上 btn-success (綠色按鈕) 的樣式 */
+.btn-success {
+  background: #67c23a;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #85ce61;
+}
+
 .btn-info {
   background: #17a2b8;
   color: white;
@@ -512,7 +590,7 @@ button:hover {
 }
 
 .ml-1 {
-  margin-left: 6px;
+  margin-left: 1px;
 }
 
 /* ========== 標題樣式 ========== */
@@ -576,7 +654,6 @@ h2 button {
 
 /* 針對 AdminLTE 側邊欄的響應式調整 (Desktop) */
 @media (min-width: 992px) {
-
   /* 當側邊欄展開時 (預設) - 避開 250px 的側邊欄 */
   :global(body:not(.sidebar-collapse)) .floating-nav.left {
     left: 255px;
@@ -613,5 +690,16 @@ h2 button {
   opacity: 0.6;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* [新增] 點擊查看更多的樣式 */
+.note-more {
+  color: #409eff;
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 2px;
+}
+.note-more:hover {
+  text-decoration: underline;
 }
 </style>

@@ -1,17 +1,13 @@
 <script setup>
-// import { log } from "node:console";
 import { ref, onMounted } from 'vue'
 
-onMounted(() => {
-  console.log('RecRentAdd component has been mounted.')
-})
 // 1. 定義 emit 事件
 const emit = defineEmits(['save-rent', 'cancel'])
 
 // 2. 創建一個空的初始表單物件的函式
 const createInitialForm = () => ({
   recSeqId: null,
-  recId: '',
+  // recId: '',
   memId: '',
   memName: '',
   seatsId: '',
@@ -21,6 +17,7 @@ const createInitialForm = () => ({
   recRentDT2: '',
   recReturnDT2: '',
   recViolatInt: 0,
+  recNote: '', // [修正] 補上備註欄位的初始化
 })
 
 // 3. 使用 ref 來儲存表單資料
@@ -36,8 +33,8 @@ const resetForm = () => {
 const saveRent = () => {
   const dataToSend = {
     ...form.value,
-    recRentDT2: form.value.recRentDT2 ? form.value.recRentDT2.replace('T', ' ') : null,
-    recReturnDT2: form.value.recReturnDT2 ? form.value.recReturnDT2.replace('T', ' ') : null,
+    recRentDT2: form.value.recRentDT2 || null, // 保持 ISO 格式 (含 'T')，後端才能正確解析
+    recReturnDT2: form.value.recReturnDT2 || null, // 保持 ISO 格式 (含 'T')
   }
   emit('save-rent', dataToSend)
   // 成功提交後通常會切換視圖，但如果需要留在原頁面，可以取消註解下一行
@@ -48,30 +45,64 @@ const saveRent = () => {
 const handleCancel = () => {
   emit('cancel')
 }
+
+// [新增] 一鍵輸入預設值函式
+const fillDefaultValues = () => {
+  const now = new Date()
+
+  // 封裝格式化邏輯：將 Date 物件轉換為 datetime-local 所需的 YYYY-MM-DDTHH:mm:ss 格式
+  const toLocalISOString = (date) => {
+    const offset = date.getTimezoneOffset() * 60000
+    return new Date(date.getTime() - offset).toISOString().slice(0, 19)
+  }
+
+  // 計算昨天 (語意更清楚的寫法)
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  
+  form.value = {
+    recSeqId: null,
+    // recId: 'TEST-' + Math.floor(Math.random() * 10000), // 隨機產生訂單編號
+    memId: 1,
+    memName: '測試會員',
+    seatsId: '1',
+    recStatus: '租借中',
+    spotIdRent: 1,
+    spotIdReturn: 2,
+    recRentDT2: toLocalISOString(yesterday),
+    recReturnDT2: toLocalISOString(now),
+    recViolatInt: 2,
+    recNote: '系統自動帶入測試資料',
+  }
+}
 </script>
 
 <template>
   <div class="view-section form-section active">
-    <h2 v-text="formTitle"></h2>
-
-    <div class="form-group">
-      <label>訂單編號(recId):</label>
-      <input v-model="form.recId" type="text" placeholder="例如: R000001" />
+    <!-- [修改] 標題區塊加入一鍵輸入按鈕 -->
+    <div class="form-header">
+      <h2>{{ formTitle }}</h2>
+      <button class="btn-warning btn-sm" @click="fillDefaultValues">一鍵輸入</button>
     </div>
+
+    <!-- <div class="form-group">
+      <label>訂單編號(recId):</label>
+      <input v-model="form.recId" type="text" placeholder="必須..." />
+    </div> -->
     <div class="form-group">
       <label>會員編號(memId):</label>
-      <input v-model="form.memId" type="number" placeholder="例如: 1" required />
+      <input v-model="form.memId" type="number" placeholder="必須..." required />
     </div>
     <div class="form-group">
-      <label>會員 姓名 (memName):</label>
-      <input v-model="form.memName" type="text" placeholder="例如: 王大明" />
+      <label>會員姓名:</label>
+      <input v-model="form.memName" type="text" placeholder="自動帶入..." disabled/>
     </div>
     <div class="form-group">
-      <label>座椅編號 (seatsId):</label>
-      <input v-model="form.seatsId" type="text" placeholder="例如: S001" required />
+      <label>座椅編號:</label>
+      <input v-model="form.seatsId" type="text" placeholder="必須..." required />
     </div>
     <div class="form-group">
-      <label>訂單狀態 (recStatus):</label>
+      <label>訂單狀態:</label>
       <select v-model="form.recStatus">
         <option value="租借中">租借中</option>
         <option value="已完成">已完成</option>
@@ -80,24 +111,29 @@ const handleCancel = () => {
       </select>
     </div>
     <div class="form-group">
-      <label>租借站點編號 (spotIdRent):</label>
-      <input v-model="form.spotIdRent" type="number" placeholder="例如: 1" required />
+      <label>租借站點編號:</label>
+      <input v-model="form.spotIdRent" type="number" placeholder="必須、數字..." required />
     </div>
     <div class="form-group">
-      <label>歸還站點編號 (spotIdReturn):</label>
-      <input v-model="form.spotIdReturn" type="number" placeholder="例如: 2" />
+      <label>歸還站點編號:</label>
+      <input v-model="form.spotIdReturn" type="number" placeholder="數字..." />
     </div>
     <div class="form-group">
-      <label>租借時間 (recRentDT):</label>
-      <input v-model="form.recRentDT2" type="datetime-local" step="1" required />
+      <label>租借時間:</label>
+      <input v-model="form.recRentDT2" type="datetime-local" step="1" placeholder="必須" required />
     </div>
     <div class="form-group">
-      <label>歸還時間 (recReturnDT):</label>
+      <label>歸還時間:</label>
       <input v-model="form.recReturnDT2" type="datetime-local" step="1" />
     </div>
     <div class="form-group">
-      <label>違規記點 (recViolatInt):</label>
-      <input v-model="form.recViolatInt" type="number" value="0" required />
+      <label>違規記點:</label>
+      <input v-model="form.recViolatInt" type="number" value="0" placeholder="數字..." required />
+    </div>
+    <div class="form-group">
+      <label>備註:</label>
+      <!-- [修正] 修正綁定錯誤，原本誤綁定到 memName -->
+      <input v-model="form.recNote" type="text" placeholder="選填..."/>
     </div>
 
     <div style="text-align: right">
@@ -117,14 +153,21 @@ const handleCancel = () => {
   margin-bottom: 20px;
 }
 
-/* ========== 表單標題 ========== */
-.form-section h2 {
+/* ========== 表單標題區塊 ========== */
+.form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* 標題在左，按鈕在右，若要按鈕緊鄰標題可改為 flex-start 並加 gap */
+  border-bottom: 2px solid #e4e7ed;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+}
+
+.form-header h2 {
   font-size: 1.3rem;
   font-weight: 600;
   color: #303133;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #e4e7ed;
+  margin: 0; /* 移除預設邊距，由 header 控制 */
 }
 
 /* ========== 表單組 ========== */
@@ -208,5 +251,13 @@ button:hover {
 
 .btn-info:hover {
   background: #66b1ff;
+}
+
+/* [新增] 小按鈕樣式 */
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+  margin-left: 10px;
+  height: auto;
 }
 </style>

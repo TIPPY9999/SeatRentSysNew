@@ -8,12 +8,13 @@ import Swal from 'sweetalert2';
 const route = useRoute();
 const isLoading = ref(false);
 const recId = ref('');
+const returnSpotId=ref('');
 const totalFee = ref(0); // [新增] 用於儲存總金額
 onMounted(() => {
   // [修改] 從 route.query 獲取訂單ID與金額
   recId.value = route.query.recId;
   totalFee.value = route.query.total;
-  
+  returnSpotId.value = route.query.returnSpotId;
   if (!recId.value) {
     Swal.fire('錯誤', '無效的訂單編號', 'error');
   }
@@ -25,15 +26,14 @@ const handleCheckout = async () => {
   isLoading.value = true;
   try {
     // 1. 準備要送到後端的資料 (Content-Type: application/x-www-form-urlencoded)
-
-
     const params = new URLSearchParams();
     params.append('recId', recId.value);
     params.append('amount', totalFee.value);
-
+    params.append('returnSpotId',returnSpotId);
+    params.append('baseUrl', window.APP_CONFIG.API_URL);
     // 2. 呼叫後端 API
     const response = await axios.post('http://localhost:8080/api/payment/checkout', params);
-    
+    //const response = await axios.post(`${window.APP_CONFIG.API_URL}/api/payment/checkout`, params);
     // 3. 處理後端回傳的 HTML 字串
     const payHtml = response.data;
     if (!payHtml || (typeof payHtml === 'string' && payHtml.includes('Error'))) {
@@ -47,8 +47,7 @@ const handleCheckout = async () => {
     // 4. 從容器中尋找表單
     const form = div.querySelector('form');
     if (form) {
-      // 找到表單後，設定在新分頁開啟並提交
-      form.target = '_blank';
+      
       div.style.display = 'none'; 
       document.body.appendChild(div);
       form.submit();

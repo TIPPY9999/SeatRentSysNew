@@ -15,6 +15,23 @@ const rents = ref([])
 const isLoading = ref(false)
 const errorMessage = ref('')
 
+// --- 分頁狀態 ---
+const currentPage = ref(1)
+const itemsPerPage = 10 // 每頁顯示10筆
+
+// --- Computed Properties ---
+const totalPages = computed(() => {
+  if (!rents.value) return 1
+  return Math.ceil(rents.value.length / itemsPerPage)
+})
+
+const paginatedRents = computed(() => {
+  if (!rents.value) return []
+  const startIndex = (currentPage.value - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  return rents.value.slice(startIndex, endIndex)
+})
+
 // --- 核心邏輯 ---
 const loadUserRents = async () => {
   const memId = memberAuthStore.member?.memId
@@ -50,6 +67,7 @@ const loadUserRents = async () => {
     })
 
     rents.value = data
+    currentPage.value = 1 // 載入新資料時，重置回第一頁
   } catch (error) {
     console.error('載入租借紀錄失敗:', error)
     errorMessage.value = '無法載入租借紀錄，請確認網路連線或稍後再試。'
@@ -66,6 +84,37 @@ const handleReport = (rent) => {
   if (rent.seatsId) query.seatId = rent.seatsId // 座位 ID
 
   router.push({ path: '/support/report', query })
+}
+
+// --- 分頁方法 ---
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+// --- Helper Functions ---
+const getStatusClass = (status) => {
+  // 根據訂單狀態回傳對應的 BS class
+  if (status === '租借中') {
+    return 'bg-success'
+  }
+  if (status === '未付款') {
+    return 'bg-warning'
+  }
+  return 'bg-secondary'
 }
 
 // --- Lifecycle ---
@@ -95,51 +144,71 @@ onMounted(() => {
     <div v-else-if="rents.length === 0" class="alert alert-info">目前沒有租借紀錄。</div>
 
     <!-- 列表顯示 -->
-    <div v-else class="list-group">
-      <div
-        v-for="rent in rents"
-        :key="rent.recSeqId"
-        class="list-group-item mb-3 shadow-sm"
-        :class="{ 'border-active': rent.recStatus === '租借中' }"
-      >
-        <div class="d-flex w-100 justify-content-between align-items-center header-row">
-          <h5 class="mb-1">
-            <span
-              class="badge"
-              :class="rent.recStatus === '租借中' ? 'bg-success' : 'bg-secondary'"
-            >
-              {{ rent.recStatus }}
-            </span>
-            <span class="ms-2 title-text">訂單編號: {{ rent.recId || rent.recSeqId }}</span>
-          </h5>
-          <span class="ms-2 title-text">座椅編號: {{ rent.seatsId }}</span>
-          <span class="ms-2 title-text">付款方式: {{ rent.recPayBy || '尚未付款' }}</span>
-          <h5 class="mb-0 text-primary fw-bold">
-            <button class="btn btn-sm btn-outline-warning" @click="handleReport(rent)">
-              <i class="fas fa-exclamation-circle"></i> 問題回報
-            </button>
-          </h5>
-        </div>
-
-        <div class="row mt-2">
-          <div class="col-md-6">
-            <p class="mb-1">
-              <strong>租借站點:</strong> {{ rent.rentSpotName || rent.spotIdRent }}
-            </p>
-            <p class="mb-1">
-              <strong>歸還站點:</strong> {{ rent.returnSpotName || rent.spotIdReturn || '-' }}
-            </p>
+    <div v-else>
+      <div class="list-group">
+        <div
+          v-for="rent in paginatedRents"
+          :key="rent.recSeqId"
+          class="list-group-item mb-3 shadow-sm"
+          :class="{ 'border-active': rent.recStatus === '租借中' || rent.recStatus === '未付款' }"
+        >
+          <div class="d-flex w-100 justify-content-between align-items-center header-row">
+            <h5 class="mb-1">
+              <span class="badge" :class="getStatusClass(rent.recStatus)">
+                {{ rent.recStatus }}
+              </span>
+              <span class="ms-2 title-text">訂單編號: {{ rent.recId || rent.recSeqId }}</span>
+            </h5>
+            <span style="margin: 0 60px"> </span>
+            <span class="ms-2 title-text">座椅編號: SN-25-{{ rent.seatsId }}</span>
+            <span></span> <span style="margin: 0 40px"> </span>
+            <h5 class="mb-0 text-primary fw-bold">
+              <button class="btn btn-sm btn-outline-warning" @click="handleReport(rent)">
+                <i class="fas fa-exclamation-circle"></i> 問題回報
+              </button>
+            </h5>
           </div>
-          <div class="col-md-6">
-            <p class="mb-1">
-              <strong>租借時間:</strong> {{ rent.recRentDT2?.replace('T', ' ') || '-' }}
-            </p>
-            <p class="mb-1">
-              <strong>歸還時間:</strong> {{ rent.recReturnDT2?.replace('T', ' ') || '-' }}
-            </p>
+
+          <div class="row mt-2">
+            <div class="col-md-6">
+              <p class="mb-1">
+                <strong>租借站點:</strong> {{ rent.rentSpotName || rent.spotIdRent }}
+              </p>
+              <p class="mb-1">
+                <strong>歸還站點:</strong> {{ rent.returnSpotName || rent.spotIdReturn || '-' }}
+              </p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1">
+                <strong>租借時間:</strong> {{ rent.recRentDT2?.replace('T', ' ') || '-' }}
+              </p>
+              <p class="mb-1">
+                <strong>歸還時間:</strong> {{ rent.recReturnDT2?.replace('T', ' ') || '-' }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Pagination Controls -->
+      <nav v-if="totalPages > 1" aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center flex-wrap">
+          <li class="page-item" :class="{ disabled: currentPage === 1 }">
+            <a class="page-link" href="#" @click.prevent="prevPage">&laquo;</a>
+          </li>
+          <li
+            v-for="page in totalPages"
+            :key="page"
+            class="page-item"
+            :class="{ active: currentPage === page }"
+          >
+            <a class="page-link" href="#" @click.prevent="goToPage(page)">{{ page }}</a>
+          </li>
+          <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+            <a class="page-link" href="#" @click.prevent="nextPage">&raquo;</a>
+          </li>
+        </ul>
+      </nav>
     </div>
   </div>
 </template>
@@ -147,7 +216,7 @@ onMounted(() => {
 <style scoped>
 .record-container {
   padding: 10px;
-  max-width: 800px;
+  max-width: max-content;
   margin: 0 auto;
 }
 .section-title {
@@ -180,10 +249,36 @@ onMounted(() => {
 .bg-secondary {
   background-color: #6c757d;
 }
+.bg-warning {
+  background-color: #ffc107;
+  color: #212529; /* 深色文字以確保可讀性 */
+}
 .text-primary {
   color: #007bff !important;
 }
 .text-muted {
   color: #6c757d !important;
+}
+
+/* Pagination Styles */
+.page-item .page-link {
+  color: #007bff;
+  margin: 0 2px; /* 增加按鈕間距 */
+  border-radius: 4px; /* 圓角 */
+}
+.page-item.active .page-link {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: white;
+  z-index: 2;
+}
+.page-item.disabled .page-link {
+  color: #6c757d;
+  background-color: #fff;
+  border-color: #dee2e6;
+}
+.pagination {
+  padding-left: 0;
+  list-style: none;
 }
 </style>

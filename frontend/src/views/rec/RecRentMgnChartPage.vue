@@ -3,9 +3,9 @@
 import { ref, onMounted, shallowRef } from 'vue'
 import * as echarts from 'echarts'
 import {
-  getOrderStatusStats,
   getDailyOrderStats,
   getHourlyOrderStats,
+  getOrderStatusStats,
   getRentalDurationStats,
 } from '@/api/modules/rec'
 import { ElMessage } from 'element-plus'
@@ -70,7 +70,7 @@ const drawDailyOrdersChart = async (start, end) => {
       axisPointer: { type: 'line' },
     },
     grid: { left: '1%', right: '1%', bottom: '9%', containLabel: true },
-    legend: { data: ['每日', '累計'], top: 'bottom' },
+    legend: { data: ['日訂單', '累計訂單'], top: 'bottom' },
     xAxis: [{ type: 'category', data: dailyLabels, axisTick: { alignWithLabel: true } }],
     yAxis: [
       {

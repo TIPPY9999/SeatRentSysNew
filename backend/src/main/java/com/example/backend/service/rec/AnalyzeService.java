@@ -1,4 +1,4 @@
-package com.example.backend.service;
+package com.example.backend.service.rec;
 
 import java.time.LocalDate;
 import java.util.HashMap;

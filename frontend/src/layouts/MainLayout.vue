@@ -2,16 +2,14 @@
 import { ref, computed } from 'vue'
 import { useMemberAuthStore } from '@/stores/memberAuth'
 import { useAdminAuthStore } from '@/stores/adminAuth'
-import { useRouter } from 'vue-router' // ✅ 已有
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
 // --- 版面狀態 ---
 const isSidebarCollapsed = ref(false)
 
-/**
- * 切換側邊欄的收合狀態
- */
+//切換側邊欄收合狀態
 const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
 }
@@ -42,7 +40,10 @@ const displayUID = computed(() => {
  * - 會員登入：導去 /profile
  */
 const handleUidClick = () => {
-  if (!displayUID.value) return
+  if (!displayUID.value) {
+    router.push('/login')
+    return
+  }
 
   if (adminAuthStore.isLogin) {
     router.push('/admin')
@@ -56,7 +57,7 @@ const handleUidClick = () => {
 /**
  * ✅ 產品化：讓游標跟可點性一致
  */
-const uidClickable = computed(() => !!displayUID.value)
+const uidClickable = computed(() => true)
 const uidCursor = computed(() => (uidClickable.value ? 'pointer' : 'default'))
 
 /**
@@ -81,158 +82,168 @@ const logout = () => {
 </script>
 
 <template>
-  <div class="page-wrapper" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
-    <!-- 左側邊欄 -->
-    <aside class="sidebar">
-      <!-- 可收合的功能選單 -->
-      <ul class="menu-list">
-        <li class="menu-item" @click="router.push('/')">
-          <div class="member-info">
-            <span class="icon-wrapper">
-              <el-icon><House /></el-icon>
-            </span>
-            <span class="menu-text">Take@Seat</span>
-          </div>
-        </li>
+  <div class="app-layout">
+    <div class="page-wrapper" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
+      <!-- 側邊欄 -->
+      <aside class="sidebar">
+        <!-- 收合功能選單 -->
+        <ul class="menu-list">
+          <li class="menu-item" @click="router.push('/')">
+            <div class="member-info">
+              <span class="icon-wrapper">
+                <el-icon><House /></el-icon>
+              </span>
+              <span class="menu-text">Take@Seat</span>
+            </div>
+          </li>
 
-        <!-- ✅ 產品化：未登入才顯示「會員登入」 -->
-        <li class="menu-item" v-if="!memberAuthStore.isLogin && !adminAuthStore.isLogin">
-          <router-link to="/login" class="member-info">
+          <!--未登入才顯示「會員登入」 -->
+          <li class="menu-item" v-if="!memberAuthStore.isLogin && !adminAuthStore.isLogin">
+            <router-link to="/login" class="member-info">
+              <span class="icon-wrapper">
+                <el-icon><Avatar /></el-icon>
+              </span>
+              <span class="menu-text">請先登入</span>
+            </router-link>
+          </li>
+          <li class="menu-item">
+            <div
+              class="member-info"
+              @click="handleUidClick"
+              :style="{
+                cursor: uidCursor,
+                width: '100%',
+              }"
+              :aria-disabled="!uidClickable"
+            >
+              <span class="icon-wrapper" style="font-size: 130%; font-weight: 400">您好 </span>
+              <span class="menu-text">
+                <span v-if="displayUID">{{ displayUID }}</span>
+                <span v-else> 歡迎使用 </span>
+              </span>
+            </div>
+          </li>
+
+          <li class="menu-item" @click="router.push('/SearchSpot')">
             <span class="icon-wrapper">
-              <el-icon><Avatar /></el-icon>
+              <el-icon><Pointer /></el-icon>
             </span>
-            <span class="menu-text">請先登入</span>
+            <span class="menu-text">@Seat借還</span>
+          </li>
+
+          <li class="menu-item" @click="router.push('/mall')">
+            <span class="icon-wrapper">
+              <el-icon><Ticket /></el-icon>
+            </span>
+            <span class="menu-text">商家優惠</span>
+          </li>
+
+          <li class="menu-item" @click="router.push('/snake')">
+            <span class="icon-wrapper">
+              <el-icon><SwitchFilled /></el-icon>
+            </span>
+            <span class="menu-text">小遊戲</span>
+          </li>
+          <li class="menu-item" v-if="memberAuthStore.isLogin">
+            <router-link to="/redemption-history" class="member-info">
+              <span class="icon-wrapper">
+                <el-icon><List /></el-icon>
+              </span>
+              <span class="menu-text">兌換紀錄</span>
+            </router-link>
+          </li>
+
+          <li class="menu-item" @click="router.push('/VisitSiteReommand')">
+            <span class="icon-wrapper">
+              <el-icon><MapLocation /></el-icon>
+            </span>
+            <span class="menu-text">美食景點</span>
+          </li>
+
+          <li class="menu-item" @click="router.push('')">
+            <span class="icon-wrapper">
+              <el-icon><Comment /></el-icon>
+            </span>
+            <span class="menu-text">分享討論</span>
+          </li>
+
+          <li class="menu-item" @click="router.push('/support')">
+            <span class="icon-wrapper">
+              <el-icon><Phone /></el-icon>
+            </span>
+            <span class="menu-text">客服支援</span>
+          </li>
+
+          <li class="menu-item">
+            <router-link to="/sponsor" class="member-info">
+              <span class="icon-wrapper">
+                <el-icon><StarFilled /></el-icon>
+              </span>
+              <span class="menu-text">支持我們</span>
+            </router-link>
+          </li>
+          <li class="menu-item" @click="logout">
+            <span class="icon-wrapper">
+              <el-icon><TopLeft /></el-icon>
+            </span>
+            <span class="menu-text">登出</span>
+          </li>
+        </ul>
+        <!--管理員快捷入口-->
+        <div class="menu-admin" v-if="adminAuthStore.isLogin">
+          <router-link to="/admin" class="member-info">
+            <span class="icon-wrapper">
+              <el-icon><Tools /></el-icon>
+            </span>
+            <span class="menu-text">後台管理</span>
           </router-link>
-        </li>
+        </div>
 
-        <!-- ✅ 合併版 + 產品化：UID 行為 -->
-        <li class="menu-item">
-          <div
-            class="member-info"
-            @click="handleUidClick"
-            :style="{
-              cursor: uidCursor,
-              width: '100%',
-            }"
-            :aria-disabled="!uidClickable"
+        <!--收合按鈕 -->
+        <div class="sidebar-footer">
+          <button
+            @click="toggleSidebar"
+            class="toggle-btn"
+            :title="isSidebarCollapsed ? '展開' : '收合'"
           >
-            <span class="icon-wrapper" style="font-size: 130%; font-weight: 400">您好 </span>
-            <span class="menu-text">
-              <span v-if="displayUID">{{ displayUID }}</span>
-              <span v-else> 按此登入 </span>
-            </span>
-          </div>
-        </li>
+            <el-icon>
+              <DArrowLeft v-if="!isSidebarCollapsed" />
+              <DArrowRight v-if="isSidebarCollapsed" />
+            </el-icon>
+          </button>
+        </div>
+      </aside>
 
-        <li class="menu-item" @click="router.push('/SearchSpot')">
-          <span class="icon-wrapper">
-            <el-icon><Pointer /></el-icon>
-          </span>
-          <span class="menu-text">@Seat借還</span>
-        </li>
+      <!-- 右側主內容容器 -->
+      <main class="main-content-area">
+        <router-view />
+      </main>
+    </div>
 
-        <li class="menu-item" @click="router.push('/mall')">
-          <span class="icon-wrapper">
-            <el-icon><Ticket /></el-icon>
-          </span>
-          <span class="menu-text">商家優惠</span>
-        </li>
-
-        <li class="menu-item" @click="router.push('/snake')">
-          <span class="icon-wrapper">
-            <el-icon><SwitchFilled /></el-icon>
-          </span>
-          <span class="menu-text">小遊戲</span>
-        </li>
-        <li class="menu-item" v-if="memberAuthStore.isLogin">
-          <router-link to="/redemption-history" class="member-info">
-            <span class="icon-wrapper">
-              <el-icon><List /></el-icon>
-            </span>
-            <span class="menu-text">兌換紀錄</span>
-          </router-link>
-        </li>
-
-        <li class="menu-item" @click="router.push('')">
-          <span class="icon-wrapper">
-            <el-icon><MapLocation /></el-icon>
-          </span>
-          <span class="menu-text">猜你喜歡</span>
-        </li>
-
-        <li class="menu-item" @click="router.push('')">
-          <span class="icon-wrapper">
-            <el-icon><Comment /></el-icon>
-          </span>
-          <span class="menu-text">分享討論</span>
-        </li>
-
-        <li class="menu-item" @click="router.push('/support')">
-          <span class="icon-wrapper">
-            <el-icon><Phone /></el-icon>
-          </span>
-          <span class="menu-text">客服支援</span>
-        </li>
-
-        <li class="menu-item">
-          <router-link to="/sponsor" class="member-info">
-            <span class="icon-wrapper">
-              <el-icon><StarFilled /></el-icon>
-            </span>
-            <span class="menu-text">支持我們</span>
-          </router-link>
-        </li>
-        <li class="menu-item" @click="logout">
-          <span class="icon-wrapper">
-            <el-icon><TopLeft /></el-icon>
-          </span>
-          <span class="menu-text">登出</span>
-        </li>
-      </ul>
-      <!-- ✅ 管理員快捷入口：保留你原本邏輯 -->
-      <div class="menu-admin" v-if="adminAuthStore.isLogin">
-        <router-link to="/admin" class="member-info">
-          <span class="icon-wrapper">
-            <el-icon><Tools /></el-icon>
-          </span>
-          <span class="menu-text">後台管理</span>
-        </router-link>
+    <!-- Footer -->
+    <footer class="main-footer">
+      <div class="footer-links">
+        <a href="/claims">隱私權政策</a> | <a href="#">個資告知書</a> | <a href="#">使用條款</a> |
+        <a href="#">服務條款</a> | © 2026 Have@Seat及其關係企業版權所有。
       </div>
-
-      <!-- 收合按鈕 -->
-      <div class="sidebar-footer">
-        <button
-          @click="toggleSidebar"
-          class="toggle-btn"
-          :title="isSidebarCollapsed ? '展開' : '收合'"
-        >
-          <el-icon>
-            <DArrowLeft v-if="!isSidebarCollapsed" />
-            <DArrowRight v-if="isSidebarCollapsed" />
-          </el-icon>
-        </button>
+      <div class="footer-copyright">
+        Have@Seat其等之標誌以及本網站中其他Have@Seat產品及服務名稱及標誌，皆為Have@Seat Inc.
+        之商標或註冊商標。本網站中提及之其他公司名稱、產品名稱、服務名稱及標誌，分別為其所有權人之商標。
       </div>
-    </aside>
-
-    <!-- 右側主內容容器 -->
-    <main class="main-content-area">
-      <router-view />
-    </main>
+    </footer>
   </div>
-  <!-- Footer -->
-  <footer class="main-footer">
-    <div class="footer-links">
-      <a href="/claims">隱私權政策</a> | <a href="#">個資告知書</a> | <a href="#">使用條款</a> |
-      <a href="#">服務條款</a> | © 2026 Have@Seat及其關係企業版權所有。
-    </div>
-    <div class="footer-copyright">
-      Have@Seat其等之標誌以及本網站中其他Have@Seat產品及服務名稱及標誌，皆為Have@Seat Inc.
-      之商標或註冊商標。本網站中提及之其他公司名稱、產品名稱、服務名稱及標誌，分別為其所有權人之商標。
-    </div>
-  </footer>
 </template>
 
 <style scoped>
+/* --- 0. App Layout --- */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  background-color: #f4f6f9;
+}
+
 /* --- 1. CSS 變數 --- */
 :root {
   --sidebar-width-expanded: 200px;
@@ -242,18 +253,17 @@ const logout = () => {
 .main-content-area {
   flex-grow: 1;
   width: 100%;
-  height: 91vh;
   position: relative;
-  overflow-y: auto; /* 如果內容超長，允許滾動 */
   display: flex;
   flex-direction: column;
+  overflow-y: auto; /* 當內容超出時，顯示滾動條，避免內容溢出覆蓋頁尾 */
 }
 /* --- 2. 主佈局 --- */
 .page-wrapper {
   display: flex;
-  /* height: 100vh; /*改為 100vh 佔滿整個視窗高度 */
+  flex: 1; /* 取代 height: 100vh，使其能自動伸展 */
   width: 100%;
-  background-color: #f4f6f9;
+  overflow: hidden; /* 確保子元素滾動，而不是此容器滾動 */
 }
 
 /* --- 3. 側邊欄 --- */
@@ -264,12 +274,14 @@ const logout = () => {
   transition: width 0.2s ease;
   flex-shrink: 0;
   display: flex;
+  overflow-y: auto;
   flex-direction: column;
   height: auto;
 }
 
 .page-wrapper.sidebar-collapsed .sidebar {
   width: var(--sidebar-width-collapsed);
+  overflow-y: auto;
 }
 
 /* 通用圖示容器樣式 */
@@ -385,7 +397,6 @@ const logout = () => {
   color: #6c757d;
   font-size: 0.8rem;
   text-align: center;
-  margin-top: auto;
 }
 
 .footer-links {

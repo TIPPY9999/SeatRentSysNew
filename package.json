@@ -17,7 +17,7 @@
     "xml:front:rec": "npx repomix --include \"frontend/src/**/rec/**,frontend/src/**/recommend/**,frontend/src/router/**\" --output \"AI_good/front/frontend_rec.xml\"",
     "//BACKEND_COMMANDS": "--- 後端指令區 (已強制包含 DB 結構) ---",
     "xml:back": "npm run xml:back:full && npm run xml:back:core && npm run xml:back:spot && npm run xml:back:maintenance && npm run xml:back:member && npm run xml:back:merchantAndCoupon && npm run xml:back:rec",
-    "xml:back:full": "npx repomix --include \"backend/**,backend/pom.xml\" --output \"AI_good/all/backend_full.xml\"",
+    "xml:back:full": "npx repomix --include \"backend/**,backend/pom.xml\" --ignore \"backend/db/**\" --output \"AI_good/all/backend_full.xml\"",
     "xml:back:core": "npx repomix --include \"backend/pom.xml,backend/src/main/resources/**,backend/**/config/**,backend/**/util/**,backend/**/security/**,backend/**/exception/**\" --output \"AI_good/back/backend_core.xml\"",
     "xml:back:spot": "npx repomix --include \"backend/**/*spot*,backend/**/*seat*,backend/**/model/**,backend/**/entity/**,backend/**/repository/**,backend/**/dto/**,backend/pom.xml\" --output \"AI_good/back/backend_spot.xml\"",
     "xml:back:maintenance": "npx repomix --include \"backend/**/*maintenance*,backend/**/*workorder*,backend/**/*fix*,backend/**/model/**,backend/**/entity/**,backend/**/repository/**,backend/**/dto/**,backend/pom.xml\" --output \"AI_good/back/backend_maintenance.xml\"",
@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "echarts": "^6.0.0",
+    "html5-qrcode": "^2.3.8",
     "xlsx": "^0.18.5"
   }
 }

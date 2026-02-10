@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useMemberAuthStore } from '@/stores/memberAuth' // 引入 Store
 import { useAdminAuthStore } from '@/stores/adminAuth' // 引入 Store
 
@@ -10,9 +10,9 @@ import RecRentUserComplete from '@/components/rec/RecRentUserComplete.vue'
 import RecRentUserRecord from '@/components/rec/RecRentUserRecord.vue'
 
 const route = useRoute()
+const router = useRouter()
 const memberAuthStore = useMemberAuthStore() // 初始化 Store
 const adminAuthStore = useAdminAuthStore() // 初始化 Store
-
 // --- 1. 狀態定義 (State Definitions) ---
 // [修正] 根據路由參數初始化 activeView，避免預設 'order' 導致 RecRentUserOrder 在歸還模式下被錯誤掛載
 // 這樣可以防止進入歸還頁面時，因為先渲染了租借頁面而觸發「有未歸還訂單」的防呆檢查
@@ -128,6 +128,7 @@ const recordRoute = computed(() => {
         <!-- [修改] 改用 currentSpotId，這樣即使 URL 暫時沒有 query，只要 Pinia 有值也能顯示 -->
         <rec-rent-user-order v-if="currentSpotId" :spot-id="String(currentSpotId)" />
         <div v-else class="alert alert-info">請先至「站點地圖」選擇一個租借站點。</div>
+        <router-link to="/SearchSpot" class="btn btn-primary">前往地圖</router-link>
       </div>
       <div v-if="activeView === 'complete'" class="view-section">
         <rec-rent-user-complete />

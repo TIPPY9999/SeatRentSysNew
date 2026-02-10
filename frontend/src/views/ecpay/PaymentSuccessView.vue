@@ -33,7 +33,7 @@ onMounted(() => {
       if (window.opener) {
         window.close();
       }
-    }, 1500);
+    }, 2500);
   };
 
   notifyAndClose();

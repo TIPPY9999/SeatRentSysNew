@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, nextTick, computed } from 'vue'
-import { LocationFilled } from '@element-plus/icons-vue'
+import { LocationFilled, Camera } from '@element-plus/icons-vue'
+import { Html5Qrcode } from 'html5-qrcode'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 import { useMemberAuthStore } from '@/stores/memberAuth'
@@ -11,7 +12,8 @@ import { useAdminAuthStore } from '@/stores/adminAuth'
 const props = defineProps({
   spotId: {
     type: String,
-    required: true,
+    required: false,
+    default: '',
   },
 })
 
@@ -28,8 +30,8 @@ const memberName = computed(() => memberAuthStore.member?.memName || '訪客')
 const router = useRouter()
 
 // --- 1. 組態設定 ---
-const center = ref({ lat: 23.973875, lng: 120.982025 })
-const zoom = ref(8)
+const center = ref({ lat: 24.973875, lng: 121.382025 })
+const zoom = ref(10)
 const backendApiUrl = 'http://localhost:8080/spot/list'
 // 地圖選項設定 (啟用 Google Maps 的完整 UI 控制項)
 const mapOptions = {
@@ -55,6 +57,51 @@ const infoWindow = ref({
   spot: null,
   title: '',
 })
+
+// --- QR Code 掃描相關邏輯 ---
+const isScanning = ref(false)
+let html5QrCode = null
+
+const startScan = () => {
+  isScanning.value = true
+  nextTick(() => {
+    // 確保 DOM 元素已渲染
+    html5QrCode = new Html5Qrcode("reader")
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } }
+    
+    // 優先使用後置鏡頭
+    html5QrCode.start(
+      { facingMode: "environment" }, 
+      config, 
+      onScanSuccess, 
+      (errorMessage) => {
+        // 掃描過程中的錯誤通常忽略，避免 log 洗版
+      }
+    ).catch(err => {
+      console.error("啟動鏡頭失敗", err)
+      alert("無法啟動鏡頭，請確認您使用的是 HTTPS 連線並已授權相機權限。")
+      isScanning.value = false
+    })
+  })
+}
+
+const onScanSuccess = (decodedText, decodedResult) => {
+  console.log(`掃描成功: ${decodedText}`, decodedResult)
+  searchQuery.value = decodedText // 將結果填入搜尋框
+  stopScan()
+  performSearch() // 自動執行搜尋
+}
+
+const stopScan = () => {
+  if (html5QrCode) {
+    html5QrCode.stop().then(() => {
+      html5QrCode.clear()
+      isScanning.value = false
+    }).catch(err => console.error("停止掃描失敗", err))
+  } else {
+    isScanning.value = false
+  }
+}
 
 // --- 3. 核心邏輯 ---
 
@@ -94,7 +141,7 @@ const initializeMapCenter = () => {
         zoom.value = 12
       },
       (error) => {
-        console.warn(`無法獲取地理位置: ${error.message}。將使用預設中心點。`)
+        console.warn(`無使用者地理位置: ${error.message}。將使用預設中心點。`)
       },
     )
   } else {
@@ -279,14 +326,17 @@ const handleReportIssue = () => {
 
 // Vue 組件掛載時執行的初始化
 onMounted(() => {
-  initializeMapCenter()
   fetchSpots()
+  initializeMapCenter()
 })
 </script>
 
 <template>
+  
   <div class="map-container-wrapper">
-    <!-- 地點搜尋列 -->
+    <!-- 地點搜尋列 --><button class="search-button scan-btn" @click="startScan" title="掃描 QR Code">
+        <el-icon :size="20"><Camera /></el-icon>
+      </button>
     <div class="search-bar-container">
       <GMapAutocomplete
         @place_changed="onPlaceChanged"
@@ -303,6 +353,7 @@ onMounted(() => {
           @keyup.enter="performSearch"
         />
       </GMapAutocomplete>
+      
       <button class="search-button" @click="performSearch" title="搜尋">
         <el-icon :size="20"><LocationFilled /></el-icon>
       </button>
@@ -332,7 +383,6 @@ onMounted(() => {
       <GMapMarker v-if="searchResultMarker" :key="'search-result'" :position="searchResultMarker" />
 
       <GMapInfoWindow
-        :header-disabled
         :opened="infoWindow.opened"
         :position="infoWindow.position"
         :options="{ pixelOffset: { width: 0, height: -35 }, headerDisabled: true }"
@@ -406,6 +456,16 @@ onMounted(() => {
         </div>
       </GMapInfoWindow>
     </GMapMap>
+
+    <!-- QR Code 掃描遮罩層 -->
+    <div v-if="isScanning" class="scanner-overlay">
+      <div class="scanner-container">
+        <div id="reader" width="100%"></div>
+        <button class="btn btn-primary close-scan-btn" @click="stopScan">
+          關閉掃描
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -542,8 +602,41 @@ onMounted(() => {
   display: flex;
   align-items: center;
 }
+.scan-btn {
+  background-color: #6c757d; /* 灰色區分 */
+  margin-left: 5px;
+}
 
 .search-button:hover {
   background-color: #0056b3;
+}
+
+/* 掃描介面樣式 */
+.scanner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.scanner-container {
+  width: 90%;
+  max-width: 500px;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.close-scan-btn {
+  margin-top: 15px;
+  width: 100%;
+  font-size: 1.2rem;
 }
 </style>
