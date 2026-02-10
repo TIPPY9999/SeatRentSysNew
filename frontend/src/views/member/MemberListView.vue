@@ -214,7 +214,7 @@ const registrationStats = computed(() => {
       counts[date] = (counts[date] || 0) + 1
     }
   })
-  const sortedDates = Object.keys(counts).sort().slice(-7) // 只取最近 7 筆日期
+  const sortedDates = Object.keys(counts).sort()
   return {
     labels: sortedDates,
     data: sortedDates.map(d => counts[d])
