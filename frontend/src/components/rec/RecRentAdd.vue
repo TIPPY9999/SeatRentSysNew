@@ -126,10 +126,10 @@ const fillDefaultValues = () => {
       <label>歸還時間:</label>
       <input v-model="form.recReturnDT2" type="datetime-local" step="1" />
     </div>
-    <div class="form-group">
+    <!-- <div class="form-group">
       <label>違規記點:</label>
       <input v-model="form.recViolatInt" type="number" value="0" placeholder="數字..." required />
-    </div>
+    </div> -->
     <div class="form-group">
       <label>備註:</label>
       <!-- [修正] 修正綁定錯誤，原本誤綁定到 memName -->

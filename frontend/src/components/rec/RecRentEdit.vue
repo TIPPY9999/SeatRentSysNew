@@ -112,10 +112,10 @@ const backToList = () => {
       <label>費用:</label>
       <input v-model="form.recPayment" type="number" />
     </div>
-    <div class="form-group">
+    <!-- <div class="form-group">
       <label>違規累計:</label>
       <input v-model="form.recViolatInt" type="number" required />
-    </div>
+    </div> -->
     <div class="form-group">
       <label>備註:</label>
       <input v-model="form.recNote" type="text" />

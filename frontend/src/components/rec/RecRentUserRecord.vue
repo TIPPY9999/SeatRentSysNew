@@ -117,6 +117,20 @@ const getStatusClass = (status) => {
   return 'bg-secondary'
 }
 
+// --- (翌帆2026-1-31新增 客服回報用)【新增】處理問題回報：導向 /support/report 並帶入 query 參數 ---
+const handleReportIssue = () => {
+  const spotId = null //
+  const seatId = null // 地圖頁目前沒有特定 seatId，可依需求擴充
+  const recId = null // 地圖頁目前沒有 recId
+
+  const query = {}
+  if (spotId) query.spotId = spotId
+  if (seatId) query.seatId = seatId
+  if (recId) query.recId = recId
+
+  router.push({ path: '/support/report', query })
+}
+
 // --- Lifecycle ---
 onMounted(() => {
   if (memberAuthStore.isLogin) {
@@ -160,10 +174,10 @@ onMounted(() => {
               <span class="ms-2 title-text">訂單編號: {{ rent.recId || rent.recSeqId }}</span>
             </h5>
             <span style="margin: 0 60px"> </span>
-            <span class="ms-2 title-text">座椅編號: SN-25-{{ rent.seatsId }}</span>
+            <span class="ms-2 title-text">座椅編號: {{ rent.serialNumber }}</span>
             <span></span> <span style="margin: 0 40px"> </span>
             <h5 class="mb-0 text-primary fw-bold">
-              <button class="btn btn-sm btn-outline-warning" @click="handleReport(rent)">
+              <button class="btn btn-sm btn-outline-warning" @click="handleReportIssue">
                 <i class="fas fa-exclamation-circle"></i> 問題回報
               </button>
             </h5>
