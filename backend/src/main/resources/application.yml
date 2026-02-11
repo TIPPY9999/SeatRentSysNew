@@ -24,11 +24,11 @@ spring:
               - email
               - profile
 
+  # 本地端資料庫連線設定
   datasource:
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    url: jdbc:sqlserver://localhost:1433;databaseName=SeatRentSysNew;encrypt=false;trustServerCertificate=true
-    username: kang
-    password: 1234
+
+  # JPA 與 Hibernate 設定 (格式修正：原本這段在 datasource 內會讀不到)
   jpa:
     show-sql: true
     hibernate:
@@ -54,3 +54,24 @@ spring:
           auth: true
           starttls:
             enable: true
+
+# Coze Web Chat SDK 配置
+# 用途：提供前端初始化 Coze AI 客服所需的資訊
+#
+# 設定方式：
+# 1. 直接在此檔案設定（開發環境）
+# 2. 使用環境變數（正式環境建議）：
+#    export COZE_BOT_ID="你的Bot ID"
+#    export COZE_PAT="你的Personal Access Token"
+#    export COZE_CHAT_SDK_SRC="SDK來源URL"
+coze:
+  bot-id: ${COZE_BOT_ID:7601738394883883013}
+  pat: ${COZE_PAT:pat_d0EULo0arrZmb8XiINrc935XCzOBNn4C3o36MCLaJZkJ7kVZRoB29CJYFPhz78s3}
+  chat-sdk-src: ${COZE_CHAT_SDK_SRC:}
+  # 新增：診斷用欄位
+  platform-hint: ${COZE_PLATFORM_HINT:coze.com}
+  api-host-hint: ${COZE_API_HOST_HINT:api.coze.com}
+  # 注意：PAT (Personal Access Token) 特性
+  # - 只能在建立時看到一次，之後無法再查看
+  # - 有過期時間，過期後無法延長，需重新建立
+  # - 建議定期更換（例如：每 90 天）
