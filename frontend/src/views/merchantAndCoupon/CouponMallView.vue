@@ -219,6 +219,10 @@ const handleRedeem = async (coupon) => {
        passcode: merchantCode // 傳送商家輸入的核銷碼
       })
 
+      if (response.data.code !== 200) { 
+            throw new Error(response.data.msg || '核銷失敗');
+        }
+
       // 6. 成功提示
       await Swal.fire({
         title: '兌換成功！',
@@ -239,7 +243,7 @@ const handleRedeem = async (coupon) => {
       // 如果核銷碼錯誤，後端應回傳 400 或 403
       Swal.fire(
         '核銷失敗',
-        err.response?.data?.message || '核銷碼錯誤或點數不足',
+        err.response?.data?.message || '核銷碼錯誤',
         'error'
       )
     }

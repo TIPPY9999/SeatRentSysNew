@@ -1,7 +1,11 @@
 //本地網址開放測試
 window.APP_CONFIG = {
   // 👇 每次 Tunnel 重開，只要將後端Tunnel放進來這一行
+<<<<<<< HEAD
+  API_URL: 'https://believed-cancel-preferred-allowing.trycloudflare.com',
+=======
   API_URL: 'https://fraser-crafts-ghz-mustang.trycloudflare.com',
+>>>>>>> 450a6e4586ca520b6ff74072ef8f6f39a9d2655c
 }
 
 //第一次 必須在終端機 輸入winget install --id Cloudflare.cloudflared 輸入Y
