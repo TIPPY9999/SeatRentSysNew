@@ -1,14 +1,12 @@
 <script setup>
-<<<<<<< Updated upstream
-import { ref, onMounted } from 'vue';
-import { RouterLink } from 'vue-router';
-=======
 import { ref, onMounted, computed } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
->>>>>>> Stashed changes
 import axios from 'axios';
+import Swal from 'sweetalert2';
+import { useMemberAuthStore } from '@/stores/memberAuth';
 
 const router = useRouter();
+const memberAuthStore = useMemberAuthStore();
 
 // --- 元件狀態 ---
 const searchKeyword = ref('');
@@ -30,9 +28,6 @@ const steps = [
   { icon: 'fas fa-coffee', title: '享受時光', desc: '專注工作或放鬆，按時計費' },
 ];
 
-<<<<<<< Updated upstream
-// 熱門點位資料
-=======
 /**
  * -------------------------------------------
  * 1. 資料獲取邏輯 (Data Fetching)
@@ -40,29 +35,16 @@ const steps = [
  */
 
 // 熱門點位資料 (由 API 獲取)
->>>>>>> Stashed changes
 const hotSpots = ref([]);
 
 const fetchHotSpots = async () => {
   try {
     const response = await axios.get('http://localhost:8080/api/analyze/hot-spots');
-<<<<<<< Updated upstream
-    // 後端回傳的資料結構包含: spotId, spotName, spotStatus, availableSeats, spotImage, orderCount
-    // 我們需要將其對映到前端使用的欄位名
-=======
->>>>>>> Stashed changes
     hotSpots.value = response.data.map(spot => ({
       id: spot.spotId,
       name: spot.spotName,
       status: spot.spotStatus,
       seats: spot.availableSeats,
-<<<<<<< Updated upstream
-      // 如果後端沒有圖片則給予預設圖
-      image: spot.spotImage ? (spot.spotImage.startsWith('http') ? spot.spotImage : `http://localhost:8080/${spot.spotImage}`) : 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?q=80&w=600&auto=format&fit=crop'
-    }));
-  } catch (error) {
-    console.error('無法取得熱門點位資料:', error);
-=======
       lat: spot.latitude,
       lng: spot.longitude,
       // 圖片處理邏輯
@@ -93,22 +75,13 @@ const fetchAllSpots = async () => {
     }));
   } catch (error) {
     console.error('無法取得所有據點資料:', error);
->>>>>>> Stashed changes
   }
 };
 
 onMounted(() => {
   fetchHotSpots();
-<<<<<<< Updated upstream
-=======
   fetchAllSpots();
 });
-
-/**
- * -------------------------------------------
- * 2. 搜尋與建議列表邏輯 (Search & Suggestions)
- * -------------------------------------------
- */
 
 // 模糊查詢過濾建議
 const filteredSuggestions = computed(() => {
@@ -117,7 +90,6 @@ const filteredSuggestions = computed(() => {
   return allSpots.value
     .filter(s => s.name.toLowerCase().includes(kw))
     .slice(0, 5);
->>>>>>> Stashed changes
 });
 
 const handleSearch = () => {
@@ -188,6 +160,26 @@ const handleMarkerClick = (spot) => {
 // 前往租借操作頁面 (Rec 模組)
 const confirmAndRent = () => {
   if (!selectedSpotForMap.value) return;
+
+  // 檢查是否登入
+  if (!memberAuthStore.isLogin) {
+    Swal.fire({
+      title: '請先登入',
+      text: '預約座位需要先登入會員唷！',
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: '前往登入',
+      cancelButtonText: '先看看',
+      confirmButtonColor: '#4CAF50'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        isMapVisible.value = false;
+        router.push({ name: 'login', query: { redirect: `/rent/order?spotId=${selectedSpotForMap.value.id}` } });
+      }
+    });
+    return;
+  }
+
   isMapVisible.value = false;
   router.push({ 
     name: 'rec-rent-user', 
@@ -303,29 +295,54 @@ const confirmAndRent = () => {
       </section>
     </div>
 
-    <!-- [新設計] 地圖預覽與跳轉確認彈窗 -->
     <el-dialog
       v-model="isMapVisible"
       title="確認租借位址"
-      width="800px"
+      width="850px"
       destroy-on-close
       class="map-preview-dialog"
+      border-radius="16px"
     >
       <div class="map-preview-body">
-        <div v-if="selectedSpotForMap" class="spot-info-mini">
-          <h4>{{ selectedSpotForMap.name }}</h4>
-          <p><i class="fas fa-map-marker-alt"></i> 即將為您跳轉至此點位的租借頁面</p>
+        <div class="spot-selector-header">
+          <div v-if="selectedSpotForMap" class="spot-info-mini animate-fade">
+            <div class="spot-title-row">
+              <span class="spot-icon-bg"><i class="fas fa-chair"></i></span>
+              <div class="spot-text-content">
+                <h4>{{ selectedSpotForMap.name }}</h4>
+                <p><i class="fas fa-map-marker-alt"></i> 即將為您跳轉至此點位的租借頁面</p>
+              </div>
+              <div class="spot-stats-mini">
+                <span class="stat-item"><i class="fas fa-couch"></i> {{ selectedSpotForMap.seats }} 位可用</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="spot-info-mini placeholder animate-fade">
+            <div class="spot-title-row">
+              <span class="spot-icon-bg gray"><i class="fas fa-search-location"></i></span>
+              <div class="spot-text-content">
+                <h4>請選擇附近的站點</h4>
+                <p><i class="fas fa-info-circle"></i> 點擊下方地圖上的標記以選擇租借點</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div v-else-if="isSearchTriggered" class="spot-info-mini">
-          <h4>請選擇附近的站點</h4>
-          <p><i class="fas fa-info-circle"></i> 點擊地圖上的標記以選擇租借點</p>
-        </div>
-        <div class="map-iframe-container">
+
+        <div class="map-container-wrapper">
           <GMapMap
             :center="mapCenter"
             :zoom="mapZoom"
-            :options="{ disableDefaultUI: true, zoomControl: true }"
-            style="width: 100%; height: 400px; border-radius: 12px;"
+            :options="{ 
+              disableDefaultUI: false, 
+              zoomControl: true, 
+              mapTypeControl: false,
+              streetViewControl: false,
+              fullscreenControl: true,
+              styles: [
+                { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }
+              ]
+            }"
+            style="width: 100%; height: 450px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
           >
             <GMapMarker
               v-for="spot in allSpots"
@@ -333,16 +350,38 @@ const confirmAndRent = () => {
               :position="{ lat: spot.lat, lng: spot.lng }"
               :clickable="true"
               @click="handleMarkerClick(spot)"
-              :icon="selectedSpotForMap && selectedSpotForMap.id === spot.id ? 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'"
-            />
+              :icon="selectedSpotForMap && selectedSpotForMap.id === spot.id 
+                ? 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' 
+                : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'"
+            >
+              <GMapInfoWindow :opened="selectedSpotForMap && selectedSpotForMap.id === spot.id">
+                <div class="map-info-window">
+                  <h6>{{ spot.name }}</h6>
+                  <p>剩餘 {{ spot.seats }} 個座位</p>
+                  <span class="badge" :class="spot.status === '營運中' ? 'badge-success' : 'badge-danger'">
+                    {{ spot.status }}
+                  </span>
+                </div>
+              </GMapInfoWindow>
+            </GMapMarker>
           </GMapMap>
         </div>
       </div>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="isMapVisible = false">返回</el-button>
-          <el-button type="success" @click="confirmAndRent" class="confirm-btn">
-            確認並開始租借 <i class="fas fa-check"></i>
+          <div class="login-hint" v-if="!memberAuthStore.isLogin && selectedSpotForMap">
+            <i class="fas fa-lightbulb"></i> 登入後可享受更快速的租借體驗
+          </div>
+          <el-button @click="isMapVisible = false" round>返回瀏覽</el-button>
+          <el-button 
+            type="success" 
+            @click="confirmAndRent" 
+            class="confirm-btn" 
+            :disabled="!selectedSpotForMap"
+            round 
+            block
+          >
+            {{ selectedSpotForMap ? '確認並開始租借' : '請選擇站點' }} <i class="fas fa-chevron-right ml-2"></i>
           </el-button>
         </div>
       </template>
@@ -409,9 +448,35 @@ const confirmAndRent = () => {
 .card-link:hover { gap: 8px; }
 
 /* 地圖預覽彈窗 */
-.spot-info-mini h4 { margin: 0 0 5px; font-size: 1.25rem; color: #2c3e50; }
-.spot-info-mini p { margin: 0 0 15px; color: #7f8c8d; font-size: 0.9rem; }
-.confirm-btn { padding: 12px 30px; font-size: 1.1rem; font-weight: 600; }
+.map-preview-dialog :deep(.el-dialog__header) { border-bottom: 1px solid #f0f2f5; margin-right: 0; padding-bottom: 20px; }
+.map-preview-dialog :deep(.el-dialog__body) { padding: 0; }
+.spot-selector-header { padding: 20px 25px; background: #fafafa; }
+.spot-info-mini { background: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.spot-info-mini.placeholder { background: transparent; box-shadow: none; border: 2px dashed #e4e7ed; }
+.spot-title-row { display: flex; align-items: center; gap: 15px; }
+.spot-icon-bg { width: 45px; height: 45px; background: #e8f5e9; color: #4CAF50; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.spot-icon-bg.gray { background: #f4f4f5; color: #909399; }
+.spot-text-content { flex: 1; }
+.spot-info-mini h4 { margin: 0 0 4px; font-size: 1.25rem; color: #2c3e50; font-weight: 700; }
+.spot-info-mini p { margin: 0; color: #7f8c8d; font-size: 0.9rem; }
+.spot-stats-mini { display: flex; gap: 10px; }
+.stat-item { background: #f0f9eb; color: #67c23a; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+
+.map-container-wrapper { padding: 15px 25px 25px; }
+.map-info-window { padding: 5px; min-width: 120px; }
+.map-info-window h6 { margin: 0 0 5px; font-weight: 700; color: #333; }
+.map-info-window p { margin: 0 0 8px; font-size: 0.85rem; color: #666; }
+.badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; }
+.badge-success { background: #67c23a; color: white; }
+.badge-danger { background: #f56c6c; color: white; }
+
+.dialog-footer { display: flex; align-items: center; justify-content: flex-end; gap: 15px; padding: 0 10px; }
+.login-hint { font-size: 0.85rem; color: #e6a23c; margin-right: auto; display: flex; align-items: center; gap: 6px; }
+.confirm-btn { padding: 12px 30px; font-size: 1.1rem; font-weight: 600; min-width: 200px; box-shadow: 0 4px 12px rgba(103, 194, 58, 0.3); }
+.confirm-btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(103, 194, 58, 0.4); }
+
+.animate-fade { animation: fadeIn 0.4s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
 @keyframes kenBurns { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
 .animate-up { opacity: 0; transform: translateY(30px); animation: fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }

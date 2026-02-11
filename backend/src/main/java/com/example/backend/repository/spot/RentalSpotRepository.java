@@ -50,12 +50,8 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
     List<SpotMonitor> getSpotRealtimeStatus();
 
     /**
-<<<<<<< Updated upstream
      * 獲取熱門點位 (依據租借次數排序，取前 4 名)
      * 用於首頁 HomeView 呈現。
-=======
-     * 獲取熱門點位 (依據租借次數排序)
->>>>>>> Stashed changes
      */
     @Query(value = """
                 SELECT TOP 4
@@ -64,11 +60,8 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
                     s.spotStatus,
                     COALESCE(curr.availableCount, 0) AS availableSeats,
                     s.spotImage,
-<<<<<<< Updated upstream
-=======
                     s.latitude,
                     s.longitude,
->>>>>>> Stashed changes
                     COUNT(r.recId) AS orderCount
                 FROM renting_Spot s
                 LEFT JOIN (
@@ -79,11 +72,7 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
                 ) curr ON curr.spotId = s.spotId
                 LEFT JOIN recRent r ON r.spotIdRent = s.spotId
                 WHERE s.spotStatus = N'營運中'
-<<<<<<< Updated upstream
-                GROUP BY s.spotId, s.spotName, s.spotStatus, curr.availableCount, s.spotImage
-=======
                 GROUP BY s.spotId, s.spotName, s.spotStatus, curr.availableCount, s.spotImage, s.latitude, s.longitude
->>>>>>> Stashed changes
                 ORDER BY orderCount DESC
             """, nativeQuery = true)
     List<HotSpot> getHotSpots();
