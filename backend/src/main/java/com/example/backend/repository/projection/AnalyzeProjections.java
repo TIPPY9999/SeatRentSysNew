@@ -33,4 +33,19 @@ public class AnalyzeProjections {
 
         Integer getCount();
     }
+
+    // 熱門點位統計 (首頁使用)
+    public interface HotSpot {
+        Integer getSpotId();
+
+        String getSpotName();
+
+        String getSpotStatus();
+
+        Integer getAvailableSeats();
+
+        String getSpotImage();
+
+        Integer getOrderCount();
+    }
 }

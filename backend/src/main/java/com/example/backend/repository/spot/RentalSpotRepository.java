@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import com.example.backend.model.spot.RentalSpot;
 import com.example.backend.repository.projection.AnalyzeProjections.SpotCountByCity;
 import com.example.backend.repository.projection.AnalyzeProjections.SpotMonitor;
+import com.example.backend.repository.projection.AnalyzeProjections.HotSpot;
 
 @Repository // [註解] 標記這是據點資料的倉庫管理員
 public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>, JpaSpecificationExecutor<RentalSpot> {
@@ -70,4 +71,30 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
                 WHERE s.spotStatus = N'營運中'
             """, nativeQuery = true)
     List<SpotMonitor> getSpotRealtimeStatus();
+
+    /**
+     * 獲取熱門點位 (依據租借次數排序，取前 4 名)
+     * 用於首頁 HomeView 呈現。
+     */
+    @Query(value = """
+                SELECT TOP 4
+                    s.spotId,
+                    s.spotName,
+                    s.spotStatus,
+                    COALESCE(curr.availableCount, 0) AS availableSeats,
+                    s.spotImage,
+                    COUNT(r.recId) AS orderCount
+                FROM renting_Spot s
+                LEFT JOIN (
+                    SELECT spotId, COUNT(*) AS availableCount
+                    FROM seats
+                    WHERE seatsStatus = N'啟用' AND spotId IS NOT NULL
+                    GROUP BY spotId
+                ) curr ON curr.spotId = s.spotId
+                LEFT JOIN recRent r ON r.spotIdRent = s.spotId
+                WHERE s.spotStatus = N'營運中'
+                GROUP BY s.spotId, s.spotName, s.spotStatus, curr.availableCount, s.spotImage
+                ORDER BY orderCount DESC
+            """, nativeQuery = true)
+    List<HotSpot> getHotSpots();
 }

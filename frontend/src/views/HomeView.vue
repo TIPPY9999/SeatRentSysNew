@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
+import axios from 'axios';
 
 // --- 模擬資料 ---
 const searchKeyword = ref('');
@@ -16,12 +17,29 @@ const steps = [
 ];
 
 // 熱門點位資料
-const hotSpots = ref([
-  { id: 1, name: '信義誠品閱讀區', status: '營運中', seats: 12, image: 'https://images.unsplash.com/photo-1507842217121-9e962835d771?q=80&w=600&auto=format&fit=crop' },
-  { id: 2, name: '大安森林公園共享亭', status: '營運中', seats: 5, image: 'https://images.unsplash.com/photo-1493934558415-9d19f0b2b4d2?q=80&w=600&auto=format&fit=crop' },
-  { id: 3, name: '松山文創園區', status: '滿位中', seats: 0, image: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=600&auto=format&fit=crop' },
-  { id: 4, name: '內湖科技園區 Hub', status: '營運中', seats: 8, image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop' },
-]);
+const hotSpots = ref([]);
+
+const fetchHotSpots = async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/api/analyze/hot-spots');
+    // 後端回傳的資料結構包含: spotId, spotName, spotStatus, availableSeats, spotImage, orderCount
+    // 我們需要將其對映到前端使用的欄位名
+    hotSpots.value = response.data.map(spot => ({
+      id: spot.spotId,
+      name: spot.spotName,
+      status: spot.spotStatus,
+      seats: spot.availableSeats,
+      // 如果後端沒有圖片則給予預設圖
+      image: spot.spotImage ? (spot.spotImage.startsWith('http') ? spot.spotImage : `http://localhost:8080/${spot.spotImage}`) : 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?q=80&w=600&auto=format&fit=crop'
+    }));
+  } catch (error) {
+    console.error('無法取得熱門點位資料:', error);
+  }
+};
+
+onMounted(() => {
+  fetchHotSpots();
+});
 
 const handleSearch = () => {
   // 這裡可以實作跳轉到搜尋頁並帶入參數

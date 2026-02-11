@@ -34,7 +34,7 @@ const displayUID = computed(() => {
 })
 
 /**
- * ✅ 產品化：點擊 UID 的導頁策略
+ * 產品化：點擊 UID 的導頁策略
  * - 未登入：不動作（也可改成導去 /login）
  * - 管理員登入：導去 /admin
  * - 會員登入：導去 /profile
@@ -55,7 +55,7 @@ const handleUidClick = () => {
 }
 
 /**
- * ✅ 產品化：讓游標跟可點性一致
+ *  產品化：讓游標跟可點性一致
  */
 const uidClickable = computed(() => true)
 const uidCursor = computed(() => (uidClickable.value ? 'pointer' : 'default'))
