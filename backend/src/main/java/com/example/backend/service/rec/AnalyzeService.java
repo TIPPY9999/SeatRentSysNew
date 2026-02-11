@@ -42,6 +42,10 @@ public class AnalyzeService {
         // 對應前端圖表：長條圖 (Bar Chart)
         data.put("durationStats", recRentAnalyzeRepository.getDurationStats(startDate, endDate));
 
+        // 熱門點位 (來自 RentalSpotRepository)
+        // 用於首頁推薦
+        data.put("hotSpots", rentalSpotRepository.getHotSpots());
+
         return data;
     }
 }

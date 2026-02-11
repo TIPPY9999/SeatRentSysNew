@@ -23,13 +23,13 @@ public class AnalyzeController {
     /**
      * 取得儀表板統計數據
      * API: GET /api/analyze/stats
-     * 回傳: JSON 物件，包含 cityDistribution, spotMonitor, hourlyHeatMap, durationStats
+     * 回傳: JSON 物件，包含 cityDistribution, spotMonitor, hourlyHeatMap, durationStats,
+     * hotSpots
      */
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getAnalyzeStats(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        // 將接收到的日期參數傳遞給 Service
         Map<String, Object> stats = analyzeService.getAnalyzeStats(startDate, endDate);
         return ResponseEntity.ok(stats);
     }
@@ -40,9 +40,17 @@ public class AnalyzeController {
      */
     @GetMapping("/spot-monitor")
     public ResponseEntity<Object> getSpotMonitor() {
-        // 監控頁面通常不需要日期篩選，傳入 null
         Map<String, Object> stats = analyzeService.getAnalyzeStats(null, null);
-        // DispatchMonitor.vue 期望直接收到 List<SpotMonitor>
         return ResponseEntity.ok(stats.get("spotMonitor"));
+    }
+
+    /**
+     * 取得熱門點位數據（專供首頁使用）
+     * API: GET /api/analyze/hot-spots
+     */
+    @GetMapping("/hot-spots")
+    public ResponseEntity<Object> getHotSpots() {
+        Map<String, Object> stats = analyzeService.getAnalyzeStats(null, null);
+        return ResponseEntity.ok(stats.get("hotSpots"));
     }
 }
