@@ -52,4 +52,21 @@ public class AnalyzeProjections {
 
         Integer getOrderCount();
     }
+
+    // [新增] 站點與即時座位數 (地圖標記使用)
+    public interface SpotWithSeats {
+        Integer getSpotId();
+
+        String getSpotName();
+
+        String getSpotStatus();
+
+        Double getLatitude();
+
+        Double getLongitude();
+
+        String getSpotImage();
+
+        Integer getAvailableSeats();
+    }
 }

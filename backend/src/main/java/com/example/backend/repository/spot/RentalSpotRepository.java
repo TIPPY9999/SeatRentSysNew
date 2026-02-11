@@ -43,6 +43,10 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
                     SELECT spotId, COUNT(*) AS availableCount
                     FROM seats
                     WHERE seatsStatus = N'啟用' AND spotId IS NOT NULL
+                    -- 排除目前正在租借中的座位
+                    AND seatsId NOT IN (
+                        SELECT CAST(seatsId AS INT) FROM recRent WHERE recStatus = N'租借中'
+                    )
                     GROUP BY spotId
                 ) curr ON curr.spotId = s.spotId
                 WHERE s.spotStatus = N'營運中'
@@ -68,6 +72,10 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
                     SELECT spotId, COUNT(*) AS availableCount
                     FROM seats
                     WHERE seatsStatus = N'啟用' AND spotId IS NOT NULL
+                    -- 排除目前正在租借中的座位
+                    AND seatsId NOT IN (
+                        SELECT CAST(seatsId AS INT) FROM recRent WHERE recStatus = N'租借中'
+                    )
                     GROUP BY spotId
                 ) curr ON curr.spotId = s.spotId
                 LEFT JOIN recRent r ON r.spotIdRent = s.spotId
@@ -76,4 +84,31 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
                 ORDER BY orderCount DESC
             """, nativeQuery = true)
     List<HotSpot> getHotSpots();
+
+    /**
+     * [新增] 獲取所有營運中的站點及其即時座位數
+     * 用於首頁地圖標記呈現。
+     */
+    @Query(value = """
+                SELECT
+                    s.spotId,
+                    s.spotName,
+                    s.spotStatus,
+                    s.latitude,
+                    s.longitude,
+                    s.spotImage,
+                    COALESCE(curr.availableCount, 0) AS availableSeats
+                FROM renting_Spot s
+                LEFT JOIN (
+                    SELECT spotId, COUNT(*) AS availableCount
+                    FROM seats
+                    WHERE seatsStatus = N'啟用' AND spotId IS NOT NULL
+                    AND seatsId NOT IN (
+                        SELECT CAST(seatsId AS INT) FROM recRent WHERE recStatus = N'租借中'
+                    )
+                    GROUP BY spotId
+                ) curr ON curr.spotId = s.spotId
+                WHERE s.spotStatus = N'營運中'
+            """, nativeQuery = true)
+    List<com.example.backend.repository.projection.AnalyzeProjections.SpotWithSeats> findAllSpotsWithSeatCount();
 }

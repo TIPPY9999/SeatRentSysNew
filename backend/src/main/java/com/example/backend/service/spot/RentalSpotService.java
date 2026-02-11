@@ -149,4 +149,9 @@ public class RentalSpotService implements IRentalSpotService {
             return map;
         }).collect(Collectors.toList());
     }
+
+    @Override
+    public List<com.example.backend.repository.projection.AnalyzeProjections.SpotWithSeats> selectAllWithSeatCount() {
+        return rentalSpotRepository.findAllSpotsWithSeatCount();
+    }
 }

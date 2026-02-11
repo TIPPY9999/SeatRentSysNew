@@ -43,6 +43,15 @@ public class RentalSpotController {
     }
 
     /**
+     * [新增] 查詢所有據點及其即時座位數 (GET /api/spot/list-with-seats)
+     * 專供首頁地圖與搜尋呈現使用，包含即時可用座位資訊。
+     */
+    @GetMapping("/list-with-seats")
+    public List<com.example.backend.repository.projection.AnalyzeProjections.SpotWithSeats> getAllSpotsWithSeats() {
+        return rentalSpotService.selectAllWithSeatCount();
+    }
+
+    /**
      * 根據 ID 查詢單一據點 (GET /api/spots/{id})
      * (原 SpotOneController)
      * 優化：使用 @PathVariable，讓 URL 更語意化。

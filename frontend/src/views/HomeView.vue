@@ -24,7 +24,7 @@ const hotTags = ['台北車站', '信義區', '圖書館', '咖啡廳'];
 // 流程步驟
 const steps = [
   { icon: 'fas fa-map-marker-alt', title: '尋找座位', desc: '透過地圖快速找到附近的空位' },
-  { icon: 'fas fa-qrcode', title: '掃碼入座', desc: '掃描桌上 QR Code 即可開始使用' },
+  { icon: 'fas fa-calendar-alt', title: '線上預約', desc: '選取心儀座位並完成線上預約' },
   { icon: 'fas fa-coffee', title: '享受時光', desc: '專注工作或放鬆，按時計費' },
 ];
 
@@ -64,7 +64,7 @@ const fetchHotSpots = async () => {
 
 const fetchAllSpots = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/spot/list');
+    const response = await axios.get('http://localhost:8080/spot/list-with-seats');
     allSpots.value = response.data.map(spot => ({
       id: spot.spotId,
       name: spot.spotName,

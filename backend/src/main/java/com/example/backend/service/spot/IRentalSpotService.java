@@ -23,4 +23,6 @@ public interface IRentalSpotService {
 
     public List<Map<String, Object>> findAllMerchantsForSelect();
 
+    public List<com.example.backend.repository.projection.AnalyzeProjections.SpotWithSeats> selectAllWithSeatCount();
+
 }
