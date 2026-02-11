@@ -24,15 +24,11 @@ spring:
               - email
               - profile
 
-  #  上傳圖片檔案大小限制（multipart）
-  servlet:
-    multipart:
-      max-file-size: 10MB # 單一檔案最大 10MB
-      max-request-size: 20MB # 同一次請求(多檔)總大小最大 20MB
-
+  # 本地端資料庫連線設定
   datasource:
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
 
+  # JPA 與 Hibernate 設定 (格式修正：原本這段在 datasource 內會讀不到)
   jpa:
     show-sql: true
     hibernate:
