@@ -373,7 +373,7 @@ onMounted(fetchMembers)
             <td class="col-info">
               <div class="info-cell">
                 <div class="list-avatar-wrap">
-                  <img :src="m.memImage ? `/members/${m.memImage}` : '/members/default.png'" />
+                  <img :src="m.memImage ? '/members/' + m.memImage : '/members/default.png'" />
                 </div>
                 <div class="user-text">
                   <span class="user-name">{{ m.memName }}</span>
