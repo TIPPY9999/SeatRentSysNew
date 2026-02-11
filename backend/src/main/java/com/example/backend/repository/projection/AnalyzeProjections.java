@@ -46,6 +46,10 @@ public class AnalyzeProjections {
 
         String getSpotImage();
 
+        Double getLatitude();
+
+        Double getLongitude();
+
         Integer getOrderCount();
     }
 }
