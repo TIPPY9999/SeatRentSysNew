@@ -1,5 +1,48 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+
+const memberList = ref([])
+const spotList = ref([])
+const seatList = ref([]) // [新增] 座位列表
+
+// [新增] 下拉選單顯示狀態
+const showMemId = ref(false)
+const showMemName = ref(false)
+const showSpotRentId = ref(false)
+const showSpotRentName = ref(false)
+const showSpotReturnId = ref(false)
+const showSpotReturnName = ref(false)
+const showSeatId = ref(false)
+
+const fetchMembers = async () => {
+  try {
+    const res = await axios.get('http://localhost:8080/api/members')
+    memberList.value = res.data
+  } catch (err) {
+    console.error('無法載入會員列表:', err)
+  }
+}
+
+const fetchSpots = async () => {
+  try {
+    const res = await axios.get('http://localhost:8080/spot/list')
+    spotList.value = res.data
+  } catch (err) {
+    console.error('無法載入據點列表:', err)
+  }
+}
+
+// [新增] 載入座位列表
+const fetchSeats = async () => {
+  try {
+    const res = await axios.get('http://localhost:8080/seats')
+    seatList.value = res.data
+  } catch (err) {
+    console.error('無法載入座位列表:', err)
+  }
+}
 
 // 1. 定義 emit 事件
 const emit = defineEmits(['save-rent', 'cancel'])
@@ -12,8 +55,11 @@ const createInitialForm = () => ({
   memName: '',
   seatsId: '',
   recStatus: '租借中',
+  recStatus: '租借中',
   spotIdRent: '',
+  spotRentName: '', // [新增] 用於顯示/輸入
   spotIdReturn: '',
+  spotReturnName: '', // [新增] 用於顯示/輸入
   recRentDT2: '',
   recReturnDT2: '',
   recViolatInt: 0,
@@ -23,6 +69,114 @@ const createInitialForm = () => ({
 // 3. 使用 ref 來儲存表單資料
 const form = ref(createInitialForm())
 const formTitle = '新增訂單' // 標題是固定的
+
+// 連動邏輯
+
+
+// [新增] 過濾邏輯 (Computed)
+import { computed } from 'vue'
+
+const filteredMemIds = computed(() => {
+  if (!form.value.memId) return memberList.value
+  return memberList.value.filter(m => String(m.memId).includes(String(form.value.memId)))
+})
+
+const filteredMemNames = computed(() => {
+  if (!form.value.memName) return memberList.value
+  return memberList.value.filter(m => m.memName.includes(form.value.memName))
+})
+
+const filteredSpotRentIds = computed(() => {
+  if (!form.value.spotIdRent) return spotList.value
+  return spotList.value.filter(s => String(s.spotId).includes(String(form.value.spotIdRent)))
+})
+
+const filteredSpotRentNames = computed(() => {
+  if (!form.value.spotRentName) return spotList.value
+  return spotList.value.filter(s => s.spotName.includes(form.value.spotRentName))
+})
+
+const filteredSpotReturnIds = computed(() => {
+  if (!form.value.spotIdReturn) return spotList.value
+  return spotList.value.filter(s => String(s.spotId).includes(String(form.value.spotIdReturn)))
+})
+
+const filteredSpotReturnNames = computed(() => {
+  if (!form.value.spotReturnName) return spotList.value
+  return spotList.value.filter(s => s.spotName.includes(form.value.spotReturnName))
+})
+
+// [新增] 可用座位過濾：需符合「所在站點 = 租借站點」且「狀態 = 可使用(或類似狀態)」
+// 若後端座位狀態 definition: '可用', '使用中', '維修中'
+const filteredSeats = computed(() => {
+  let list = seatList.value
+  
+  // 1. 先篩選出屬於「目前租借站點」的座位
+  // if (form.value.spotIdRent) {
+  //   list = list.filter(s => s.spotId == form.value.spotIdRent)
+  // }
+  
+  // 2. 再根據輸入的 seatsId 進行模糊搜尋 (包含 ID, 名稱, 序號)
+  if (form.value.seatsId) {
+    const term = String(form.value.seatsId).toLowerCase()
+    list = list.filter(s => {
+      const id = String(s.seatsId).toLowerCase()
+      const name = (s.seatsName || '').toLowerCase()
+      const serial = (s.serialNumber || '').toLowerCase()
+      return id.includes(term) || name.includes(term) || serial.includes(term)
+    })
+  }
+  
+  // 3. 過濾掉非「可租借」狀態的座位 (可選)
+  list = list.filter(s => s.seatsStatus === '啟用') 
+  
+  return list
+})
+
+// [新增] 選擇處理函式
+const selectMember = (member) => {
+  form.value.memId = member.memId
+  form.value.memName = member.memName
+  showMemId.value = false
+  showMemName.value = false
+}
+
+const selectSpotRent = (spot) => {
+  form.value.spotIdRent = spot.spotId
+  form.value.spotRentName = spot.spotName
+  showSpotRentId.value = false
+  showSpotRentName.value = false
+}
+
+const selectSpotReturn = (spot) => {
+  form.value.spotIdReturn = spot.spotId
+  form.value.spotReturnName = spot.spotName
+  showSpotReturnId.value = false
+  showSpotReturnName.value = false
+}
+
+const selectSeat = (seat) => {
+  form.value.seatsId = seat.seatsId // 注意型別轉換若需要
+  showSeatId.value = false
+}
+
+// 延遲隱藏 (避免點擊選項前 input blur 導致選單消失)
+const delayHide = (refVar) => {
+  setTimeout(() => {
+    refVar.value = false
+  }, 200)
+}
+
+// [新增] 手動切換下拉選單顯示
+const toggleDropdown = (refVar) => {
+  refVar.value = !refVar.value
+}
+
+onMounted(() => {
+  fetchMembers()
+  fetchSpots()
+  fetchSeats()
+})
 
 // 4. 清空/重設表單的函式
 const resetForm = () => {
@@ -89,18 +243,64 @@ const fillDefaultValues = () => {
       <label>訂單編號(recId):</label>
       <input v-model="form.recId" type="text" placeholder="必須..." />
     </div> -->
-    <div class="form-group">
-      <label>會員編號(memId):</label>
-      <input v-model="form.memId" type="number" placeholder="必須..." required />
+    <div class="form-group relative">
+      <label>會員編號:</label>
+      <input
+        v-model="form.memId"
+        type="number"
+        placeholder="必須、數字..."
+        required
+        @focus="showMemId = true"
+        @blur="delayHide(showMemId)"
+        @input="showMemId = true"
+        @keydown.esc="showMemId = false"
+      />
+      <span class="toggle-icon" @mousedown.prevent="toggleDropdown(showMemId)">▼</span>
+      <ul v-if="showMemId && filteredMemIds.length" class="custom-dropdown">
+        <li v-for="m in filteredMemIds" :key="m.memId" @mousedown="selectMember(m)">
+          {{ m.memId }} - {{ m.memName }}
+        </li>
+      </ul>
     </div>
-    <div class="form-group">
+    <div class="form-group relative">
       <label>會員姓名:</label>
-      <input v-model="form.memName" type="text" placeholder="自動帶入..." disabled/>
+      <input
+        v-model="form.memName"
+        type="text"
+        placeholder="或輸入姓名快速搜尋..."
+        @focus="showMemName = true"
+        @blur="delayHide(showMemName)"
+        @input="showMemName = true"
+        @keydown.esc="showMemName = false"
+      />
+      <span class="toggle-icon" @mousedown.prevent="toggleDropdown(showMemName)">▼</span>
+      <ul v-if="showMemName && filteredMemNames.length" class="custom-dropdown">
+        <li v-for="m in filteredMemNames" :key="m.memId" @mousedown="selectMember(m)">
+          {{ m.memId }} - {{ m.memName }}
+        </li>
+      </ul>
     </div>
-    <div class="form-group">
+    
+    <div class="form-group relative">
       <label>座椅編號:</label>
-      <input v-model="form.seatsId" type="text" placeholder="必須..." required />
+      <input
+        v-model="form.seatsId"
+        type="text"
+        placeholder="必須..."
+        required
+        @focus="showSeatId = true"
+        @blur="delayHide(showSeatId)"
+        @input="showSeatId = true"
+        @keydown.esc="showSeatId = false"
+      />
+      <span class="toggle-icon" @mousedown.prevent="toggleDropdown(showSeatId)">▼</span>
+       <ul v-if="showSeatId && filteredSeats.length" class="custom-dropdown">
+        <li v-for="s in filteredSeats" :key="s.seatsId" @mousedown="selectSeat(s)">
+          {{ s.seatsName }} ( {{ s.serialNumber}} )
+        </li>
+      </ul>
     </div>
+
     <div class="form-group">
       <label>訂單狀態:</label>
       <select v-model="form.recStatus">
@@ -110,13 +310,80 @@ const fillDefaultValues = () => {
         <option value="已取消">已取消</option>
       </select>
     </div>
-    <div class="form-group">
+    
+    <div class="form-group relative">
       <label>租借站點編號:</label>
-      <input v-model="form.spotIdRent" type="number" placeholder="必須、數字..." required />
+      <input
+        v-model="form.spotIdRent"
+        type="number"
+        placeholder="必須、數字..."
+        required
+        @focus="showSpotRentId = true"
+        @blur="delayHide(showSpotRentId)"
+        @input="showSpotRentId = true"
+        @keydown.esc="showSpotRentId = false"
+      />
+      <span class="toggle-icon" @mousedown.prevent="toggleDropdown(showSpotRentId)">▼</span>
+      <ul v-if="showSpotRentId && filteredSpotRentIds.length" class="custom-dropdown">
+        <li v-for="s in filteredSpotRentIds" :key="s.spotId" @mousedown="selectSpotRent(s)">
+          {{ s.spotId }} - {{ s.spotName }}
+        </li>
+      </ul>
     </div>
-    <div class="form-group">
+    <div class="form-group relative">
+      <label>租借站點名稱:</label>
+      <input
+        v-model="form.spotRentName"
+        type="text"
+        placeholder="或輸入名稱快速搜尋..."
+        @focus="showSpotRentName = true"
+        @blur="delayHide(showSpotRentName)"
+        @input="showSpotRentName = true"
+        @keydown.esc="showSpotRentName = false"
+      />
+      <span class="toggle-icon" @mousedown.prevent="toggleDropdown(showSpotRentName)">▼</span>
+      <ul v-if="showSpotRentName && filteredSpotRentNames.length" class="custom-dropdown">
+        <li v-for="s in filteredSpotRentNames" :key="s.spotId" @mousedown="selectSpotRent(s)">
+          {{ s.spotName }} ({{ s.spotId }})
+        </li>
+      </ul>
+    </div>
+    
+    <div class="form-group relative">
       <label>歸還站點編號:</label>
-      <input v-model="form.spotIdReturn" type="number" placeholder="數字..." />
+      <input
+        v-model="form.spotIdReturn"
+        type="number"
+        placeholder="數字..."
+        @focus="showSpotReturnId = true"
+        @blur="delayHide(showSpotReturnId)"
+        @input="showSpotReturnId = true"
+        @keydown.esc="showSpotReturnId = false"
+      />
+      <span class="toggle-icon" @mousedown.prevent="toggleDropdown(showSpotReturnId)">▼</span>
+       <ul v-if="showSpotReturnId && filteredSpotReturnIds.length" class="custom-dropdown">
+        <li v-for="s in filteredSpotReturnIds" :key="s.spotId" @mousedown="selectSpotReturn(s)">
+          {{ s.spotId }} - {{ s.spotName }}
+        </li>
+      </ul>
+    </div>
+    <div class="form-group relative">
+      <label>歸還站點名稱:</label>
+      <input
+        v-model="form.spotReturnName"
+        type="text"
+        placeholder="或輸入名稱快速搜尋..."
+        @focus="showSpotReturnName = true"
+        @blur="delayHide(showSpotReturnName)"
+        @input="showSpotReturnName = true"
+        @keydown.esc="showSpotReturnName = false"
+      />
+      <span class="toggle-icon" @mousedown.prevent="toggleDropdown(showSpotReturnName)">▼</span>
+       <ul v-if="showSpotReturnName && filteredSpotReturnNames.length" class="custom-dropdown">
+        <li v-for="s in filteredSpotReturnNames" :key="s.spotId" @mousedown="selectSpotReturn(s)">
+          {{ s.spotName }} ({{ s.spotId }})
+        </li>
+      </ul>
     </div>
     <div class="form-group">
       <label>租借時間:</label>
@@ -254,10 +521,54 @@ button:hover {
 }
 
 /* [新增] 小按鈕樣式 */
-.btn-sm {
-  padding: 4px 10px;
+/* [新增] 自訂下拉選單樣式 */
+.relative {
+  position: relative;
+}
+
+.custom-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 180px; /* 配合 label 寬度 */
+  right: 0;
+  background: white;
+  border: 1px solid #c0c4cc;
+  border-radius: 4px;
+  max-height: 200px; /* 約顯示 6 筆 */
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.custom-dropdown li {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #606266;
+  font-size: 14px;
+}
+
+.custom-dropdown li:hover {
+  background-color: #f5f7fa;
+  color: #409eff;
+}
+
+/* [新增] 下拉選單切換圖示 */
+.toggle-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #c0c4cc;
   font-size: 12px;
-  margin-left: 10px;
-  height: auto;
+  transition: color 0.3s;
+  padding: 5px; /* 增加點擊範圍 */
+}
+
+.toggle-icon:hover {
+  color: #409eff;
 }
 </style>

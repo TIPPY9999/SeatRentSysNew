@@ -1,6 +1,7 @@
 package com.example.backend.repository.rec;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import org.springframework.data.jpa.domain.Specification;
@@ -38,7 +39,7 @@ public class RentDetailsSpecs {
             return cb.like(root.get("rentSpotName"), "%" + spotName + "%");
         };
     }
-    
+
     public static Specification<RentDetails> memNameContains(String memName) {
         return (root, query, cb) -> {
             if (!StringUtils.hasText(memName)) {
@@ -69,21 +70,18 @@ public class RentDetailsSpecs {
         };
     }
 
-    public static Specification<RentDetails> hasRentDate(LocalDate rentDate) {
+    public static Specification<RentDetails> isWithinTimeRange(LocalDate startDate, LocalDate endDate) {
         return (root, query, cb) -> {
-            if (rentDate == null) {
+            if (startDate == null || endDate == null) {
                 return cb.conjunction();
             }
-            return cb.between(root.get("recRentDT2"), rentDate.atStartOfDay(), rentDate.atTime(LocalTime.MAX));
-        };
-    }
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
-    public static Specification<RentDetails> hasReturnDate(LocalDate returnDate) {
-        return (root, query, cb) -> {
-            if (returnDate == null) {
-                return cb.conjunction();
-            }
-            return cb.between(root.get("recReturnDT2"), returnDate.atStartOfDay(), returnDate.atTime(LocalTime.MAX));
+            Predicate rentTimeIn = cb.between(root.get("recRentDT2"), startDateTime, endDateTime);
+            Predicate returnTimeIn = cb.between(root.get("recReturnDT2"), startDateTime, endDateTime);
+
+            return cb.or(rentTimeIn, returnTimeIn);
         };
     }
 

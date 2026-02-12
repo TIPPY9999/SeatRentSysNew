@@ -174,7 +174,7 @@ onMounted(() => {
               <span class="ms-2 title-text">訂單編號: {{ rent.recId || rent.recSeqId }}</span>
             </h5>
             <span style="margin: 0 60px"> </span>
-            <span class="ms-2 title-text">座椅編號: {{ rent.serialNumber }}</span>
+           
             <span></span> <span style="margin: 0 40px"> </span>
             <h5 class="mb-0 text-primary fw-bold">
               <button class="btn btn-sm btn-outline-warning" @click="handleReportIssue">
@@ -184,7 +184,11 @@ onMounted(() => {
           </div>
 
           <div class="row mt-2">
+             <span class="ms-2 title-text"> </span>
             <div class="col-md-6">
+              <p class="mb-1">
+                <strong>發票號碼:</strong> {{ rent.recInvoice  }}
+              </p>
               <p class="mb-1">
                 <strong>租借站點:</strong> {{ rent.rentSpotName || rent.spotIdRent }}
               </p>
@@ -193,6 +197,9 @@ onMounted(() => {
               </p>
             </div>
             <div class="col-md-6">
+              <p class="mb-1">
+                <strong>座椅編號:</strong> SN-2026{{ rent.seatsId || '-' }}
+              </p>
               <p class="mb-1">
                 <strong>租借時間:</strong> {{ rent.recRentDT2?.replace('T', ' ') || '-' }}
               </p>

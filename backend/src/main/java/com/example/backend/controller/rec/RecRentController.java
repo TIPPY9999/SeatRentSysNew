@@ -53,18 +53,18 @@ public class RecRentController {
             @RequestParam(required = false) String recStatus,
             @RequestParam(required = false) Integer spotId,
             @RequestParam(required = false) String spotName,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate rentDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate returnDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         // 如果所有參數都為空，則返回所有列表
         if (recId == null && memId == null && memName == null && recStatus == null && spotId == null && spotName == null
-                && rentDate == null && returnDate == null) {
+                && startDate == null && endDate == null) {
             return recDetailService.getAllRec();
         }
 
         // 否則，呼叫 search service
-        return recDetailService.search(recSeqId, recId, memId, memName, recStatus, spotId, spotName, rentDate,
-                returnDate);
+        return recDetailService.search(recSeqId, recId, memId, memName, recStatus, spotId, spotName, startDate,
+                endDate);
     }
 
     // 2. 依訂單PK (recSeqId) 查詢
@@ -73,11 +73,11 @@ public class RecRentController {
         return recDetailService.getRecById(id);
     }
 
-    // 4. 新增訂單 (修改後)
+    // 4. 新增訂單
     @PostMapping("/new") // 2. 將端點改為 /new
     public ResponseEntity<RecRent> create(@RequestBody RecRent recRent) {
         // 3. 在後端控制台打印收到的完整訂單資料
-        System.out.println("後端收到新的訂單請求: " + recRent.toString());
+        System.out.println("新訂單請求: " + recRent.toString());
 
         // recSeqId 會由資料庫自動產生
         // recId 會由資料庫自動計算
@@ -89,7 +89,7 @@ public class RecRentController {
 
         RecRent savedRent = rentRepos.save(recRent);
 
-        // 說明: 租借訂單建立成功後，同步更新該座位的 spotId 為 0 (表示已被租用，不在任何可選地點上)
+        // 租借訂單建立成功後，同步更新該座位的 spotId 為 0 (表示被租用，不在任何可選地點上)
         // 由於整個 Controller 已標記為 @Transactional，此操作將與上面的訂單新增在同一個資料庫交易中，確保資料一致性。
         Integer seatId = Integer.valueOf(savedRent.getSeatsId());
 

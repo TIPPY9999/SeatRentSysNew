@@ -22,6 +22,7 @@ import com.example.backend.model.rec.RentDetails;
 import com.example.backend.repository.rec.RecRentRepository;
 import com.example.backend.repository.rec.RentDetailsRepository;
 import com.example.backend.repository.rec.RentDetailsSpecs;
+import org.springframework.data.domain.Sort;
 
 @Service
 @Transactional
@@ -32,8 +33,7 @@ public class RecDetailMgnService {
     private RecRentRepository recRepos;
 
     public List<RentDetails> getAllRec() {
-        return detailRepos.findAll();
-
+        return detailRepos.findAll(Sort.by(Sort.Direction.DESC, "recRentDT2"));
     }
 
     public List<RentDetails> search(
@@ -44,8 +44,8 @@ public class RecDetailMgnService {
             String recStatus,
             Integer spotId,
             String spotName,
-            LocalDate rentDate,
-            LocalDate returnDate) {
+            LocalDate startDate,
+            LocalDate endDate) {
 
         Specification<RentDetails> spec = Specification.where(null);
 
@@ -67,14 +67,12 @@ public class RecDetailMgnService {
         if (spotName != null && !spotName.isEmpty()) {
             spec = spec.and(RentDetailsSpecs.spotNameContains(spotName));
         }
-        if (rentDate != null) {
-            spec = spec.and(RentDetailsSpecs.hasRentDate(rentDate));
-        }
-        if (returnDate != null) {
-            spec = spec.and(RentDetailsSpecs.hasReturnDate(returnDate));
+        // Time Range Search
+        if (startDate != null || endDate != null) {
+            spec = spec.and(RentDetailsSpecs.isWithinTimeRange(startDate, endDate));
         }
 
-        return detailRepos.findAll(spec);
+        return detailRepos.findAll(spec, Sort.by(Sort.Direction.DESC, "recRentDT2"));
     }
 
     public RentDetails getRecById(String recId) {

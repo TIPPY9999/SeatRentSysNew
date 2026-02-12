@@ -117,6 +117,7 @@ const proceedWithRent = async () => {
   // 這樣後端 PaymentApiController 在付款成功後，才能讀取到 spotIdReturn 並執行座位更新
   const rentalData = {
     recStatus: '未付款', // 標記狀態，等待金流更新為「已完成」
+    recInvoice: generateInvoiceNumber(), // [修正] 預設發票號碼
     spotIdReturn: selectedSpot.value?.spotId, // [修正] 使用 Optional Chaining 避免報錯
     recPayment: rentCalculation.value.totalFee,
   }
