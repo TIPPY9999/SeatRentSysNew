@@ -232,16 +232,16 @@ const menuGroups = [
     icon: 'fas fa-clipboard-list',
     items: [
       {
-        path: '/admin/rec-chart',
-        icon: 'fas fa-file-invoice',
-        title: '統計圖表',
-        prefix: '/admin/rec-chart',
-      },
-      {
         path: '/admin/rec-rent',
         icon: 'fas fa-file-invoice',
         title: '訂單管理',
         prefix: '/admin/rec-rent',
+      },
+      {
+        path: '/admin/rec-chart',
+        icon: 'fas fa-file-invoice',
+        title: '統計圖表',
+        prefix: '/admin/rec-chart',
       },
     ],
   },

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import axios from 'axios'
 import RecRentSearch from '@/components/rec/RecRentSearch.vue'
 import RecRentAdd from '@/components/rec/RecRentAdd.vue'
@@ -116,25 +116,25 @@ const backToList = () => {
 </script>
 
 <template>
-  <div class="top-nav">
-    <button
-      @click="backToList"
-      :class="{ active: activeView === 'list' }"
-      :disabled="activeView === 'list'"
-    >
-      訂單查詢
-    </button>
-
-    <button
-      @click="goToAddView"
-      :class="{ active: activeView === 'add' }"
-      :disabled="activeView === 'add'"
-    >
-      新增訂單
-    </button>
-  </div>
-
   <div class="rec-rent-container">
+    <div class="top-nav">
+      <button
+        @click="backToList"
+        :class="{ active: activeView === 'list' }"
+        :disabled="activeView === 'list'"
+      >
+        訂單查詢
+      </button>
+
+      <button
+        @click="goToAddView"
+        :class="{ active: activeView === 'add' }"
+        :disabled="activeView === 'add'"
+      >
+        新增訂單
+      </button>
+    </div>
+
     <div class="main-content">
       <h1>訂單管理系統</h1>
 
