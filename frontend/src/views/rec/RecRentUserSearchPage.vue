@@ -129,32 +129,32 @@ const updateMapLocation = (location) => {
   zoom.value = 15
 }
 
-// [新增] 定位使用者位置 (高精準度)
-const locateUser = () => {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        center.value = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        }
-        zoom.value = 15 // 定位成功後放大
-      },
-      (err) => {
-        console.warn(`無使用者地理位置: ${err.message}`)
-        // 可以選擇顯示錯誤提示，例如使用 Element Plus 的 ElMessage
-        alert('無法取得您的位置，請確認瀏覽器權限或 GPS 設定。')
-      },
-      {
-        enableHighAccuracy: true, // 要求高精準度 (GPS)
-        timeout: 5000, // 超時時間
-        maximumAge: 0, // 不使用快取
-      }
-    )
-  } else {
-    alert('此瀏覽器不支援地理位置功能。')
-  }
-}
+// // 定位使用者位置 (高精準度)
+// const locateUser = () => {
+//   if (navigator.geolocation) {
+//     navigator.geolocation.getCurrentPosition(
+//       (position) => {
+//         center.value = {
+//           lat: position.coords.latitude,
+//           lng: position.coords.longitude,
+//         }
+//         zoom.value = 15 // 定位成功後放大
+//       },
+//       (err) => {
+//         console.warn(`無使用者地理位置: ${err.message}`)
+//         // 可以選擇顯示錯誤提示，例如使用 Element Plus 的 ElMessage
+//         alert('無法取得您的位置，請確認瀏覽器權限或 GPS 設定。')
+//       },
+//       {
+//         enableHighAccuracy: true, // 要求高精準度 (GPS)
+//         timeout: 5000, // 超時時間
+//         maximumAge: 0, // 不使用快取
+//       },
+//     )
+//   } else {
+//     alert('此瀏覽器不支援地理位置功能。')
+//   }
+// }
 
 // 處理從 GMapAutocomplete 選擇一個地點
 const onPlaceChanged = (place) => {
@@ -335,7 +335,7 @@ const handleReportIssue = () => {
 onMounted(() => {
   fetchSpots()
   fetchSpots()
-  locateUser() // [新增] 初始化時嘗試定位
+  //locateUser() // 初始化時嘗試定位
 })
 </script>
 
@@ -365,11 +365,11 @@ onMounted(() => {
       <button class="search-button" @click="performSearch" title="搜尋">
         <el-icon :size="20"><LocationFilled /></el-icon>
       </button>
-      
-      <!-- [新增] 定位按鈕 -->
+
+      <!-- [新增] 定位按鈕
       <button class="search-button locate-btn" @click="locateUser" title="定位我的位置">
         <el-icon :size="20"><Aim /></el-icon>
-      </button>
+      </button> -->
     </div>
 
     <div v-if="error" class="error-message">{{ error }}</div>

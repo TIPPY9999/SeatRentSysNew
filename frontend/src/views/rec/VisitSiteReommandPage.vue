@@ -13,6 +13,7 @@ const itemsPerPage = 15
 const searchQuery = ref('') // 綁定輸入框
 const appliedSearchQuery = ref('') // 實際應用的搜尋關鍵字
 const selectedRegion = ref('') // 空字串代表 '所有地區'
+const selectedCategory = ref('all') // [新增] 'all', '景點', '餐廳'
 
 // 從指定的 URL 獲取資料
 async function fetchDataFromUrl(url) {
@@ -73,11 +74,28 @@ async function fetchAllData() {
 
 // 固定的台灣縣市列表
 const uniqueRegions = [
-  '臺北市',  '新北市',  '桃園市',  '臺中市',  '臺南市',
-  '高雄市',  '基隆市',  '宜蘭縣',  '花蓮縣',  '臺東縣',
-  '新竹市',  '新竹縣',  '苗栗縣',  '彰化縣',
-  '南投縣',  '雲林縣',  '嘉義市',  '嘉義縣',
-  '屏東縣',  '澎湖縣',  '金門縣',  '連江縣',
+  '臺北市',
+  '新北市',
+  '桃園市',
+  '臺中市',
+  '臺南市',
+  '高雄市',
+  '基隆市',
+  '宜蘭縣',
+  '花蓮縣',
+  '臺東縣',
+  '新竹市',
+  '新竹縣',
+  '苗栗縣',
+  '彰化縣',
+  '南投縣',
+  '雲林縣',
+  '嘉義市',
+  '嘉義縣',
+  '屏東縣',
+  '澎湖縣',
+  '金門縣',
+  '連江縣',
 ]
 
 // 根據`appliedSearchQuery`和地區篩選資料
@@ -86,6 +104,11 @@ const filteredData = computed(() => {
 
   if (selectedRegion.value) {
     data = data.filter((item) => item.address.startsWith(selectedRegion.value))
+  }
+
+  // [新增] 根據類別篩選
+  if (selectedCategory.value !== 'all') {
+    data = data.filter((item) => item.type === selectedCategory.value)
   }
 
   if (appliedSearchQuery.value) {
@@ -182,8 +205,37 @@ onMounted(() => {
               <option value="">所有地區</option>
               <option v-for="region in uniqueRegions" :key="region" :value="region">
                 {{ region }}
-              </option>
-            </select>
+              </option></select
+            >&nbsp;&nbsp;&nbsp;&nbsp;
+
+            <!-- [新增] 類別篩選按鈕 -->
+            <div class="btn-group btn-group-sm" role="group">
+              <button
+                type="button"
+                class="btn"
+                :class="selectedCategory === 'all' ? 'btn-primary' : 'btn-outline-primary'"
+                @click="selectedCategory = 'all'"
+              >
+                全部
+              </button>
+              <button
+                type="button"
+                class="btn"
+                :class="selectedCategory === '景點' ? 'btn-primary' : 'btn-outline-primary'"
+                @click="selectedCategory = '景點'"
+              >
+                景點
+              </button>
+              <button
+                type="button"
+                class="btn"
+                :class="selectedCategory === '餐廳' ? 'btn-primary' : 'btn-outline-primary'"
+                @click="selectedCategory = '餐廳'"
+              >
+                餐廳
+              </button>
+            </div>
+
             <button class="btn btn-success btn-sm" style="margin: 0 12px" @click="randomizeOrder">
               <i class="fas fa-random me-1"></i> 隨機推薦
             </button>
@@ -253,12 +305,11 @@ onMounted(() => {
                       <div
                         class="badge ms-2"
                         :class="
-                          item.type === '景點'
-                            ? 'bg-primary text-white'
-                            : 'bg-warning text-dark'
+                          item.type === '景點' ? 'bg-primary text-white' : 'bg-warning text-dark'
                         "
-                        >{{ item.type }}</div
                       >
+                        {{ item.type }}
+                      </div>
                     </h5>
                     <p class="card-text text-muted small flex-grow-1">
                       {{ item.description.substring(0, 80)
