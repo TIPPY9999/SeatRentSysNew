@@ -169,17 +169,17 @@ CREATE TABLE SponsorshipRecord
     SponsorID INT IDENTITY(1,1) PRIMARY KEY,
     MemberID INT NOT NULL,
     -- 關聯會員
-    MerchantTradeNo NVARCHAR(50) NOT NULL,
+    MerchantTradeNo NVARCHAR(500) NOT NULL,
     -- 傳給綠界的唯一訂單號
-    TradeNo NVARCHAR(50),
+    TradeNo NVARCHAR(500),
     -- 綠界內部的交易序號
-    Amount DECIMAL(10) NOT NULL,
+    Amount DECIMAL(1000) NOT NULL,
     -- 贊助金額
     SponsorComment NVARCHAR(500),
     -- 贊助者的留言 (新需求)
     Status INT DEFAULT 0,
     -- 0:待處理, 1:成功, 2:失敗
-    PaymentType NVARCHAR(20),
+    PaymentType NVARCHAR(200),
     -- 支付方式
     CreatedAt DATETIME DEFAULT GETDATE(),
     UpdatedAt DATETIME DEFAULT GETDATE(),
