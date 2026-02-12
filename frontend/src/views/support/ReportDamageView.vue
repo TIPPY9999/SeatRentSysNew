@@ -23,7 +23,7 @@ const form = reactive({
   seatsId: null,
   issueType: '',
   issueDesc: '',
-  issuePriority: 'NORMAL'
+  issuePriority: 'NORMAL',
 })
 
 // 問題類型選項（不含「保養」）
@@ -32,7 +32,7 @@ const issueTypeOptions = [
   { value: '椅子損壞', icon: '🪑' },
   { value: '清潔問題', icon: '🧹' },
   { value: '網路異常', icon: '📡' },
-  { value: '其他問題', icon: '❓' }
+  { value: '其他問題', icon: '❓' },
 ]
 
 // 優先級配置
@@ -40,7 +40,7 @@ const priorityConfig = {
   LOW: { color: '#909399', icon: '🔵', text: '低', desc: '可稍後處理' },
   NORMAL: { color: '#409eff', icon: '🟢', text: '普通', desc: '一般問題' },
   HIGH: { color: '#e6a23c', icon: '🟠', text: '高', desc: '需盡快處理' },
-  URGENT: { color: '#f56c6c', icon: '🔴', text: '緊急', desc: '立即處理' }
+  URGENT: { color: '#f56c6c', icon: '🔴', text: '緊急', desc: '立即處理' },
 }
 
 // 選項資料
@@ -55,13 +55,8 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 // ============ 驗證規則 ============
 const rules = {
-  issueType: [
-    { required: true, message: '請選擇或輸入問題類型', trigger: 'blur' }
-  ],
-  issueDesc: [
-    { required: true, message: '請填寫問題描述', trigger: 'blur' },
-    { min: 10, message: '描述至少需要 10 個字', trigger: 'blur' }
-  ]
+  issueType: [{ required: true, message: '請選擇或輸入問題類型', trigger: 'blur' }],
+  issueDesc: [],
 }
 
 // ============ Computed ============
@@ -78,9 +73,8 @@ const currentTargetOptions = computed(() => {
 const isFormValid = computed(() => {
   const hasTarget = targetType.value === 'spot' ? !!form.spotId : !!form.seatsId
   const hasType = !!form.issueType
-  const hasDesc = form.issueDesc && form.issueDesc.length >= 10
   const hasImages = fileList.value.length > 0
-  return hasTarget && hasType && hasDesc && hasImages
+  return hasTarget && hasType && hasImages
 })
 
 // ============ 生命週期 ============
@@ -90,7 +84,7 @@ onMounted(async () => {
     // 載入機台與椅子選項
     const [spotRes, seatRes] = await Promise.all([
       maintenanceApi.getAllSpots().catch(() => ({ data: [] })),
-      maintenanceApi.getAllSeats().catch(() => ({ data: [] }))
+      maintenanceApi.getAllSeats().catch(() => ({ data: [] })),
     ])
 
     spotOptions.value = Array.isArray(spotRes.data) ? spotRes.data : []
@@ -98,7 +92,7 @@ onMounted(async () => {
 
     // 從 query 預填資料
     const { spotId, seatId, recId } = route.query
-    
+
     if (spotId) {
       targetType.value = 'spot'
       form.spotId = Number(spotId)
@@ -158,7 +152,7 @@ const handleFileChange = (file) => {
  * 移除檔案
  */
 const handleRemoveFile = (file) => {
-  const index = fileList.value.findIndex(f => f.uid === file.uid)
+  const index = fileList.value.findIndex((f) => f.uid === file.uid)
   if (index > -1) {
     fileList.value.splice(index, 1)
   }
@@ -200,7 +194,7 @@ const submit = async () => {
     confirmButtonColor: '#409eff',
     cancelButtonColor: '#909399',
     confirmButtonText: '<i class="fas fa-paper-plane mr-1"></i> 確認送出',
-    cancelButtonText: '再檢查一下'
+    cancelButtonText: '再檢查一下',
   })
 
   if (!confirmResult.isConfirmed) return
@@ -214,7 +208,7 @@ const submit = async () => {
       issueType: `SUPPORT_${form.issueType}`, // ✅ 標記為問題回報
       issueDesc: `[REPORT] ${form.issueDesc}`, // ✅ 描述前加標記
       issuePriority: form.issuePriority,
-      assignedStaffId: null // 前台回報不指派人員
+      assignedStaffId: null, // 前台回報不指派人員
     }
 
     console.log('📤 建立工單:', ticketPayload)
@@ -228,7 +222,7 @@ const submit = async () => {
     // ============ Step 2：上傳圖片 ============
     let attachmentSuccess = false
     try {
-      const files = fileList.value.map(f => f.raw)
+      const files = fileList.value.map((f) => f.raw)
       await maintenanceApi.uploadTicketAttachments(ticketId, files, '使用者回報')
       attachmentSuccess = true
     } catch (attachError) {
@@ -249,7 +243,7 @@ const submit = async () => {
           </div>
         `,
         confirmButtonText: '返回地圖',
-        confirmButtonColor: '#409eff'
+        confirmButtonColor: '#409eff',
       })
       router.push('/SearchSpot')
     } else {
@@ -265,11 +259,10 @@ const submit = async () => {
           </div>
         `,
         confirmButtonText: '我知道了',
-        confirmButtonColor: '#e6a23c'
+        confirmButtonColor: '#e6a23c',
       })
       router.push('/SearchSpot')
     }
-
   } catch (error) {
     console.error('送出失敗:', error)
     const errorMsg = error?.response?.data?.message || '系統忙碌中，請稍後再試'
@@ -347,10 +340,7 @@ const handleCancel = () => {
             </el-form-item>
 
             <!-- 選擇機台 / 椅子 -->
-            <el-form-item
-              :label="targetType === 'spot' ? '選擇機台' : '選擇椅子'"
-              required
-            >
+            <el-form-item :label="targetType === 'spot' ? '選擇機台' : '選擇椅子'" required>
               <el-select
                 v-if="targetType === 'spot'"
                 v-model="form.spotId"
@@ -369,7 +359,10 @@ const handleCancel = () => {
                   <div class="option-item">
                     <i class="fas fa-desktop"></i>
                     <span>{{ spot.spotName || `機台 #${spot.spotId}` }}</span>
-                    <el-tag :type="spot.spotStatus === '營運中' ? 'success' : 'danger'" size="small">
+                    <el-tag
+                      :type="spot.spotStatus === '營運中' ? 'success' : 'danger'"
+                      size="small"
+                    >
                       {{ spot.spotStatus }}
                     </el-tag>
                   </div>
@@ -394,7 +387,10 @@ const handleCancel = () => {
                   <div class="option-item">
                     <i class="fas fa-chair"></i>
                     <span>{{ seat.seatsName || `椅子 #${seat.seatsId}` }}</span>
-                    <el-tag :type="seat.seatsStatus === '可用' ? 'success' : 'warning'" size="small">
+                    <el-tag
+                      :type="seat.seatsStatus === '可用' ? 'success' : 'warning'"
+                      size="small"
+                    >
                       {{ seat.seatsStatus }}
                     </el-tag>
                   </div>
@@ -426,12 +422,12 @@ const handleCancel = () => {
             </el-form-item>
 
             <!-- 問題描述 -->
-            <el-form-item label="問題描述" prop="issueDesc" required>
+            <el-form-item label="問題描述" prop="issueDesc">
               <el-input
                 v-model="form.issueDesc"
                 type="textarea"
                 :rows="6"
-                placeholder="請詳細描述問題狀況，例如：故障位置、發生時間、嚴重程度等... (至少 10 個字)"
+                placeholder="請詳細描述問題狀況，例如：故障位置、發生時間、嚴重程度等... "
                 show-word-limit
                 maxlength="1000"
               />
@@ -457,15 +453,11 @@ const handleCancel = () => {
 
             <!-- 圖片上傳 -->
             <el-form-item label="問題照片" required>
-              <el-alert
-                type="warning"
-                :closable="false"
-                show-icon
-                class="mb-3"
-              >
+              <el-alert type="warning" :closable="false" show-icon class="mb-3">
                 <template #title>
-                  <span style="font-size: 13px;">
-                    <i class="fas fa-camera"></i> 必須上傳圖片（最多 5 張，單張最大 5MB，支援 JPG/PNG/WEBP）
+                  <span style="font-size: 13px">
+                    <i class="fas fa-camera"></i> 必須上傳圖片（最多 5 張，單張最大 5MB，支援
+                    JPG/PNG/WEBP）
                   </span>
                 </template>
               </el-alert>
@@ -571,7 +563,9 @@ const handleCancel = () => {
   font-size: 1.8rem;
   font-weight: 800;
   color: #2c3e50;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(255, 255, 255, 0.5);
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    0 1px 3px rgba(255, 255, 255, 0.5);
 }
 
 .header-text p {
@@ -579,7 +573,9 @@ const handleCancel = () => {
   font-size: 0.95rem;
   font-weight: 600;
   color: #34495e;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(255, 255, 255, 0.3);
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 /* ========== 內容區域 ========== */
@@ -837,9 +833,19 @@ const handleCancel = () => {
 }
 
 /* ========== 輔助類 ========== */
-.w-100 { width: 100%; }
-.mt-2 { margin-top: 8px; }
-.mb-3 { margin-bottom: 12px; }
-.mr-1 { margin-right: 4px; }
-.mr-2 { margin-right: 8px; }
+.w-100 {
+  width: 100%;
+}
+.mt-2 {
+  margin-top: 8px;
+}
+.mb-3 {
+  margin-bottom: 12px;
+}
+.mr-1 {
+  margin-right: 4px;
+}
+.mr-2 {
+  margin-right: 8px;
+}
 </style>
