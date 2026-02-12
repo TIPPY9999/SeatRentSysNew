@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, nextTick, computed } from 'vue'
-import { LocationFilled, Camera } from '@element-plus/icons-vue'
+import { LocationFilled, Camera, Aim } from '@element-plus/icons-vue'
 import { Html5Qrcode } from 'html5-qrcode'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
@@ -129,8 +129,8 @@ const updateMapLocation = (location) => {
   zoom.value = 15
 }
 
-// 初始化地圖中心點，優先使用使用者地理位置
-const initializeMapCenter = () => {
+// [新增] 定位使用者位置 (高精準度)
+const locateUser = () => {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -138,14 +138,21 @@ const initializeMapCenter = () => {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         }
-        zoom.value = 12
+        zoom.value = 15 // 定位成功後放大
       },
-      (error) => {
-        console.warn(`無使用者地理位置: ${error.message}。將使用預設中心點。`)
+      (err) => {
+        console.warn(`無使用者地理位置: ${err.message}`)
+        // 可以選擇顯示錯誤提示，例如使用 Element Plus 的 ElMessage
+        alert('無法取得您的位置，請確認瀏覽器權限或 GPS 設定。')
       },
+      {
+        enableHighAccuracy: true, // 要求高精準度 (GPS)
+        timeout: 5000, // 超時時間
+        maximumAge: 0, // 不使用快取
+      }
     )
   } else {
-    console.warn('此瀏覽器不支援地理位置功能。將使用預設中心點。')
+    alert('此瀏覽器不支援地理位置功能。')
   }
 }
 
@@ -327,7 +334,8 @@ const handleReportIssue = () => {
 // Vue 組件掛載時執行的初始化
 onMounted(() => {
   fetchSpots()
-  initializeMapCenter()
+  fetchSpots()
+  locateUser() // [新增] 初始化時嘗試定位
 })
 </script>
 
@@ -356,6 +364,11 @@ onMounted(() => {
 
       <button class="search-button" @click="performSearch" title="搜尋">
         <el-icon :size="20"><LocationFilled /></el-icon>
+      </button>
+      
+      <!-- [新增] 定位按鈕 -->
+      <button class="search-button locate-btn" @click="locateUser" title="定位我的位置">
+        <el-icon :size="20"><Aim /></el-icon>
       </button>
     </div>
 
@@ -603,6 +616,14 @@ onMounted(() => {
 .scan-btn {
   background-color: #6c757d; /* 灰色區分 */
   margin-left: 5px;
+}
+
+/* [新增] 定位按鈕樣式 */
+.locate-btn {
+  background-color: #28a745; /* 綠色 */
+}
+.locate-btn:hover {
+  background-color: #218838;
 }
 
 .search-button:hover {
