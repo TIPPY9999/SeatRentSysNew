@@ -117,8 +117,10 @@ const getMarkerIcon = (status, seatCount, returnCount) => {
     } else {
       color = 'green' // 可租借
     }
-  } else {
+  } else if (status === '維修中') {
     color = 'brown' // 維修中
+  } else if (status === '停用') {
+    color = 'gray' // 停用
   }
 
   const svg = `
@@ -352,7 +354,6 @@ const handleReportIssue = () => {
 
 // Vue 組件掛載時執行的初始化
 onMounted(() => {
-  fetchSpots()
   fetchSpots()
   //locateUser() // 初始化時嘗試定位
 })

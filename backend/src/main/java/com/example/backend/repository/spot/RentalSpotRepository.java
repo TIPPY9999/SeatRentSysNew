@@ -108,7 +108,7 @@ public interface RentalSpotRepository extends JpaRepository<RentalSpot, Integer>
                     )
                     GROUP BY spotId
                 ) curr ON curr.spotId = s.spotId
-                WHERE s.spotStatus = N'營運中'
+
             """, nativeQuery = true)
     List<com.example.backend.repository.projection.AnalyzeProjections.SpotWithSeats> findAllSpotsWithSeatCount();
 }

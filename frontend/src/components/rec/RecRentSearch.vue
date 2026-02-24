@@ -247,17 +247,17 @@ const showFullNote = (note) => {
         </div>
         <div class="form-group-search">
         <label>開始日期:</label>
-        <input v-model="searchCriteria.startDate" type="date" />
+        <input v-model="searchCriteria.startDate" type="date"/>
       </div>
       <div class="form-group-search">
         <label>結束日期:</label>
-        <input v-model="searchCriteria.endDate" type="date" />
+        <input v-model="searchCriteria.endDate" type="date"/>
       </div>
       </div>
     </div>
     <div class="view-section active">
       <div class="search-actions">
-        <button class="btn-primary" @click="loadRents" style="min-width: 135px; margin: 0 0 0 10px">
+        <button class="btn-primary" @click="loadRents" style="min-width: 125px; margin: 0 0 0 10px">
           搜尋
         </button>
         <button class="btn-secondary" @click="clearSearch">清除</button>
@@ -271,9 +271,9 @@ const showFullNote = (note) => {
         </select>
         <!-- 匯出按鈕 -->
         <button class="btn-info" @click="exportToCsv" style="margin-left: auto">匯出 CSV</button>
-        <button class="btn-info" @click="exportToJson">匯出 JSON</button>
+        <button class="btn-info" @click="exportToJson">匯出JSON</button>
       </div>
-      <table>
+      <table style="font-size: 11px;">
         <thead>
           <tr>
             <th>訂單狀態</th>
@@ -319,7 +319,7 @@ const showFullNote = (note) => {
               </span>
               <span v-else>{{ rent.recNote }}</span>
             </td>
-            <td>
+            <td style="font-size: 10px;">
               <button class="btn-warning" @click="editRent(rent)">編輯</button><span>/</span>
               <button class="btn-danger ml-1" @click="deleteRent(rent.recId)">刪除</button>
             </td>
@@ -373,16 +373,17 @@ const showFullNote = (note) => {
 /* ========== 搜尋表單區 - 淺色風格 ========== */
 .search-form-container {
   background: #f5f7fa;
-  padding: 8px 10px;
+  padding: 8px 8px;
   border-radius: 10px;
   margin-bottom: 5px;
 }
 
 .search-form {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px;
   align-items: end;
+  font-size: 8px;
 }
 
 .form-group-search {
@@ -391,7 +392,7 @@ const showFullNote = (note) => {
 }
 
 .form-group-search label {
-  font-weight: 500;
+  font-weight: 550;
   margin-bottom: 3px;
   font-size: 14px;
   color: #606266;
@@ -399,7 +400,7 @@ const showFullNote = (note) => {
 
 .form-group-search input,
 .form-group-search select {
-  padding: 3px 10px;
+  padding: 3px 8px;
   border: 1px solid #e4e7ed;
   border-radius: 8px;
   font-size: 14px;
@@ -422,13 +423,13 @@ const showFullNote = (note) => {
   display: flex;
   padding: 0px;
   justify-content: flex-start;
-  gap: 8px;
+  gap: 4px;
   margin-bottom: 10px;
 }
 
 /* [新增] 設定操作區按鈕的最小寬度，讓按鈕整齊一致 */
 .search-actions button {
-  min-width: 65px;
+  min-width: 55px;
 }
 
 .page-size-select {

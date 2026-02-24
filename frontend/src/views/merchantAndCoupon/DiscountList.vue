@@ -239,9 +239,10 @@
       v-model="isEditModalOpen"
       :title="editingDiscount.couponId ? `編輯優惠券 #${editingDiscount.couponId}` : '新增優惠券'"
       width="600px"
-      top="5vh"
+      align-center
       class="modern-dialog"
       :close-on-click-modal="false"
+      :append-to-body="true"
     >
       <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
         <el-button 

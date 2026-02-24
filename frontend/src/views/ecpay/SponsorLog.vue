@@ -70,7 +70,7 @@
           <div class="stat-icon"><i class="fas fa-users"></i></div>
           <div class="stat-info">
             <h3>{{ uniqueDonors }} <small>人</small></h3>
-            <span>本月贊助會員數</span>
+            <span>贊助會員人數</span>
           </div>
         </div>
       </el-col>
